@@ -1,0 +1,265 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  MB Study Buddy — Clinical Dark theme.
+  Students study at night; bright UIs fatigue them. Dark base, medical blue
+  as the focus color, and a strict semantic palette so color always means
+  something:
+    Blue   -> Learning   (primary actions, focus)
+    Green  -> Mastery    (strong topics, correct answers)
+    Red    -> Weakness   (wrong, weak topics, urgent timer)
+    Amber  -> Review     (needs-review, spaced-repetition due)
+*/
+
+:root {
+  /* Clinical dark surfaces */
+  --background: oklch(0.14 0.012 240);   /* ~#0B0F14 */
+  --foreground: oklch(0.965 0.006 240);
+
+  --card: oklch(0.185 0.014 240);        /* ~#121821 surface */
+  --card-foreground: oklch(0.965 0.006 240);
+
+  --popover: oklch(0.2 0.014 240);
+  --popover-foreground: oklch(0.965 0.006 240);
+
+  /* Primary: Medical Blue #3B82F6 */
+  --primary: oklch(0.62 0.185 258);
+  --primary-foreground: oklch(0.98 0.006 240);
+
+  /* Secondary: muted slate chip */
+  --secondary: oklch(0.26 0.015 240);
+  --secondary-foreground: oklch(0.96 0.006 240);
+
+  --muted: oklch(0.24 0.013 240);
+  --muted-foreground: oklch(0.72 0.012 240);
+
+  /* Accent: Emerald (also the "mastery" color) */
+  --accent: oklch(0.72 0.15 165);
+  --accent-foreground: oklch(0.14 0.012 240);
+
+  /* Destructive: red (also "weakness") */
+  --destructive: oklch(0.66 0.22 26);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --border: oklch(0.28 0.015 240);
+  --input: oklch(0.28 0.015 240);
+  --ring: oklch(0.62 0.185 258);
+
+  /* Semantic learning-state tokens */
+  --learning: oklch(0.62 0.185 258);   /* blue   */
+  --mastery:  oklch(0.72 0.15 165);    /* emerald */
+  --weakness: oklch(0.66 0.22 26);     /* red    */
+  --review:   oklch(0.8 0.17 78);      /* amber  */
+
+  /* Chart palette: blue, emerald, red, amber, slate */
+  --chart-1: oklch(0.62 0.185 258);
+  --chart-2: oklch(0.72 0.15 165);
+  --chart-3: oklch(0.66 0.22 26);
+  --chart-4: oklch(0.8 0.17 78);
+  --chart-5: oklch(0.75 0.01 240);
+
+  /* Slightly larger radius — brief calls for rounded-2xl surfaces */
+  --radius: 1rem;
+
+  /* Sidebar: slightly darker than cards so hierarchy reads */
+  --sidebar: oklch(0.12 0.012 240);
+  --sidebar-foreground: oklch(0.965 0.006 240);
+  --sidebar-primary: oklch(0.62 0.185 258);
+  --sidebar-primary-foreground: oklch(0.98 0.006 240);
+  --sidebar-accent: oklch(0.2 0.014 240);
+  --sidebar-accent-foreground: oklch(0.965 0.006 240);
+  --sidebar-border: oklch(0.24 0.013 240);
+  --sidebar-ring: oklch(0.62 0.185 258);
+}
+
+@theme inline {
+  /* Inter for body, Sora for display/headings.
+     We alias --font-serif -> Sora so the existing `font-serif` usage
+     across the app becomes our display font without editing 24 files. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: var(--font-sora), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sora), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Semantic color utilities: bg-mastery, text-weakness, border-review, etc. */
+  --color-learning: var(--learning);
+  --color-mastery: var(--mastery);
+  --color-weakness: var(--weakness);
+  --color-review: var(--review);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply bg-background;
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    /* Tight body rhythm per brief */
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  /* Display headings use Sora via --font-serif alias */
+  h1, h2, h3 {
+    letter-spacing: -0.015em;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Immersive scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--primary) 30%, transparent); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: color-mix(in oklab, var(--primary) 55%, transparent); }
+
+  /* Ambient background pulse behind hero sections */
+  @keyframes ambient-drift {
+    0%, 100% { opacity: 0.4; transform: scale(1) translate(0, 0); }
+    33% { opacity: 0.6; transform: scale(1.05) translate(1%, -1%); }
+    66% { opacity: 0.35; transform: scale(0.97) translate(-1%, 1%); }
+  }
+  .ambient-orb {
+    animation: ambient-drift 12s ease-in-out infinite;
+  }
+
+  /* Shimmer sweep for loading/highlight states */
+  @keyframes shimmer {
+    from { background-position: -200% center; }
+    to { background-position: 200% center; }
+  }
+  .shimmer-text {
+    background: linear-gradient(90deg, var(--foreground) 30%, color-mix(in oklab, var(--primary) 90%, var(--foreground)) 50%, var(--foreground) 70%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 3s linear infinite;
+  }
+
+  /* Hover lift utility */
+  .hover-lift {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px -8px color-mix(in oklab, var(--primary) 20%, transparent);
+  }
+
+  /* Active nav indicator bar */
+  .nav-active-bar::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 20%;
+    height: 60%;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--primary);
+    box-shadow: 0 0 8px 1px color-mix(in oklab, var(--primary) 60%, transparent);
+  }
+
+  /* Reader highlight uses medical blue */
+  .ai-highlight {
+    background: color-mix(in oklab, var(--learning) 28%, transparent);
+    box-shadow: inset 0 -2px 0 0 color-mix(in oklab, var(--learning) 80%, transparent);
+    border-radius: 2px;
+    padding: 0 2px;
+    color: var(--foreground);
+  }
+
+  /* Subtle inner glow for focus cards */
+  .study-glow {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--learning) 18%, transparent),
+      0 20px 60px -20px color-mix(in oklab, var(--learning) 25%, transparent);
+  }
+
+  /* Pressure pulse for timers under stress (steeplechase last 5s) */
+  @keyframes pressure-pulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--destructive) 55%, transparent);
+    }
+    50% {
+      transform: scale(1.03);
+      box-shadow: 0 0 0 12px color-mix(in oklab, var(--destructive) 0%, transparent);
+    }
+  }
+  .pressure-pulse {
+    animation: pressure-pulse 0.9s ease-in-out infinite;
+  }
+
+  /* Noise texture overlay for immersive surfaces */
+  .noise-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 120px;
+  }
+
+  /* Subtle background grid for exam/focus surfaces */
+  .grid-surface {
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
