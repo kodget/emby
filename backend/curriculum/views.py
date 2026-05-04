@@ -477,39 +477,57 @@ class UpcomingTestViewSet(viewsets.ModelViewSet):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_slide_content(request, slide_id):
-    """Get rendered slide pages with text coordinates"""
+    """Get rendered slide pages. Returns cached result if available."""
     try:
-        print(f"Getting content for slide: {slide_id}")
         slide = Slide.objects.get(id=slide_id)
-        print(f"Slide found: {slide.title}, file_url: {slide.file_url}")
-        
-        from .slide_renderer import render_slide_pages
-        
-        print(f"Rendering pages from {slide.file_url}...")
-        content = render_slide_pages(slide.file_url, slide.file_type, slide.id)
-        print(f"Pages rendered: {content['total_pages']} pages")
-        
+    except Slide.DoesNotExist:
+        return Response({'error': 'Slide not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Return cached content if already extracted
+    slide_content, _ = SlideContent.objects.get_or_create(slide=slide)
+    if slide_content.is_extracted and slide_content.content_data.get('pages'):
+        data = slide_content.content_data
         return Response({
             'slide_id': slide.id,
             'title': slide.title,
-            'total_pages': content['total_pages'],
-            'pages': content['pages']
+            'total_pages': data.get('total_pages', 0),
+            'pages': data.get('pages', []),
+            'cached': True,
         })
-                
-    except Slide.DoesNotExist:
-        print(f"Slide not found: {slide_id}")
-        return Response(
-            {'error': 'Slide not found'},
-            status=status.HTTP_404_NOT_FOUND
-        )
+
+    file_url = slide.get_file_url
+    if not file_url:
+        return Response({'error': 'Slide has no file URL'}, status=status.HTTP_400_BAD_REQUEST)
+
+    from .slide_renderer import render_slide_pages
+    try:
+        content = render_slide_pages(file_url, slide.file_type, slide.id)
     except Exception as e:
-        print(f"Slide rendering error: {e}")
         import traceback
         traceback.print_exc()
-        return Response(
-            {'error': f'Slide rendering failed: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        slide_content.is_extracted = False
+        slide_content.extraction_error = str(e)
+        slide_content.save()
+        return Response({'error': f'Rendering failed: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Cache result
+    slide_content.content_data = content
+    slide_content.is_extracted = content['total_pages'] > 0
+    slide_content.extraction_error = '' if content['total_pages'] > 0 else 'No pages rendered'
+    slide_content.extracted_at = timezone.now()
+    slide_content.save()
+
+    # Keep page_count in sync
+    if content['total_pages'] > 0:
+        Slide.objects.filter(id=slide.id).update(page_count=content['total_pages'])
+
+    return Response({
+        'slide_id': slide.id,
+        'title': slide.title,
+        'total_pages': content['total_pages'],
+        'pages': content['pages'],
+        'cached': False,
+    })
 
 
 # -------------------------
@@ -616,10 +634,21 @@ def submit_quiz_answer(request):
         # Check correctness for MCQ
         if quiz.quiz_type == 'mcq':
             answer.is_correct = (selected_option.upper() == question.correct_option.upper())
-        
-        # TODO: For theory questions, use AI to score and provide feedback
-        # For now, just save the answer
-        
+
+        # AI grading for theory answers
+        if quiz.quiz_type == 'theory' and text_answer.strip():
+            try:
+                from .ai_service import grade_theory_answer
+                grading = grade_theory_answer(
+                    question_text=question.question_text,
+                    model_answer=question.model_answer,
+                    student_answer=text_answer,
+                )
+                answer.ai_score = grading.get('score', 0)
+                answer.ai_feedback = grading.get('feedback', '')
+            except Exception as e:
+                print(f"Theory grading failed: {e}")
+
         answer.save()
         
         serializer = QuizAnswerSerializer(answer)
@@ -660,9 +689,10 @@ def complete_quiz(request, quiz_id):
         stats.quizzes_taken += 1
         stats.save()
         
-        # Award points
-        points = quiz.score * 2  # 2 points per correct answer
-        statsApi.awardPoints(points, f'Completed {quiz.quiz_type.upper()} quiz')
+        # Award points (2 per correct answer)
+        points = quiz.score * 2
+        stats.points += points
+        stats.save()
         
         serializer = QuizSerializer(quiz)
         return Response(serializer.data)
@@ -765,3 +795,100 @@ def log_study_time(request):
         'total_today': session.minutes_studied,
         'total_overall': stats.total_study_minutes
     })
+
+
+# -------------------------
+# AI LEARNING SUPPORT
+# -------------------------
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ai_tutor(request):
+    """
+    AI tutor chat endpoint.
+    Body: {message, slide_id (optional), history (optional list of {role, content})}
+    """
+    from .ai_service import ai_tutor_chat
+
+    message = request.data.get('message', '').strip()
+    if not message:
+        return Response({'error': 'message is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    slide_context = ''
+    slide_id = request.data.get('slide_id')
+    if slide_id:
+        try:
+            slide = Slide.objects.get(id=slide_id)
+            sc = SlideContent.objects.filter(slide=slide, is_extracted=True).first()
+            if sc and sc.content_data.get('pages'):
+                texts = [p.get('text', '') or ' '.join(b.get('text', '') for b in p.get('text_blocks', []))
+                         for p in sc.content_data['pages']]
+                slide_context = '\n\n'.join(texts)[:8000]
+            elif slide.get_file_url:
+                from .content_extractor import get_slide_full_text
+                slide_context = get_slide_full_text(slide.get_file_url, slide.file_type)
+        except Slide.DoesNotExist:
+            pass
+
+    history = request.data.get('history', [])
+    result = ai_tutor_chat(message, slide_text_context=slide_context, conversation_history=history)
+    return Response(result)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_questions_from_slide_view(request, slide_id):
+    """
+    Auto-generate MCQ and theory questions from a slide.
+    Body: {num_mcq (default 5), num_theory (default 3)}
+    Only class heads and material uploaders can trigger this.
+    """
+    profile = request.user.profile
+    if profile.role not in ['class_head', 'material_uploader']:
+        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        slide = Slide.objects.get(id=slide_id)
+    except Slide.DoesNotExist:
+        return Response({'error': 'Slide not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    from .question_generator import generate_questions_from_slide
+    num_mcq = int(request.data.get('num_mcq', 5))
+    num_theory = int(request.data.get('num_theory', 3))
+
+    result = generate_questions_from_slide(slide, num_mcq=num_mcq, num_theory=num_theory)
+    return Response(result, status=status.HTTP_201_CREATED if not result.get('error') else status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ai_study_recommendations(request):
+    """Return personalised study recommendations for the current user."""
+    from .ai_service import get_study_recommendations
+
+    recent_quizzes = Quiz.objects.filter(
+        user=request.user, completed=True
+    ).select_related('topic', 'subject').order_by('-completed_at')[:10]
+
+    history = []
+    for q in recent_quizzes:
+        history.append({
+            'topic': q.topic.name if q.topic else (q.subject.name if q.subject else 'General'),
+            'score': q.score,
+            'quiz_type': q.quiz_type,
+        })
+
+    # Topics with low average score (below 60%)
+    weak_topics = list({
+        (q.topic.name if q.topic else '') for q in recent_quizzes
+        if q.score < 60 and q.topic
+    })
+
+    # Topics from slides not yet completed
+    completed_slides = UserProgress.objects.filter(
+        user=request.user, completed=True
+    ).values_list('slide__topic__name', flat=True)
+    upcoming = list(Topic.objects.exclude(name__in=completed_slides).values_list('name', flat=True)[:5])
+
+    result = get_study_recommendations(history, weak_topics, upcoming)
+    return Response(result)

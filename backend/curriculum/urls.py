@@ -4,7 +4,8 @@ from .views import (
     SubjectViewSet, BlockViewSet, TopicViewSet, SectionViewSet, SlideViewSet, MaterialViewSet,
     UserProgressViewSet, ScheduleItemViewSet, UserStatsViewSet,
     CommunityPostViewSet, UpcomingTestViewSet, get_weekly_study_data, log_study_time, get_slide_content,
-    generate_quiz, submit_quiz_answer, complete_quiz, get_quiz_history
+    generate_quiz, submit_quiz_answer, complete_quiz, get_quiz_history,
+    ai_tutor, generate_questions_from_slide_view, ai_study_recommendations,
 )
 from .upload_views import upload_file, delete_file
 
@@ -32,4 +33,8 @@ urlpatterns = [
     path('quiz/history/', get_quiz_history, name='quiz-history'),
     path('study-time/weekly/', get_weekly_study_data, name='weekly-study-data'),
     path('study-time/log/', log_study_time, name='log-study-time'),
+    # AI endpoints
+    path('ai/tutor/', ai_tutor, name='ai-tutor'),
+    path('ai/recommendations/', ai_study_recommendations, name='ai-recommendations'),
+    path('slides/<str:slide_id>/generate-questions/', generate_questions_from_slide_view, name='generate-questions'),
 ]
