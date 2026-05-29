@@ -23,8 +23,3 @@ export function useCanBrainstorm(): boolean {
     (s) => s.user.role === "brainstormer" || s.user.role === "class-rep",
   );
 }
-
-/** Returns the rendered slide page data-URLs for a given materialId, or null */
-export function useSlidePages(materialId: string): string[] | null {
-  return useAppSelector((s) => s.uploads.slides[materialId] ?? null);
-}

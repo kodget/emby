@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import (
     Subject, Block, Topic, Section, Slide, Material, UserProgress, ScheduleItem,
-    UserStats, CommunityPost, PostComment, UpcomingTest, QuizQuestion, Quiz, QuizAnswer
+    UserStats, CommunityPost, PostComment, UpcomingTest, QuizQuestion, Quiz, QuizAnswer,
+    SlideDeck, SlidePage
 )
 
 
@@ -55,6 +56,34 @@ class SlideSerializer(serializers.ModelSerializer):
         if 'id' not in validated_data or not validated_data['id']:
             import uuid
             validated_data['id'] = str(uuid.uuid4())[:8]
+        
+        # If file_url is provided, try to extract Cloudinary public_id and populate file field
+        file_url = validated_data.get('file_url')
+        if file_url and 'cloudinary.com' in file_url:
+            try:
+                # Extract public_id from Cloudinary URL
+                # URL format: https://res.cloudinary.com/cloud_name/resource_type/upload/public_id.ext
+                import re
+                from cloudinary import CloudinaryResource
+                
+                # Extract public_id from URL
+                match = re.search(r'/upload/(?:v\d+/)?(.+?)(?:\.[^.]+)?$', file_url)
+                if match:
+                    public_id = match.group(1)
+                    
+                    # Create CloudinaryResource and assign to file field
+                    validated_data['file'] = CloudinaryResource(
+                        public_id=public_id,
+                        resource_type='raw'  # For PDFs, PPTX, etc.
+                    )
+                    
+                    print(f"Extracted Cloudinary public_id: {public_id}")
+                else:
+                    print(f"Could not extract public_id from URL: {file_url}")
+            except Exception as e:
+                print(f"Error processing Cloudinary URL: {e}")
+                # Keep file_url as fallback
+        
         return super().create(validated_data)
 
 
@@ -180,6 +209,59 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
             'question_text', 'explanation',
             'option_a', 'option_b', 'option_c', 'option_d', 'correct_option',
             'model_answer', 'source_type', 'created_at'
+        ]
+
+
+# -------------------------
+# SLIDE DECK & PAGE SERIALIZERS
+# -------------------------
+class SlidePageSerializer(serializers.ModelSerializer):
+    """Serializer for individual pages in a slide deck"""
+    image_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = SlidePage
+        fields = [
+            'id', 'slide_number', 'image_url', 'width', 'height',
+            'extracted_text', 'created_at'
+        ]
+    
+    def get_image_url(self, obj):
+        return obj.get_image_url
+
+
+class SlideDeckSerializer(serializers.ModelSerializer):
+    """Serializer for slide decks with nested pages"""
+    uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
+    pages = SlidePageSerializer(many=True, read_only=True)
+    id = serializers.CharField(max_length=50, required=False)
+    
+    class Meta:
+        model = SlideDeck
+        fields = [
+            'id', 'title', 'file_type', 'file_size',
+            'processing_status', 'processing_error',
+            'page_count', 'uploaded_by', 'uploaded_by_name',
+            'pages', 'created_at', 'updated_at'
+        ]
+    
+    def create(self, validated_data):
+        if 'id' not in validated_data or not validated_data['id']:
+            import uuid
+            validated_data['id'] = f"deck_{str(uuid.uuid4())[:8]}"
+        return super().create(validated_data)
+
+
+class SlideDeckListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for listing slide decks"""
+    uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
+    
+    class Meta:
+        model = SlideDeck
+        fields = [
+            'id', 'title', 'file_type', 'file_size',
+            'processing_status', 'page_count',
+            'uploaded_by', 'uploaded_by_name', 'created_at'
         ]
 
 

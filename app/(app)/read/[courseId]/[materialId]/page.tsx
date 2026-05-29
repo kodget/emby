@@ -13,6 +13,7 @@ export default function ReadPage() {
   
   const [slide, setSlide] = useState<Slide | null>(null)
   const [slideContent, setSlideContent] = useState<any>(null)
+  const [suggestedVideos, setSuggestedVideos] = useState<any[]>([])
   const [courseBreadcrumb, setCourseBreadcrumb] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
@@ -31,6 +32,14 @@ export default function ReadPage() {
           setSlideContent(content)
         } catch (error) {
           console.log('Content extraction failed, will show fallback:', error)
+        }
+        
+        // Fetch AI suggested videos
+        try {
+          const videos = await curriculumApi.getSuggestedVideos(materialId)
+          setSuggestedVideos(videos.videos || [])
+        } catch (error) {
+          console.log('Video suggestions failed:', error)
         }
         
         // Build breadcrumb
@@ -81,5 +90,5 @@ export default function ReadPage() {
     return null
   }
 
-  return <Reader courseId={courseId} slide={slide} slideContent={slideContent} courseBreadcrumb={courseBreadcrumb} />
+  return <Reader courseId={courseId} slide={slide} slideContent={slideContent} suggestedVideos={suggestedVideos} courseBreadcrumb={courseBreadcrumb} />
 }

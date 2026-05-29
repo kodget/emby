@@ -1,14 +1,27 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Stethoscope, Clock, CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { authApi } from '@/lib/api';
-import type { UserProfile } from '@/lib/api';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  Stethoscope,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Mail,
+  Loader2,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { authApi } from "@/lib/api";
+import type { UserProfile } from "@/lib/api";
 
 export default function VerificationPendingPage() {
   const router = useRouter();
@@ -21,20 +34,23 @@ export default function VerificationPendingPage() {
         const profile = await authApi.getProfile();
         setUser(profile);
 
+        // Update sessionStorage with fresh profile data
+        sessionStorage.setItem("user", JSON.stringify(profile));
+
         // If verified, redirect to dashboard
         if (profile.class_head_verified) {
-          router.push('/dashboard');
+          router.push("/dashboard");
         }
       } catch (error) {
         // If not authenticated, redirect to signin
-        router.push('/signin');
+        router.push("/signin");
       } finally {
         setLoading(false);
       }
     };
 
     checkStatus();
-    
+
     // Poll every 30 seconds to check if verified
     const interval = setInterval(checkStatus, 30000);
     return () => clearInterval(interval);
@@ -82,10 +98,13 @@ export default function VerificationPendingPage() {
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <p className="font-semibold mb-1">Verification Not Approved</p>
+                  <p className="font-semibold mb-1">
+                    Verification Not Approved
+                  </p>
                   <p className="text-sm">{user.class_head_rejection_reason}</p>
                   <p className="text-sm mt-2">
-                    Please contact support at support@emby.com for more information.
+                    Please contact support at support@emby.com for more
+                    information.
                   </p>
                 </AlertDescription>
               </Alert>
@@ -135,8 +154,13 @@ export default function VerificationPendingPage() {
                     <ul className="text-sm space-y-1 list-disc list-inside">
                       <li>Our team will verify your class head credentials</li>
                       <li>You'll receive an email with your class code</li>
-                      <li>Once approved, you'll have full access to all premium features</li>
-                      <li>Share your class code with your classmates to join</li>
+                      <li>
+                        Once approved, you'll have full access to all premium
+                        features
+                      </li>
+                      <li>
+                        Share your class code with your classmates to join
+                      </li>
                     </ul>
                   </AlertDescription>
                 </Alert>
@@ -158,8 +182,8 @@ export default function VerificationPendingPage() {
                 variant="ghost"
                 className="w-full"
                 onClick={() => {
-                  localStorage.clear();
-                  router.push('/signin');
+                  sessionStorage.clear();
+                  router.push("/signin");
                 }}
               >
                 Sign out
@@ -169,8 +193,11 @@ export default function VerificationPendingPage() {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          Need help? Contact us at{' '}
-          <a href="mailto:support@emby.com" className="underline hover:text-foreground">
+          Need help? Contact us at{" "}
+          <a
+            href="mailto:support@emby.com"
+            className="underline hover:text-foreground"
+          >
             support@emby.com
           </a>
         </p>

@@ -34,21 +34,21 @@ export function useAuth() {
         );
 
         const backendUser = res.data.user;
-        
+
         // Store token and user data
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(backendUser));
+        sessionStorage.setItem("token", res.data.token);
+        sessionStorage.setItem("user", JSON.stringify(backendUser));
         axios.defaults.headers.common["Authorization"] =
           `Bearer ${res.data.token}`;
-        
+
         // Fetch user stats
         let stats = null;
         try {
           stats = await statsApi.getMyStats();
         } catch (error) {
-          console.log('Stats not available yet:', error);
+          console.log("Stats not available yet:", error);
         }
-        
+
         dispatch(
           updateUserProfile({
             id: backendUser.id,
@@ -60,8 +60,8 @@ export function useAuth() {
             streak: stats?.current_streak || backendUser.streak || 0,
             points: stats?.points || 0,
             rank: stats?.rank || 0,
-            school: stats?.school || '',
-            setName: stats?.set_name || '',
+            school: stats?.school || "",
+            setName: stats?.set_name || "",
             subscription: backendUser.subscription || {
               status: "free",
               tier: "free",
@@ -80,14 +80,14 @@ export function useAuth() {
 
   const manualLogout = useCallback(() => {
     dispatch(logout());
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
     delete axios.defaults.headers.common["Authorization"];
   }, [dispatch]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userStr = localStorage.getItem("user");
+    const token = sessionStorage.getItem("token");
+    const userStr = sessionStorage.getItem("user");
     if (token && userStr) {
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       const backendUser: BackendUser = JSON.parse(userStr);
@@ -113,30 +113,35 @@ export function useAuth() {
       );
 
       // Refresh stats in background without blocking render
-      statsApi.getMyStats().then(stats => {
-        dispatch(
-          updateUserProfile({
-            id: backendUser.id,
-            name: backendUser.name,
-            email: backendUser.email,
-            photoUrl: backendUser.photo_url,
-            role: backendUser.role,
-            isClassRep: backendUser.is_class_rep,
-            streak: stats.current_streak,
-            points: stats.points,
-            rank: stats.rank,
-            school: stats.school,
-            setName: stats.set_name,
-            subscription: backendUser.subscription || {
-              status: "free",
-              tier: "free",
-              expiresAt: null,
-              paymentCardBrand: null,
-              paymentLast4: null,
-            },
-          }),
-        );
-      }).catch(() => {/* silently ignore, already using stored data */});
+      statsApi
+        .getMyStats()
+        .then((stats) => {
+          dispatch(
+            updateUserProfile({
+              id: backendUser.id,
+              name: backendUser.name,
+              email: backendUser.email,
+              photoUrl: backendUser.photo_url,
+              role: backendUser.role,
+              isClassRep: backendUser.is_class_rep,
+              streak: stats.current_streak,
+              points: stats.points,
+              rank: stats.rank,
+              school: stats.school,
+              setName: stats.set_name,
+              subscription: backendUser.subscription || {
+                status: "free",
+                tier: "free",
+                expiresAt: null,
+                paymentCardBrand: null,
+                paymentLast4: null,
+              },
+            }),
+          );
+        })
+        .catch(() => {
+          /* silently ignore, already using stored data */
+        });
     }
   }, [dispatch]);
 
@@ -144,6 +149,7 @@ export function useAuth() {
     login: () => login(),
     logout: manualLogout,
     user,
-    isAuthenticated: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    isAuthenticated:
+      typeof window !== "undefined" && !!sessionStorage.getItem("token"),
   };
 }

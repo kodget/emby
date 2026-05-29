@@ -7,7 +7,9 @@ import AuthGuard from "@/components/auth/auth-guard";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"account" | "password" | "notifications">("account");
+  const [activeTab, setActiveTab] = useState<
+    "account" | "password" | "notifications"
+  >("account");
   const [passwordForm, setPasswordForm] = useState({
     current_password: "",
     new_password: "",
@@ -29,20 +31,27 @@ export default function SettingsPage() {
     }
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:8000/api/accounts/change-password/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      const response = await fetch(
+        "http://localhost:8000/api/accounts/change-password/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            old_password: passwordForm.current_password,
+            new_password: passwordForm.new_password,
+          }),
         },
-        body: JSON.stringify({
-          old_password: passwordForm.current_password,
-          new_password: passwordForm.new_password,
-        }),
-      });
+      );
       if (response.ok) {
         alert("Password changed successfully");
-        setPasswordForm({ current_password: "", new_password: "", confirm_password: "" });
+        setPasswordForm({
+          current_password: "",
+          new_password: "",
+          confirm_password: "",
+        });
       } else {
         const data = await response.json();
         alert(data.error || "Failed to change password");
@@ -56,23 +65,30 @@ export default function SettingsPage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user_profile");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("refreshToken");
+    sessionStorage.removeItem("user");
     router.push("/signin");
   };
 
   const handleDeleteAccount = async () => {
-    if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete your account? This action cannot be undone.",
+      )
+    ) {
       return;
     }
     try {
-      const response = await fetch("http://localhost:8000/api/accounts/profile/", {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      const response = await fetch(
+        "http://localhost:8000/api/accounts/profile/",
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
         },
-      });
+      );
       if (response.ok) {
         alert("Account deleted successfully");
         handleLogout();
@@ -134,8 +150,12 @@ export default function SettingsPage() {
               {activeTab === "account" && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Account Management</h2>
-                    <p className="text-gray-600 mb-6">Manage your account settings and preferences</p>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                      Account Management
+                    </h2>
+                    <p className="text-gray-600 mb-6">
+                      Manage your account settings and preferences
+                    </p>
                   </div>
 
                   <div className="space-y-4">
@@ -155,9 +175,12 @@ export default function SettingsPage() {
                     </button>
 
                     <div className="pt-6 border-t">
-                      <h3 className="text-lg font-semibold text-red-600 mb-2">Danger Zone</h3>
+                      <h3 className="text-lg font-semibold text-red-600 mb-2">
+                        Danger Zone
+                      </h3>
                       <p className="text-gray-600 mb-4 text-sm">
-                        Once you delete your account, there is no going back. Please be certain.
+                        Once you delete your account, there is no going back.
+                        Please be certain.
                       </p>
                       <button
                         onClick={handleDeleteAccount}
@@ -174,40 +197,67 @@ export default function SettingsPage() {
               {/* Password Tab */}
               {activeTab === "password" && (
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Change Password</h2>
-                  <p className="text-gray-600 mb-6">Update your password to keep your account secure</p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                    Change Password
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    Update your password to keep your account secure
+                  </p>
 
                   <form onSubmit={handlePasswordChange} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Current Password
+                      </label>
                       <input
                         type="password"
                         value={passwordForm.current_password}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordForm({
+                            ...passwordForm,
+                            current_password: e.target.value,
+                          })
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        New Password
+                      </label>
                       <input
                         type="password"
                         value={passwordForm.new_password}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordForm({
+                            ...passwordForm,
+                            new_password: e.target.value,
+                          })
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         required
                         minLength={8}
                       />
-                      <p className="text-sm text-gray-500 mt-1">Must be at least 8 characters</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Must be at least 8 characters
+                      </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Confirm New Password
+                      </label>
                       <input
                         type="password"
                         value={passwordForm.confirm_password}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordForm({
+                            ...passwordForm,
+                            confirm_password: e.target.value,
+                          })
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         required
                       />
@@ -227,26 +277,60 @@ export default function SettingsPage() {
               {/* Notifications Tab */}
               {activeTab === "notifications" && (
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Notification Preferences</h2>
-                  <p className="text-gray-600 mb-6">Choose what notifications you want to receive</p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                    Notification Preferences
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    Choose what notifications you want to receive
+                  </p>
 
                   <div className="space-y-4">
                     {[
-                      { key: "email_updates", label: "Email Updates", desc: "Receive updates about new features and content" },
-                      { key: "community_activity", label: "Community Activity", desc: "Get notified about likes and comments on your posts" },
-                      { key: "study_reminders", label: "Study Reminders", desc: "Daily reminders to keep your streak going" },
-                      { key: "weekly_report", label: "Weekly Report", desc: "Weekly summary of your learning progress" },
+                      {
+                        key: "email_updates",
+                        label: "Email Updates",
+                        desc: "Receive updates about new features and content",
+                      },
+                      {
+                        key: "community_activity",
+                        label: "Community Activity",
+                        desc: "Get notified about likes and comments on your posts",
+                      },
+                      {
+                        key: "study_reminders",
+                        label: "Study Reminders",
+                        desc: "Daily reminders to keep your streak going",
+                      },
+                      {
+                        key: "weekly_report",
+                        label: "Weekly Report",
+                        desc: "Weekly summary of your learning progress",
+                      },
                     ].map((item) => (
-                      <div key={item.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div
+                        key={item.key}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      >
                         <div>
-                          <h3 className="font-semibold text-gray-900">{item.label}</h3>
+                          <h3 className="font-semibold text-gray-900">
+                            {item.label}
+                          </h3>
                           <p className="text-sm text-gray-600">{item.desc}</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={notifications[item.key as keyof typeof notifications]}
-                            onChange={(e) => setNotifications({ ...notifications, [item.key]: e.target.checked })}
+                            checked={
+                              notifications[
+                                item.key as keyof typeof notifications
+                              ]
+                            }
+                            onChange={(e) =>
+                              setNotifications({
+                                ...notifications,
+                                [item.key]: e.target.checked,
+                              })
+                            }
                             className="sr-only peer"
                           />
                           <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>

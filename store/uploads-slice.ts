@@ -19,12 +19,8 @@ export type SlideUpload = {
   setName: string;
 };
 
-// Keyed by materialId — array of base64 data-URL strings, one per page/slide
-type SlidesMap = Record<string, string[]>;
-
 type UploadsState = {
   items: SlideUpload[];
-  slides: SlidesMap;
   isModalOpen: boolean;
   targetCourseId: string | null;
   targetModuleId: string | null;
@@ -32,7 +28,6 @@ type UploadsState = {
 
 const initialState: UploadsState = {
   items: [],
-  slides: {},
   isModalOpen: false,
   targetCourseId: null,
   targetModuleId: null,
@@ -75,21 +70,9 @@ export const uploadsSlice = createSlice({
           item.pages = action.payload.pages;
       }
     },
-    // Store rendered slide images for a materialId
-    setSlidePages(
-      state,
-      action: PayloadAction<{ materialId: string; pages: string[] }>,
-    ) {
-      state.slides[action.payload.materialId] = action.payload.pages;
-    },
   },
 });
 
-export const {
-  openUploadModal,
-  closeUploadModal,
-  addUpload,
-  updateProgress,
-  setSlidePages,
-} = uploadsSlice.actions;
+export const { openUploadModal, closeUploadModal, addUpload, updateProgress } =
+  uploadsSlice.actions;
 export default uploadsSlice.reducer;

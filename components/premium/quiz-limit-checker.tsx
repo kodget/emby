@@ -31,13 +31,15 @@ export function QuizLimitChecker({ children }: { children: React.ReactNode }) {
 
   const checkQuizLimit = () => {
     const today = new Date().toDateString();
-    const stored = localStorage.getItem(STORAGE_KEY);
-    
-    let attempts: QuizAttempt = stored ? JSON.parse(stored) : { date: today, count: 0 };
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+
+    let attempts: QuizAttempt = stored
+      ? JSON.parse(stored)
+      : { date: today, count: 0 };
 
     if (attempts.date !== today) {
       attempts = { date: today, count: 0 };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(attempts));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(attempts));
     }
 
     const remaining = DAILY_QUIZ_LIMIT - attempts.count;
@@ -53,15 +55,17 @@ export function QuizLimitChecker({ children }: { children: React.ReactNode }) {
     if (hasPremium) return;
 
     const today = new Date().toDateString();
-    const stored = localStorage.getItem(STORAGE_KEY);
-    let attempts: QuizAttempt = stored ? JSON.parse(stored) : { date: today, count: 0 };
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    let attempts: QuizAttempt = stored
+      ? JSON.parse(stored)
+      : { date: today, count: 0 };
 
     if (attempts.date !== today) {
       attempts = { date: today, count: 0 };
     }
 
     attempts.count += 1;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(attempts));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(attempts));
     checkQuizLimit();
   };
 
@@ -84,8 +88,12 @@ export function QuizLimitChecker({ children }: { children: React.ReactNode }) {
               <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4">
                 <Lock className="w-10 h-10 text-white" />
               </div>
-              <h1 className="text-3xl font-bold text-white mb-2">Daily Limit Reached</h1>
-              <p className="text-orange-100">You've used all your free quiz attempts for today</p>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                Daily Limit Reached
+              </h1>
+              <p className="text-orange-100">
+                You've used all your free quiz attempts for today
+              </p>
             </div>
 
             <div className="p-8">
@@ -95,7 +103,8 @@ export function QuizLimitChecker({ children }: { children: React.ReactNode }) {
                   {DAILY_QUIZ_LIMIT} Questions Per Day (Free Tier)
                 </h2>
                 <p className="text-gray-600">
-                  Come back tomorrow for more questions, or upgrade to Premium for unlimited access
+                  Come back tomorrow for more questions, or upgrade to Premium
+                  for unlimited access
                 </p>
               </div>
 
@@ -103,22 +112,34 @@ export function QuizLimitChecker({ children }: { children: React.ReactNode }) {
                 <div className="flex items-start gap-3 p-4 bg-purple-50 rounded-lg">
                   <Crown className="w-6 h-6 text-purple-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Unlimited Quizzes</h3>
-                    <p className="text-sm text-gray-600">Take as many quizzes as you want, anytime</p>
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      Unlimited Quizzes
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Take as many quizzes as you want, anytime
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
                   <Crown className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Full Community Access</h3>
-                    <p className="text-sm text-gray-600">Create posts, like, and comment without limits</p>
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      Full Community Access
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Create posts, like, and comment without limits
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg">
                   <Crown className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Unlimited AI Usage</h3>
-                    <p className="text-sm text-gray-600">Use AI study assistant without time restrictions</p>
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      Unlimited AI Usage
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Use AI study assistant without time restrictions
+                    </p>
                   </div>
                 </div>
               </div>
@@ -148,7 +169,8 @@ export function QuizLimitChecker({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-yellow-600" />
               <p className="text-sm text-yellow-800">
-                <strong>Free Tier:</strong> {attemptsLeft} quiz question{attemptsLeft !== 1 ? "s" : ""} remaining today
+                <strong>Free Tier:</strong> {attemptsLeft} quiz question
+                {attemptsLeft !== 1 ? "s" : ""} remaining today
               </p>
             </div>
             <button

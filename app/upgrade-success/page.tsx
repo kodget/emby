@@ -1,48 +1,50 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Stethoscope, Check, Loader2, XCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { paymentApi } from '@/lib/api';
-import { useToast } from '@/hooks/use-toast';
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Stethoscope, Check, Loader2, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { paymentApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
-  const [status, setStatus] = useState<'verifying' | 'success' | 'failed'>('verifying');
+  const [status, setStatus] = useState<"verifying" | "success" | "failed">(
+    "verifying",
+  );
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const verifyPayment = async () => {
-      const reference = searchParams.get('reference');
-      
+      const reference = searchParams.get("reference");
+
       if (!reference) {
-        setStatus('failed');
+        setStatus("failed");
         return;
       }
 
       try {
         const result = await paymentApi.verifyPayment(reference);
-        
-        // Update localStorage with new user data
-        localStorage.setItem('user', JSON.stringify(result.user));
+
+        // Update sessionStorage with new user data
+        sessionStorage.setItem("user", JSON.stringify(result.user));
         setUser(result.user);
-        setStatus('success');
+        setStatus("success");
 
         toast({
-          title: 'Payment Successful!',
-          description: 'Your premium subscription is now active',
+          title: "Payment Successful!",
+          description: "Your premium subscription is now active",
         });
       } catch (error: any) {
-        setStatus('failed');
+        setStatus("failed");
         toast({
-          title: 'Payment Verification Failed',
-          description: error.response?.data?.error || 'Please contact support',
-          variant: 'destructive',
+          title: "Payment Verification Failed",
+          description: error.response?.data?.error || "Please contact support",
+          variant: "destructive",
         });
       }
     };
@@ -50,7 +52,7 @@ export default function PaymentSuccessPage() {
     verifyPayment();
   }, [searchParams, toast]);
 
-  if (status === 'verifying') {
+  if (status === "verifying") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20">
         <div className="text-center">
@@ -79,14 +81,16 @@ export default function PaymentSuccessPage() {
 
         <Card>
           <CardContent className="p-8">
-            {status === 'success' ? (
+            {status === "success" ? (
               <div className="text-center space-y-6">
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-500/10">
                   <Check className="h-10 w-10 text-green-500" />
                 </div>
 
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">Payment Successful!</h1>
+                  <h1 className="text-3xl font-bold mb-2">
+                    Payment Successful!
+                  </h1>
                   <p className="text-muted-foreground">
                     Your premium subscription is now active
                   </p>
@@ -105,7 +109,9 @@ export default function PaymentSuccessPage() {
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Expires</span>
                       <span className="font-medium">
-                        {new Date(user.subscription_expires_at).toLocaleDateString()}
+                        {new Date(
+                          user.subscription_expires_at,
+                        ).toLocaleDateString()}
                       </span>
                     </div>
                   )}
@@ -138,7 +144,7 @@ export default function PaymentSuccessPage() {
                 <Button
                   className="w-full"
                   size="lg"
-                  onClick={() => router.push('/dashboard')}
+                  onClick={() => router.push("/dashboard")}
                 >
                   Go to Dashboard
                 </Button>
@@ -157,29 +163,32 @@ export default function PaymentSuccessPage() {
                 </div>
 
                 <p className="text-sm text-muted-foreground">
-                  If you were charged, please contact support with your transaction reference.
-                  We'll resolve this as soon as possible.
+                  If you were charged, please contact support with your
+                  transaction reference. We'll resolve this as soon as possible.
                 </p>
 
                 <div className="space-y-2">
                   <Button
                     className="w-full"
-                    onClick={() => router.push('/payment')}
+                    onClick={() => router.push("/payment")}
                   >
                     Try Again
                   </Button>
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => router.push('/dashboard')}
+                    onClick={() => router.push("/dashboard")}
                   >
                     Go to Dashboard
                   </Button>
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Need help?{' '}
-                  <a href="mailto:support@emby.com" className="underline hover:text-foreground">
+                  Need help?{" "}
+                  <a
+                    href="mailto:support@emby.com"
+                    className="underline hover:text-foreground"
+                  >
                     Contact Support
                   </a>
                 </p>

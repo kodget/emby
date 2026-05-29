@@ -1,30 +1,37 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Stethoscope, Mail, Lock, User, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { GoogleLoginButton } from '@/components/auth/google-login-button';
-import { authApi } from '@/lib/api';
-import { useToast } from '@/hooks/use-toast';
-import { isAuthenticated, getRedirectPath } from '@/lib/guards';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Stethoscope, Mail, Lock, User, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { GoogleLoginButton } from "@/components/auth/google-login-button";
+import { authApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { isAuthenticated, getRedirectPath } from "@/lib/guards";
 
 export default function SignUpPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [checking, setChecking] = useState(true);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    first_name: '',
-    last_name: '',
+    email: "",
+    password: "",
+    first_name: "",
+    last_name: "",
   });
 
   // Auto-redirect if already authenticated
@@ -39,49 +46,54 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       const response = await authApi.signup(formData);
-      
-      localStorage.setItem('token', response.tokens.access);
-      localStorage.setItem('refreshToken', response.tokens.refresh);
-      localStorage.setItem('user', JSON.stringify(response.user));
+
+      sessionStorage.setItem("token", response.tokens.access);
+      sessionStorage.setItem("refreshToken", response.tokens.refresh);
+      sessionStorage.setItem("user", JSON.stringify(response.user));
 
       toast({
-        title: 'Account created!',
-        description: 'Please check your email to verify your account.',
+        title: "Account created!",
+        description: "Please check your email to verify your account.",
       });
 
-      router.push('/onboarding');
+      router.push("/onboarding");
     } catch (err: any) {
-      const errorMessage = err.response?.data?.email?.[0] || 
-                          err.response?.data?.password?.[0] ||
-                          err.response?.data?.error || 
-                          'Signup failed. Please try again.';
+      const errorMessage =
+        err.response?.data?.email?.[0] ||
+        err.response?.data?.password?.[0] ||
+        err.response?.data?.error ||
+        "Signup failed. Please try again.";
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSuccess = async (user: any, tokens: any, isNewUser: boolean) => {
-    localStorage.setItem('token', tokens.access);
-    localStorage.setItem('refreshToken', tokens.refresh);
-    localStorage.setItem('user', JSON.stringify(user));
+  const handleGoogleSuccess = async (
+    user: any,
+    tokens: any,
+    isNewUser: boolean,
+  ) => {
+    sessionStorage.setItem("token", tokens.access);
+    sessionStorage.setItem("refreshToken", tokens.refresh);
+    sessionStorage.setItem("user", JSON.stringify(user));
 
     toast({
-      title: isNewUser ? 'Account created!' : 'Welcome back!',
-      description: 'Signed in with Google successfully',
+      title: isNewUser ? "Account created!" : "Welcome back!",
+      description: "Signed in with Google successfully",
     });
 
     if (!user.onboarding_completed) {
-      router.push('/onboarding');
-    } else if (user.role === 'class_head' && !user.class_head_verified) {
-      router.push('/verification-pending');
+      router.push("/onboarding");
+    } else if (user.role === "class_head" && !user.class_head_verified) {
+      router.push("/verification-pending");
     } else {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   };
 
@@ -134,7 +146,9 @@ export default function SignUpPage() {
                     id="first_name"
                     placeholder="John"
                     value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, first_name: e.target.value })
+                    }
                     required
                     disabled={loading}
                   />
@@ -145,7 +159,9 @@ export default function SignUpPage() {
                     id="last_name"
                     placeholder="Doe"
                     value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, last_name: e.target.value })
+                    }
                     required
                     disabled={loading}
                   />
@@ -162,7 +178,9 @@ export default function SignUpPage() {
                     placeholder="you@example.com"
                     className="pl-10"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     required
                     disabled={loading}
                   />
@@ -179,7 +197,9 @@ export default function SignUpPage() {
                     placeholder="••••••••"
                     className="pl-10"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                     required
                     disabled={loading}
                     minLength={8}
@@ -211,8 +231,11 @@ export default function SignUpPage() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-2">
             <div className="text-sm text-center text-muted-foreground">
-              Already have an account?{' '}
-              <Link href="/signin" className="text-primary hover:underline font-medium">
+              Already have an account?{" "}
+              <Link
+                href="/signin"
+                className="text-primary hover:underline font-medium"
+              >
                 Sign in
               </Link>
             </div>
@@ -220,11 +243,11 @@ export default function SignUpPage() {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          By creating an account, you agree to our{' '}
+          By creating an account, you agree to our{" "}
           <Link href="/terms" className="underline hover:text-foreground">
             Terms of Service
-          </Link>{' '}
-          and{' '}
+          </Link>{" "}
+          and{" "}
           <Link href="/privacy" className="underline hover:text-foreground">
             Privacy Policy
           </Link>

@@ -18,8 +18,18 @@ export default function CourseMaterialsPage() {
   const pathSegments = params.slug as string[];
   const subjectId = pathSegments[0];
   const blockId = pathSegments[1];
-  const topicId = pathSegments[2];
-  const sectionId = pathSegments[3] || pathSegments[2];
+
+  // Determine the structure based on path length
+  // Length 2: subject/block
+  // Length 3: subject/block/section (block has sections directly)
+  // Length 4: subject/block/topic/section (block has topics with sections)
+  const topicId = pathSegments.length === 4 ? pathSegments[2] : undefined;
+  const sectionId =
+    pathSegments.length === 4
+      ? pathSegments[3]
+      : pathSegments.length === 3
+        ? pathSegments[2]
+        : undefined;
 
   useEffect(() => {
     loadMaterials();
@@ -28,34 +38,43 @@ export default function CourseMaterialsPage() {
   const loadMaterials = async () => {
     try {
       const filters: any = { subject: subjectId, block: blockId };
-      
-      if (pathSegments.length === 4) {
-        // Has topic and section
+
+      // Add topic filter if present (4-segment path)
+      if (topicId) {
         filters.topic = topicId;
-        filters.section = sectionId;
-      } else if (pathSegments.length === 3) {
-        // Has section only
+      }
+
+      // Add section filter if present (3 or 4-segment path)
+      if (sectionId) {
         filters.section = sectionId;
       }
-      // If pathSegments.length === 2, only filter by subject and block
 
-      console.log('Loading materials with filters:', filters);
-      console.log('Path segments:', pathSegments);
-      console.log('Subject:', subjectId, 'Block:', blockId, 'Section:', sectionId);
+      console.log("Loading materials with filters:", filters);
+      console.log("Path segments:", pathSegments);
+      console.log(
+        "Subject:",
+        subjectId,
+        "Block:",
+        blockId,
+        "Topic:",
+        topicId,
+        "Section:",
+        sectionId,
+      );
 
       const [slidesData, materialsData] = await Promise.all([
         curriculumApi.getSlides(filters).catch((err) => {
-          console.error('Failed to load slides:', err);
+          console.error("Failed to load slides:", err);
           return [];
         }),
         curriculumApi.getMaterials(filters).catch((err) => {
-          console.error('Failed to load materials:', err);
+          console.error("Failed to load materials:", err);
           return [];
         }),
       ]);
 
-      console.log('Loaded slides:', slidesData);
-      console.log('Loaded materials:', materialsData);
+      console.log("Loaded slides:", slidesData);
+      console.log("Loaded materials:", materialsData);
 
       setSlides(slidesData);
       setMaterials(materialsData);
@@ -134,7 +153,8 @@ export default function CourseMaterialsPage() {
                           {slide.title}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {slide.file_type.toUpperCase()} • {slide.page_count} pages
+                          {slide.file_type.toUpperCase()} • {slide.page_count}{" "}
+                          pages
                         </p>
                       </div>
                     </div>

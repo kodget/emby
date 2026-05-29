@@ -2,12 +2,12 @@ import { UserProfile } from "./api";
 
 export const isAuthenticated = (): boolean => {
   if (typeof window === "undefined") return false;
-  return !!localStorage.getItem("token");
+  return !!sessionStorage.getItem("token");
 };
 
 export const getStoredProfile = (): UserProfile | null => {
   if (typeof window === "undefined") return null;
-  const profile = localStorage.getItem("user");
+  const profile = sessionStorage.getItem("user");
   return profile ? JSON.parse(profile) : null;
 };
 
@@ -33,7 +33,10 @@ export const canAccessApp = (): boolean => {
 
 export const isPremium = (): boolean => {
   const profile = getStoredProfile();
-  return profile?.subscription_tier === "premium" || profile?.subscription_tier === "class_head";
+  return (
+    profile?.subscription_tier === "premium" ||
+    profile?.subscription_tier === "class_head"
+  );
 };
 
 export const isClassHead = (): boolean => {
@@ -90,7 +93,18 @@ export const getRedirectPath = (): string => {
   return "/dashboard";
 };
 
-export const checkFeatureAccess = (feature: "premium" | "class_head" | "create_posts" | "upload_materials" | "manage_class" | "engage_community" | "steeplechase" | "unlimited_ai" | "unlimited_quiz"): boolean => {
+export const checkFeatureAccess = (
+  feature:
+    | "premium"
+    | "class_head"
+    | "create_posts"
+    | "upload_materials"
+    | "manage_class"
+    | "engage_community"
+    | "steeplechase"
+    | "unlimited_ai"
+    | "unlimited_quiz",
+): boolean => {
   const profile = getStoredProfile();
   if (!profile) return false;
 

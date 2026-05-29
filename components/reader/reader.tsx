@@ -20,12 +20,8 @@ import { progressApi, statsApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { ReaderContent, type SelectionPayload } from "./reader-content";
 import { AiPanel, type Message, type YoutubeSuggestion } from "./ai-panel";
-import {
-  useSlidePages,
-  useCanUpload,
-  useAppDispatch,
-  useAppSelector,
-} from "@/store/hooks";
+import { TextbookPanel, VideosPanel, QuizPanel } from "./ai-panels";
+import { useCanUpload, useAppDispatch, useAppSelector } from "@/store/hooks";
 import { openUploadModal } from "@/store/uploads-slice";
 import { incrementUsage } from "@/store/user-slice";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
@@ -37,11 +33,13 @@ export function Reader({
   courseId,
   slide,
   slideContent,
+  suggestedVideos,
   courseBreadcrumb,
 }: {
   courseId: string;
   slide: Slide;
   slideContent: any;
+  suggestedVideos?: any[];
   courseBreadcrumb: string;
 }) {
   const [panelOpen, setPanelOpen] = useState(true);
@@ -50,54 +48,67 @@ export function Reader({
   const [currentPage, setCurrentPage] = useState(1);
   const [timeSpent, setTimeSpent] = useState(0);
   const startTimeRef = useRef<number>(Date.now());
-  
+
   const safeBreadcrumb = courseBreadcrumb ?? "";
   const isAnatomy = safeBreadcrumb.toLowerCase().includes("anatomy");
-  const slidePages = useSlidePages(slide.id);
   const { hasAccess, isPremium, isTrial } = useFeatureAccess();
   const usage = useAppSelector((s) => s.user.usage);
+  const user = useAppSelector((s) => s.user);
   const dispatch = useAppDispatch();
-  const hasUnlimitedAI = hasAccess("unlimited_ai_explanations");
-  
+
+  // Fix: Class heads should have premium access
+  const isClassHead = user.role === "class-rep" || user.isClassRep;
+  const hasPremiumAccess = isPremium || isTrial || isClassHead;
+  const hasUnlimitedAI =
+    hasAccess("unlimited_ai_explanations") || hasPremiumAccess;
+
   // Track time spent and update progress
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
       const elapsed = Math.floor((now - startTimeRef.current) / 60000); // minutes
       if (elapsed > 0) {
-        setTimeSpent(prev => prev + elapsed);
+        setTimeSpent((prev) => prev + elapsed);
         startTimeRef.current = now;
       }
     }, 60000); // Check every minute
-    
+
     return () => clearInterval(interval);
   }, []);
-  
+
   // Update progress when page changes or component unmounts
   useEffect(() => {
     return () => {
       // Save progress on unmount
-      const totalTime = timeSpent + Math.floor((Date.now() - startTimeRef.current) / 60000);
+      const totalTime =
+        timeSpent + Math.floor((Date.now() - startTimeRef.current) / 60000);
       if (totalTime > 0) {
-        progressApi.updateProgress({
-          slide_id: slide.id,
-          current_page: currentPage,
-          total_pages: slide.page_count,
-          time_spent_minutes: totalTime,
-        }).catch(err => console.log('Progress save failed:', err));
-        
+        progressApi
+          .updateProgress({
+            slide_id: slide.id,
+            current_page: currentPage,
+            total_pages: slide.page_count,
+            time_spent_minutes: totalTime,
+          })
+          .catch((err) => console.log("Progress save failed:", err));
+
         // Award points for reading
-        statsApi.awardPoints(5, 'Reading slide').catch(err => console.log('Points award failed:', err));
-        
+        statsApi
+          .awardPoints(5, "Reading slide")
+          .catch((err) => console.log("Points award failed:", err));
+
         // Update streak
-        statsApi.updateStreak().catch(err => console.log('Streak update failed:', err));
+        statsApi
+          .updateStreak()
+          .catch((err) => console.log("Streak update failed:", err));
       }
     };
   }, [slide.id, currentPage, timeSpent]);
-  
+
   const handlePageChange = async (newPage: number) => {
     // Save current progress
-    const totalTime = timeSpent + Math.floor((Date.now() - startTimeRef.current) / 60000);
+    const totalTime =
+      timeSpent + Math.floor((Date.now() - startTimeRef.current) / 60000);
     if (totalTime > 0) {
       try {
         await progressApi.updateProgress({
@@ -107,12 +118,13 @@ export function Reader({
           time_spent_minutes: totalTime,
         });
       } catch (error) {
-        console.log('Progress update failed:', error);
+        console.log("Progress update failed:", error);
       }
     }
     setCurrentPage(newPage);
     startTimeRef.current = Date.now();
   };
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "seed",
@@ -123,7 +135,7 @@ export function Reader({
     },
   ]);
 
-  // Mock AI response generator keyed off highlighted phrases
+  // Mock AI response generator keyed off highlighted phrases (only for Emby panel)
   const askAboutSelection = (text: string) => {
     if (!hasUnlimitedAI && usage.aiQuestionsUsed >= 5) {
       alert(
@@ -136,7 +148,7 @@ export function Reader({
     const userMsg: Message = {
       id: `u-${Date.now()}`,
       role: "user",
-      content: `Explain: “${text.length > 140 ? text.slice(0, 140) + "…" : text}”`,
+      content: `Explain: "${text.length > 140 ? text.slice(0, 140) + "…" : text}"`,
     };
     setMessages((m) => [...m, userMsg]);
     const lower = text.toLowerCase();
@@ -199,8 +211,8 @@ export function Reader({
       <div className="flex flex-1 min-h-0">
         <div
           className={cn(
-            "flex-1 min-w-0 overflow-y-auto border-r border-border transition-[padding]",
-            panelOpen ? "lg:pr-0" : "",
+            "flex-1 min-w-0 overflow-y-auto border-r border-border transition-[margin]",
+            panelOpen ? "lg:mr-[400px]" : "",
           )}
         >
           <div className="mx-auto max-w-3xl px-6 py-10">
@@ -210,7 +222,6 @@ export function Reader({
               onSelect={setSelection}
               onExplain={askAboutSelection}
               fallbackTitle={slide.title}
-              slidePages={slidePages}
             />
 
             <ReaderPager pages={slide.pages} current={1} />
@@ -218,7 +229,7 @@ export function Reader({
         </div>
 
         {panelOpen && (
-          <aside className="hidden w-[400px] shrink-0 flex-col border-l border-border bg-card lg:flex">
+          <aside className="hidden w-[400px] shrink-0 flex-col border-l border-border bg-card lg:flex h-[calc(100vh-4rem)] fixed right-0 top-[4rem]">
             <PanelTabs tab={tab} onChange={setTab} />
             <div className="flex-1 min-h-0 overflow-y-auto">
               {tab === "ai" &&
@@ -249,14 +260,42 @@ export function Reader({
                     />
                   </div>
                 ))}
-              {tab === "textbook" && <TextbookPanel />}
-              {tab === "videos" && (
-                <VideosPanel
-                  selection={selection?.text ?? null}
-                  isAnatomy={isAnatomy}
-                />
-              )}
-              {tab === "quiz" && <QuizPanel />}
+              {tab === "textbook" &&
+                (hasPremiumAccess ? (
+                  <TextbookPanel slideId={slide.id} />
+                ) : (
+                  <div className="p-4">
+                    <UpgradePrompt
+                      feature="Textbook Suggestions"
+                      description="Get AI-powered textbook recommendations based on what you're reading"
+                    />
+                  </div>
+                ))}
+              {tab === "videos" &&
+                (hasPremiumAccess ? (
+                  <VideosPanel
+                    slideId={slide.id}
+                    selection={selection?.text ?? null}
+                  />
+                ) : (
+                  <div className="p-4">
+                    <UpgradePrompt
+                      feature="Video Suggestions"
+                      description="Get AI-curated educational videos related to your current slide"
+                    />
+                  </div>
+                ))}
+              {tab === "quiz" &&
+                (hasPremiumAccess ? (
+                  <QuizPanel slideId={slide.id} />
+                ) : (
+                  <div className="p-4">
+                    <UpgradePrompt
+                      feature="Auto-Generated Quizzes"
+                      description="Get 20 MCQs automatically generated from your current slide"
+                    />
+                  </div>
+                ))}
             </div>
           </aside>
         )}
@@ -297,8 +336,6 @@ function ReaderToolbar({
   panelOpen: boolean;
   onTogglePanel: () => void;
 }) {
-  const canUpload = useCanUpload();
-  const dispatch = useAppDispatch();
   return (
     <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/90 px-4 py-2.5 backdrop-blur-md sm:px-6">
       <Link
@@ -314,18 +351,6 @@ function ReaderToolbar({
         {slideTitle}
       </p>
       <div className="ml-auto flex items-center gap-2">
-        {canUpload && (
-          <button
-            type="button"
-            onClick={() =>
-              dispatch(openUploadModal({ courseId, moduleId: courseId }))
-            }
-            className="hidden items-center gap-1.5 rounded-full border border-dashed border-primary/50 bg-primary/5 px-3 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors md:inline-flex"
-          >
-            <BookOpenText className="size-3.5" aria-hidden="true" />
-            Upload slides / past questions
-          </button>
-        )}
         <span className="hidden items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary md:inline-flex">
           <Sparkles className="size-3.5" aria-hidden="true" />
           Emby tutor
@@ -522,207 +547,7 @@ function PremiumPromo() {
   );
 }
 
-function TextbookPanel() {
-  return (
-    <div className="p-5">
-      <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3">
-        <div className="flex size-14 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <BookOpenText className="size-5" aria-hidden="true" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-            Recommended textbook
-          </p>
-          <p className="font-serif text-base leading-tight">
-            Moore&apos;s Clinically Oriented Anatomy, 9e
-          </p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Chapter 3, Upper Limb
-          </p>
-        </div>
-      </div>
-
-      <article className="mt-5 space-y-3 text-sm leading-relaxed">
-        <h3 className="font-serif text-lg">Axilla (Armpit)</h3>
-        <p className="text-muted-foreground">
-          The axilla is the pyramidal space between the thoracic wall and upper
-          limb. Its shape and size vary with the position of the limb. It has an
-          apex, a base, and four walls, three of which are muscular.
-        </p>
-        <p className="text-muted-foreground">
-          The axilla provides passage for structures serving the upper limb. The
-          axillary sheath is a tubular sleeve of areolar tissue that encloses
-          the axillary vessels and brachial plexus…
-        </p>
-        <p className="italic text-muted-foreground">Page 726, Figure 3.40</p>
-      </article>
-    </div>
-  );
-}
-
-function VideosPanel({
-  selection,
-  isAnatomy,
-}: {
-  selection: string | null;
-  isAnatomy: boolean;
-}) {
-  const anatomyVideos = [
-    {
-      title: "Axilla: Boundaries & Contents (Acland's Video Atlas)",
-      channel: "Acland's Anatomy",
-      length: "6:42",
-      dissection: true,
-    },
-    {
-      title: "Long Thoracic Nerve, Real Cadaver Dissection",
-      channel: "Kenhub",
-      length: "4:12",
-      dissection: true,
-    },
-    {
-      title: "Brachial Plexus in 10 Minutes",
-      channel: "Armando Hasudungan",
-      length: "10:15",
-      dissection: false,
-    },
-  ];
-
-  const generalVideos = [
-    {
-      title: "Glycolysis, Step by Step with Enzymes",
-      channel: "Ninja Nerd",
-      length: "18:24",
-      dissection: false,
-    },
-    {
-      title: "PFK-1 Regulation in 5 Minutes",
-      channel: "Osmosis",
-      length: "5:02",
-      dissection: false,
-    },
-    {
-      title: "Net ATP Yield, Glycolysis vs Krebs",
-      channel: "Armando Hasudungan",
-      length: "7:48",
-      dissection: false,
-    },
-  ];
-
-  const videos = isAnatomy ? anatomyVideos : generalVideos;
-
-  return (
-    <div className="p-5">
-      <p className="text-[11px] font-medium uppercase tracking-widest text-accent">
-        Tailored videos
-      </p>
-      <h3 className="mt-1 font-serif text-xl">
-        {selection ? "Based on your highlight" : "For this page"}
-      </h3>
-      {selection && (
-        <p className="mt-1 line-clamp-2 text-[12px] italic text-muted-foreground">
-          “{selection}”
-        </p>
-      )}
-
-      <ul className="mt-4 space-y-3">
-        {videos.map((v) => (
-          <li key={v.title}>
-            <button
-              type="button"
-              className="flex w-full gap-3 rounded-2xl border border-border bg-background p-3 text-left hover:border-primary/40"
-            >
-              <div className="relative flex size-20 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                <Play className="size-5" aria-hidden="true" />
-                <span className="absolute bottom-1 right-1 rounded bg-foreground/80 px-1 py-0.5 text-[10px] font-medium text-background">
-                  {v.length}
-                </span>
-              </div>
-              <div className="min-w-0">
-                <p className="line-clamp-2 text-sm font-medium">{v.title}</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  {v.channel}
-                </p>
-                {v.dissection && (
-                  <span className="mt-1.5 inline-flex rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">
-                    Real dissection
-                  </span>
-                )}
-              </div>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function QuizPanel() {
-  return (
-    <div className="p-5">
-      <p className="text-[11px] font-medium uppercase tracking-widest text-primary">
-        Generated from this page
-      </p>
-      <h3 className="mt-1 font-serif text-xl">Quiz yourself in 60 seconds</h3>
-
-      <ol className="mt-4 space-y-4 text-sm">
-        <li className="rounded-2xl border border-border bg-background p-4">
-          <p className="font-medium">
-            1. Which structure forms the lateral wall of the axilla?
-          </p>
-          <ul className="mt-2 space-y-1.5 text-muted-foreground">
-            {[
-              "Pectoralis major",
-              "Serratus anterior",
-              "Intertubercular groove of humerus",
-              "Latissimus dorsi",
-            ].map((opt, i) => (
-              <li
-                key={i}
-                className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 hover:border-primary"
-              >
-                <span className="size-5 shrink-0 rounded-full border border-border text-[10px] leading-[1.2rem] text-center font-semibold text-foreground">
-                  {String.fromCharCode(65 + i)}
-                </span>
-                {opt}
-              </li>
-            ))}
-          </ul>
-        </li>
-        <li className="rounded-2xl border border-border bg-background p-4">
-          <p className="font-medium">
-            2. Injury to the long thoracic nerve causes:
-          </p>
-          <ul className="mt-2 space-y-1.5 text-muted-foreground">
-            {["Wrist drop", "Claw hand", "Winged scapula", "Erb's palsy"].map(
-              (opt, i) => (
-                <li
-                  key={i}
-                  className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 hover:border-primary"
-                >
-                  <span className="size-5 shrink-0 rounded-full border border-border text-[10px] leading-[1.2rem] text-center font-semibold text-foreground">
-                    {String.fromCharCode(65 + i)}
-                  </span>
-                  {opt}
-                </li>
-              ),
-            )}
-          </ul>
-        </li>
-      </ol>
-
-      <Link
-        href="/quiz/axilla-mcq"
-        className="mt-5 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-primary text-sm font-medium text-primary-foreground hover:opacity-90"
-      >
-        <Highlighter className="size-4" aria-hidden="true" />
-        Take the full 5-question quiz
-      </Link>
-    </div>
-  );
-}
-
-// ---------------- Mock AI ----------------
+// ---------------- Mock AI for Emby Panel Only ----------------
 
 function generateAiAnswer(
   input: string,
@@ -768,45 +593,6 @@ function generateAiAnswer(
         channel: "Acland's Anatomy",
         length: "8:05",
         isDissection: true,
-      },
-    };
-  }
-  if (/hand|thenar|hypothenar|intrinsic/.test(input)) {
-    return {
-      content:
-        "You&apos;re not alone in finding the hand tricky, it has a lot of small muscles in a tiny space.\n\nThe thenar eminence (the bump at the base of your thumb) is made of abductor pollicis brevis, flexor pollicis brevis, and opponens pollicis, all supplied by the recurrent branch of the median nerve. The hypothenar eminence mirrors this on the little-finger side, supplied by the ulnar nerve. Almost every other intrinsic muscle of the hand is ulnar, which is why ulnar nerve injury gives the classic claw hand appearance.",
-      sources: ["Moore's 9e · p. 780"],
-      youtube: {
-        title: "Intrinsic Muscles of the Hand, Cadaveric Dissection",
-        channel: "Kenhub",
-        length: "7:20",
-        isDissection: true,
-      },
-    };
-  }
-  if (/glycolysis|pfk|phosphofructokinase|hexokinase/.test(input)) {
-    return {
-      content:
-        "This is one of those topics that feels huge until you pin down the three regulated enzymes, then it gets a lot friendlier.\n\nPFK-1 is the rate-limiting enzyme of glycolysis. It&apos;s switched on by AMP and fructose-2,6-bisphosphate (think: the cell is low on energy, run glycolysis), and switched off by ATP and citrate (think: the cell already has plenty of energy). Net yield per glucose is 2 ATP and 2 NADH. The other regulated enzymes to remember are hexokinase/glucokinase at the start, and pyruvate kinase at the end.",
-      sources: ["Lippincott Illustrated Reviews: Biochemistry, 8e · Ch. 8"],
-      youtube: {
-        title: "Glycolysis Explained Simply (with PFK-1 Regulation)",
-        channel: "Ninja Nerd",
-        length: "18:24",
-        isDissection: false,
-      },
-    };
-  }
-  if (/cardiac cycle|wiggers|isovolumetric|ventricle/.test(input)) {
-    return {
-      content:
-        "Cardiac cycle is honestly one of the prettier topics once the Wiggers diagram clicks. Let&apos;s ease into it.\n\nDuring isovolumetric contraction, every valve is closed. The ventricles squeeze harder and harder without changing volume, so only the pressure rises. The moment ventricular pressure exceeds aortic (or pulmonary) pressure, the semilunar valves open and ejection begins. That little closed-valve phase is why the pressure curve shoots up almost vertically on the Wiggers diagram.",
-      sources: ["Guyton & Hall Physiology, 14e · Ch. 9"],
-      youtube: {
-        title: "Cardiac Cycle and Wiggers Diagram Explained Clearly",
-        channel: "Armando Hasudungan",
-        length: "12:08",
-        isDissection: false,
       },
     };
   }

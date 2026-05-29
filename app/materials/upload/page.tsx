@@ -6,7 +6,14 @@ import { curriculumApi, authApi } from "@/lib/api";
 import { Subject, Block, Topic, Section, UserProfile } from "@/lib/api";
 import AuthGuard from "@/components/auth/auth-guard";
 import { canUploadMaterials } from "@/lib/guards";
-import { Upload, FileText, CheckCircle, XCircle, Loader, ArrowLeft } from "lucide-react";
+import {
+  Upload,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Loader,
+  ArrowLeft,
+} from "lucide-react";
 
 export default function MaterialUploadPage() {
   const router = useRouter();
@@ -16,12 +23,22 @@ export default function MaterialUploadPage() {
   const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "uploading" | "success" | "error"
+  >("idle");
   const [uploadType, setUploadType] = useState<"slide" | "material">("slide");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    materialType: "" as "pdf" | "pptx" | "docx" | "video" | "image" | "past_question" | "other" | "",
+    materialType: "" as
+      | "pdf"
+      | "pptx"
+      | "docx"
+      | "video"
+      | "image"
+      | "past_question"
+      | "other"
+      | "",
     linkUrl: "",
     subject: "",
     block: "",
@@ -47,24 +64,26 @@ export default function MaterialUploadPage() {
 
   const loadData = async () => {
     try {
-      console.log('Loading profile...');
+      console.log("Loading profile...");
       const profileData = await authApi.getProfile();
-      console.log('Profile loaded:', profileData);
+      console.log("Profile loaded:", profileData);
       setProfile(profileData);
 
       if (!canUploadMaterials()) {
-        console.log('User cannot upload materials, redirecting...');
+        console.log("User cannot upload materials, redirecting...");
         router.push("/dashboard");
         return;
       }
 
-      console.log('Fetching subjects from API...');
+      console.log("Fetching subjects from API...");
       const subjectsData = await curriculumApi.getSubjects();
-      console.log('Subjects loaded:', subjectsData);
+      console.log("Subjects loaded:", subjectsData);
       setSubjects(subjectsData);
     } catch (error) {
       console.error("Failed to load data:", error);
-      alert(`Failed to load data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `Failed to load data: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -75,7 +94,7 @@ export default function MaterialUploadPage() {
       const blocksData = await curriculumApi.getBlocks(subjectId);
       setBlocks(blocksData);
       setSections([]);
-      setFormData(prev => ({ ...prev, block: "", section: "" }));
+      setFormData((prev) => ({ ...prev, block: "", section: "" }));
     } catch (error) {
       console.error("Failed to load blocks:", error);
     }
@@ -85,7 +104,7 @@ export default function MaterialUploadPage() {
     try {
       const sectionsData = await curriculumApi.getSections({ block: blockId });
       setSections(sectionsData);
-      setFormData(prev => ({ ...prev, section: "" }));
+      setFormData((prev) => ({ ...prev, section: "" }));
     } catch (error) {
       console.error("Failed to load sections:", error);
     }
@@ -98,19 +117,22 @@ export default function MaterialUploadPage() {
         alert("File size must be less than 100MB");
         return;
       }
-      setFormData(prev => ({ ...prev, file }));
-      
+      setFormData((prev) => ({ ...prev, file }));
+
       // Auto-detect file type
-      const ext = file.name.split('.').pop()?.toLowerCase();
-      if (ext === 'pdf') setFormData(prev => ({ ...prev, materialType: 'pdf' }));
-      else if (ext === 'pptx' || ext === 'ppt') setFormData(prev => ({ ...prev, materialType: 'pptx' }));
-      else if (ext === 'docx' || ext === 'doc') setFormData(prev => ({ ...prev, materialType: 'docx' }));
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      if (ext === "pdf")
+        setFormData((prev) => ({ ...prev, materialType: "pdf" }));
+      else if (ext === "pptx" || ext === "ppt")
+        setFormData((prev) => ({ ...prev, materialType: "pptx" }));
+      else if (ext === "docx" || ext === "doc")
+        setFormData((prev) => ({ ...prev, materialType: "docx" }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.file && !formData.linkUrl) {
       alert("Please select a file or enter a link");
       return;
@@ -131,27 +153,37 @@ export default function MaterialUploadPage() {
       if (formData.file) {
         const uploadFormData = new FormData();
         uploadFormData.append("file", formData.file);
-        uploadFormData.append("type", uploadType === "slide" ? "slides" : "materials");
+        uploadFormData.append(
+          "type",
+          uploadType === "slide" ? "slides" : "materials",
+        );
 
-        console.log('Uploading file to Cloudinary...');
-        const uploadResponse = await fetch("http://localhost:8000/api/upload/", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+        console.log("Uploading file to Cloudinary...");
+        const uploadResponse = await fetch(
+          "http://localhost:8000/api/upload/",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+            },
+            body: uploadFormData,
           },
-          body: uploadFormData,
-        });
+        );
 
         if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json().catch(() => ({ error: 'Upload failed' }));
-          console.error('Upload error:', errorData);
-          throw new Error(errorData.error || "Failed to upload file to Cloudinary");
+          const errorData = await uploadResponse
+            .json()
+            .catch(() => ({ error: "Upload failed" }));
+          console.error("Upload error:", errorData);
+          throw new Error(
+            errorData.error || "Failed to upload file to Cloudinary",
+          );
         }
 
         const uploadData = await uploadResponse.json();
-        console.log('File uploaded successfully:', uploadData);
+        console.log("File uploaded successfully:", uploadData);
         fileUrl = uploadData.url;
-        
+
         if (!fileUrl) {
           throw new Error("No file URL returned from upload");
         }
@@ -161,7 +193,7 @@ export default function MaterialUploadPage() {
         throw new Error("No file URL available");
       }
 
-      console.log('Creating record with file URL:', fileUrl);
+      console.log("Creating record with file URL:", fileUrl);
 
       if (uploadType === "slide") {
         // Create slide (for PDF/PPT/DOCX only)
@@ -174,10 +206,10 @@ export default function MaterialUploadPage() {
           file_type: formData.materialType,
           page_count: 0, // Will be updated after processing
         };
-        
-        console.log('Creating slide with data:', slideData);
+
+        console.log("Creating slide with data:", slideData);
         const createdSlide = await curriculumApi.createSlide(slideData);
-        console.log('Slide created successfully:', createdSlide);
+        console.log("Slide created successfully:", createdSlide);
       } else {
         // Create material (for other types)
         const materialData = {
@@ -190,10 +222,11 @@ export default function MaterialUploadPage() {
           file_url: fileUrl,
           file_size: formData.file?.size || 0,
         };
-        
-        console.log('Creating material with data:', materialData);
-        const createdMaterial = await curriculumApi.createMaterial(materialData);
-        console.log('Material created successfully:', createdMaterial);
+
+        console.log("Creating material with data:", materialData);
+        const createdMaterial =
+          await curriculumApi.createMaterial(materialData);
+        console.log("Material created successfully:", createdMaterial);
       }
 
       setUploadStatus("success");
@@ -202,7 +235,11 @@ export default function MaterialUploadPage() {
       }, 1500);
     } catch (error) {
       console.error("Failed to upload:", error);
-      alert(error instanceof Error ? error.message : "Upload failed. Please try again.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Upload failed. Please try again.",
+      );
       setUploadStatus("error");
       setTimeout(() => setUploadStatus("idle"), 3000);
     } finally {
@@ -236,8 +273,12 @@ export default function MaterialUploadPage() {
               <ArrowLeft className="w-6 h-6 text-gray-600" />
             </button>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">Upload Content</h1>
-              <p className="text-gray-600">Share slides and materials with your class</p>
+              <h1 className="text-4xl font-bold text-gray-900">
+                Upload Content
+              </h1>
+              <p className="text-gray-600">
+                Share slides and materials with your class
+              </p>
             </div>
           </div>
 
@@ -247,7 +288,8 @@ export default function MaterialUploadPage() {
               {/* Upload Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  What are you uploading? <span className="text-red-500">*</span>
+                  What are you uploading?{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   <button
@@ -261,7 +303,9 @@ export default function MaterialUploadPage() {
                   >
                     <div className="text-3xl mb-2">📄</div>
                     <div className="font-semibold text-gray-900">Slide</div>
-                    <div className="text-xs text-gray-600">PDF/PPT/DOCX for reading</div>
+                    <div className="text-xs text-gray-600">
+                      PDF/PPT/DOCX for reading
+                    </div>
                   </button>
                   <button
                     type="button"
@@ -274,7 +318,9 @@ export default function MaterialUploadPage() {
                   >
                     <div className="text-3xl mb-2">📚</div>
                     <div className="font-semibold text-gray-900">Material</div>
-                    <div className="text-xs text-gray-600">Videos, images, past questions</div>
+                    <div className="text-xs text-gray-600">
+                      Videos, images, past questions
+                    </div>
                   </button>
                 </div>
               </div>
@@ -287,7 +333,9 @@ export default function MaterialUploadPage() {
                 <input
                   type="text"
                   value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, title: e.target.value }))
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                   placeholder="e.g., Upper Limb Anatomy Lecture"
@@ -298,11 +346,17 @@ export default function MaterialUploadPage() {
               {uploadType === "material" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description <span className="text-gray-500">(Optional)</span>
+                    Description{" "}
+                    <span className="text-gray-500">(Optional)</span>
                   </label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     rows={3}
                     placeholder="Brief description"
@@ -317,7 +371,12 @@ export default function MaterialUploadPage() {
                 </label>
                 <select
                   value={formData.subject}
-                  onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      subject: e.target.value,
+                    }))
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 >
@@ -338,7 +397,12 @@ export default function MaterialUploadPage() {
                   </label>
                   <select
                     value={formData.block}
-                    onChange={(e) => setFormData(prev => ({ ...prev, block: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        block: e.target.value,
+                      }))
+                    }
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     required
                   >
@@ -360,7 +424,12 @@ export default function MaterialUploadPage() {
                   </label>
                   <select
                     value={formData.section}
-                    onChange={(e) => setFormData(prev => ({ ...prev, section: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        section: e.target.value,
+                      }))
+                    }
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="">Select Section (or skip)</option>
@@ -381,7 +450,11 @@ export default function MaterialUploadPage() {
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-500 transition-colors">
                   <input
                     type="file"
-                    accept={uploadType === "slide" ? ".pdf,.ppt,.pptx,.doc,.docx" : "*"}
+                    accept={
+                      uploadType === "slide"
+                        ? ".pdf,.ppt,.pptx,.doc,.docx"
+                        : "*"
+                    }
                     onChange={handleFileChange}
                     className="hidden"
                     id="file-upload"
@@ -390,7 +463,9 @@ export default function MaterialUploadPage() {
                     <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     {formData.file ? (
                       <div>
-                        <p className="text-lg font-semibold text-gray-900 mb-1">{formData.file.name}</p>
+                        <p className="text-lg font-semibold text-gray-900 mb-1">
+                          {formData.file.name}
+                        </p>
                         <p className="text-sm text-gray-600">
                           {(formData.file.size / 1024 / 1024).toFixed(2)} MB
                         </p>
@@ -398,7 +473,7 @@ export default function MaterialUploadPage() {
                           type="button"
                           onClick={(e) => {
                             e.preventDefault();
-                            setFormData(prev => ({ ...prev, file: null }));
+                            setFormData((prev) => ({ ...prev, file: null }));
                           }}
                           className="mt-2 text-sm text-red-600 hover:text-red-700"
                         >
@@ -411,7 +486,9 @@ export default function MaterialUploadPage() {
                           Click to upload
                         </p>
                         <p className="text-sm text-gray-600">
-                          {uploadType === "slide" ? "PDF, PPT, DOCX (max 100MB)" : "Any file type (max 100MB)"}
+                          {uploadType === "slide"
+                            ? "PDF, PPT, DOCX (max 100MB)"
+                            : "Any file type (max 100MB)"}
                         </p>
                       </div>
                     )}
@@ -426,14 +503,19 @@ export default function MaterialUploadPage() {
                   disabled={uploading}
                   className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {uploadStatus === "uploading" && <Loader className="w-5 h-5 animate-spin" />}
-                  {uploadStatus === "success" && <CheckCircle className="w-5 h-5" />}
+                  {uploadStatus === "uploading" && (
+                    <Loader className="w-5 h-5 animate-spin" />
+                  )}
+                  {uploadStatus === "success" && (
+                    <CheckCircle className="w-5 h-5" />
+                  )}
                   {uploadStatus === "error" && <XCircle className="w-5 h-5" />}
                   {uploadStatus === "idle" && <Upload className="w-5 h-5" />}
                   {uploadStatus === "uploading" && "Uploading..."}
                   {uploadStatus === "success" && "Uploaded Successfully!"}
                   {uploadStatus === "error" && "Upload Failed"}
-                  {uploadStatus === "idle" && `Upload ${uploadType === "slide" ? "Slide" : "Material"}`}
+                  {uploadStatus === "idle" &&
+                    `Upload ${uploadType === "slide" ? "Slide" : "Material"}`}
                 </button>
                 <button
                   type="button"

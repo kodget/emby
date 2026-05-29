@@ -106,6 +106,21 @@ class Slide(models.Model):
         if self.file:
             return self.file.url
         return self.file_url
+    
+    @property
+    def subject_name(self):
+        """Return subject name if subject exists"""
+        return self.subject.name if self.subject else None
+    
+    @property
+    def block_name(self):
+        """Return block name if block exists"""
+        return self.block.name if self.block else None
+    
+    @property
+    def topic_name(self):
+        """Return topic name if topic exists"""
+        return self.topic.name if self.topic else None
 
 
 class SlideContent(models.Model):
@@ -494,3 +509,157 @@ class QuizAnswer(models.Model):
     
     def __str__(self):
         return f"{self.quiz.user.username} - Q{self.question.id}"
+
+
+# -------------------------
+# SLIDE DECK & PAGE RENDERING
+# -------------------------
+class SlideDeck(models.Model):
+    """Uploaded document (PDF, PPTX, DOCX, PPT)"""
+    PROCESSING_STATUS = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    
+    FILE_TYPES = [
+        ('pdf', 'PDF'),
+        ('pptx', 'PowerPoint PPTX'),
+        ('ppt', 'PowerPoint PPT'),
+        ('docx', 'Word Document'),
+    ]
+    
+    id = models.CharField(max_length=50, primary_key=True)
+    title = models.CharField(max_length=200)
+    
+    # Original file
+    original_file = CloudinaryField('original_file', resource_type='auto')
+    file_type = models.CharField(max_length=10, choices=FILE_TYPES)
+    file_size = models.BigIntegerField(default=0)  # in bytes
+    
+    # Converted formats (stored in Cloudinary)
+    converted_pptx = CloudinaryField('converted_pptx', null=True, blank=True, resource_type='auto')
+    converted_pdf = CloudinaryField('converted_pdf', null=True, blank=True, resource_type='auto')
+    
+    # Metadata
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='uploaded_decks')
+    processing_status = models.CharField(max_length=20, choices=PROCESSING_STATUS, default='pending')
+    processing_error = models.TextField(blank=True)
+    
+    # Stats
+    page_count = models.IntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.title} ({self.file_type})"
+    
+    @property
+    def is_processing(self):
+        return self.processing_status == 'processing'
+    
+    @property
+    def is_completed(self):
+        return self.processing_status == 'completed'
+    
+    @property
+    def has_failed(self):
+        return self.processing_status == 'failed'
+
+
+class SlidePage(models.Model):
+    """Rendered page from a slide deck"""
+    deck = models.ForeignKey(SlideDeck, on_delete=models.CASCADE, related_name='pages')
+    
+    slide_number = models.IntegerField()  # 1-based page number
+    
+    # Rendered image (stored in Cloudinary)
+    image = CloudinaryField('image', resource_type='image')
+    image_url = models.URLField(blank=True)  # Fallback URL
+    
+    # Image dimensions
+    width = models.IntegerField(default=0)
+    height = models.IntegerField(default=0)
+    
+    # Extracted text from this page
+    extracted_text = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['deck', 'slide_number']
+        ordering = ['slide_number']
+    
+    def __str__(self):
+        return f"{self.deck.title} - Page {self.slide_number}"
+    
+    @property
+    def get_image_url(self):
+        """Return Cloudinary URL if image exists, otherwise return image_url"""
+        if self.image:
+            return self.image.url
+        return self.image_url
+
+
+# -------------------------
+# RAG SYSTEM - CHUNKS & EMBEDDINGS
+# -------------------------
+class SlideChunk(models.Model):
+    """Text chunks from slides for RAG retrieval"""
+    slide = models.ForeignKey(Slide, on_delete=models.CASCADE, related_name='chunks')
+    chunk_index = models.IntegerField()  # Order of chunk in the slide
+    text = models.TextField()  # The actual text content
+    page_number = models.IntegerField(null=True, blank=True)  # Source page
+    word_count = models.IntegerField(default=0)
+    
+    # Embedding vector stored as JSON array
+    embedding = models.JSONField(null=True, blank=True)  # Store as list of floats
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['slide', 'chunk_index']
+        indexes = [
+            models.Index(fields=['slide', 'chunk_index']),
+        ]
+    
+    def __str__(self):
+        return f"{self.slide.title} - Chunk {self.chunk_index}"
+
+
+class SlideProcessingStatus(models.Model):
+    """Track which slides have been chunked and embedded"""
+    slide = models.OneToOneField(Slide, on_delete=models.CASCADE, related_name='processing_status', primary_key=True)
+    
+    # Processing status
+    status = models.CharField(max_length=20, choices=[
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ], default='pending')
+    
+    # RAG processing status
+    is_chunked = models.BooleanField(default=False)
+    is_embedded = models.BooleanField(default=False)
+    chunk_count = models.IntegerField(default=0)
+    
+    # Content extraction status
+    content_extracted = models.BooleanField(default=False)
+    rag_processed = models.BooleanField(default=False)
+    
+    # Timestamps
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Error tracking
+    error_message = models.TextField(blank=True)
+    
+    def __str__(self):
+        return f"{self.slide.title} - Status: {self.status}, Chunked: {self.is_chunked}, Embedded: {self.is_embedded}"

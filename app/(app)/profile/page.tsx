@@ -7,11 +7,29 @@ import { UserProfile, UserStats } from "@/lib/api";
 import AuthGuard from "@/components/auth/auth-guard";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { updateUserProfile } from "@/store/user-slice";
-import { Upload, Mail, Calendar, Award, Edit2, Check, X, Loader2, Crown, Shield, Users } from "lucide-react";
+import {
+  Upload,
+  Mail,
+  Calendar,
+  Award,
+  Edit2,
+  Check,
+  X,
+  Loader2,
+  Crown,
+  Shield,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +39,7 @@ export default function ProfilePage() {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const user = useAppSelector((s) => s.user);
-  
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,28 +62,30 @@ export default function ProfilePage() {
       ]);
       setProfile(profileData);
       setStats(statsData);
-      
+
       // Update Redux store
-      dispatch(updateUserProfile({
-        name: profileData.full_name,
-        email: profileData.email,
-        photoUrl: profileData.photo_url,
-        school: profileData.school_name,
-        setName: profileData.set_name,
-        streak: profileData.streak,
-        points: statsData?.points || 0,
-        rank: statsData?.rank || 0,
-      }));
-      
+      dispatch(
+        updateUserProfile({
+          name: profileData.full_name,
+          email: profileData.email,
+          photoUrl: profileData.photo_url,
+          school: profileData.school_name,
+          setName: profileData.set_name,
+          streak: profileData.streak,
+          points: statsData?.points || 0,
+          rank: statsData?.rank || 0,
+        }),
+      );
+
       // Initialize edit form
       const nameParts = profileData.full_name.split(" ");
       setEditForm({
         first_name: nameParts[0] || "",
         last_name: nameParts.slice(1).join(" ") || "",
       });
-      
-      // Update localStorage
-      localStorage.setItem("user", JSON.stringify(profileData));
+
+      // Update sessionStorage
+      sessionStorage.setItem("user", JSON.stringify(profileData));
     } catch (error) {
       console.error("Failed to load profile:", error);
       toast({
@@ -107,7 +127,10 @@ export default function ProfilePage() {
       // Upload to Cloudinary
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "emby_uploads");
+      formData.append(
+        "upload_preset",
+        process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "emby_uploads",
+      );
       formData.append("folder", "profile_images");
 
       const cloudinaryResponse = await fetch(
@@ -115,7 +138,7 @@ export default function ProfilePage() {
         {
           method: "POST",
           body: formData,
-        }
+        },
       );
 
       if (!cloudinaryResponse.ok) {
@@ -123,15 +146,17 @@ export default function ProfilePage() {
       }
 
       const cloudinaryData = await cloudinaryResponse.json();
-      
+
       // Update profile with new photo URL
-      const response = await authApi.updateProfile({ photo_url: cloudinaryData.secure_url });
-      
+      const response = await authApi.updateProfile({
+        photo_url: cloudinaryData.secure_url,
+      });
+
       toast({
         title: "Success",
         description: response.message,
       });
-      
+
       await loadProfile();
     } catch (error) {
       console.error("Failed to upload image:", error);
@@ -161,12 +186,12 @@ export default function ProfilePage() {
         first_name: editForm.first_name,
         last_name: editForm.last_name,
       });
-      
+
       toast({
         title: "Success",
         description: response.message,
       });
-      
+
       setEditing(false);
       await loadProfile();
     } catch (error) {
@@ -198,8 +223,16 @@ export default function ProfilePage() {
 
   const subscriptionBadge = {
     free: { label: "Free", color: "bg-gray-100 text-gray-700", icon: null },
-    premium: { label: "Premium", color: "bg-gradient-to-r from-purple-500 to-blue-500 text-white", icon: Crown },
-    class_head: { label: "Class Head", color: "bg-gradient-to-r from-yellow-500 to-orange-500 text-white", icon: Shield },
+    premium: {
+      label: "Premium",
+      color: "bg-gradient-to-r from-purple-500 to-blue-500 text-white",
+      icon: Crown,
+    },
+    class_head: {
+      label: "Class Head",
+      color: "bg-gradient-to-r from-yellow-500 to-orange-500 text-white",
+      icon: Shield,
+    },
   }[profile.subscription_tier];
 
   const roleBadge = {
@@ -228,7 +261,10 @@ export default function ProfilePage() {
                 {/* Profile Image */}
                 <div className="relative">
                   <Avatar className="h-32 w-32">
-                    <AvatarImage src={profile.photo_url || undefined} alt={profile.full_name} />
+                    <AvatarImage
+                      src={profile.photo_url || undefined}
+                      alt={profile.full_name}
+                    />
                     <AvatarFallback className="text-3xl bg-gradient-to-br from-purple-400 to-blue-400 text-white">
                       {getInitials(profile.full_name)}
                     </AvatarFallback>
@@ -259,7 +295,12 @@ export default function ProfilePage() {
                           <Input
                             id="first_name"
                             value={editForm.first_name}
-                            onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                first_name: e.target.value,
+                              })
+                            }
                           />
                         </div>
                         <div>
@@ -267,7 +308,12 @@ export default function ProfilePage() {
                           <Input
                             id="last_name"
                             value={editForm.last_name}
-                            onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                last_name: e.target.value,
+                              })
+                            }
                           />
                         </div>
                       </div>
@@ -276,7 +322,11 @@ export default function ProfilePage() {
                           <Check className="w-4 h-4 mr-1" />
                           Save
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditing(false)}
+                        >
                           <X className="w-4 h-4 mr-1" />
                           Cancel
                         </Button>
@@ -285,13 +335,19 @@ export default function ProfilePage() {
                   ) : (
                     <>
                       <div className="flex items-center gap-3 flex-wrap">
-                        <h1 className="text-3xl font-bold">{profile.full_name}</h1>
+                        <h1 className="text-3xl font-bold">
+                          {profile.full_name}
+                        </h1>
                         <Badge className={subscriptionBadge.color}>
-                          {subscriptionBadge.icon && <subscriptionBadge.icon className="w-3 h-3 mr-1" />}
+                          {subscriptionBadge.icon && (
+                            <subscriptionBadge.icon className="w-3 h-3 mr-1" />
+                          )}
                           {subscriptionBadge.label}
                         </Badge>
                         <Badge variant="outline">
-                          {roleBadge.icon && <roleBadge.icon className="w-3 h-3 mr-1" />}
+                          {roleBadge.icon && (
+                            <roleBadge.icon className="w-3 h-3 mr-1" />
+                          )}
                           {roleBadge.label}
                         </Badge>
                       </div>
@@ -299,16 +355,26 @@ export default function ProfilePage() {
                         <Mail className="w-4 h-4" />
                         <span>{profile.email}</span>
                         {profile.email_verified ? (
-                          <Badge variant="outline" className="text-green-600 border-green-600">
+                          <Badge
+                            variant="outline"
+                            className="text-green-600 border-green-600"
+                          >
                             Verified
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                          <Badge
+                            variant="outline"
+                            className="text-yellow-600 border-yellow-600"
+                          >
                             Unverified
                           </Badge>
                         )}
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditing(true)}
+                      >
                         <Edit2 className="w-4 h-4 mr-1" />
                         Edit Profile
                       </Button>
@@ -323,19 +389,29 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card>
               <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-orange-600 mb-2">{profile.streak}</div>
-                <div className="text-sm text-muted-foreground">Day Streak 🔥</div>
+                <div className="text-4xl font-bold text-orange-600 mb-2">
+                  {profile.streak}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Day Streak 🔥
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-blue-600 mb-2">{stats?.points || 0}</div>
-                <div className="text-sm text-muted-foreground">Total Points</div>
+                <div className="text-4xl font-bold text-blue-600 mb-2">
+                  {stats?.points || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Total Points
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-green-600 mb-2">#{stats?.rank || "N/A"}</div>
+                <div className="text-4xl font-bold text-green-600 mb-2">
+                  #{stats?.rank || "N/A"}
+                </div>
                 <div className="text-sm text-muted-foreground">Class Rank</div>
               </CardContent>
             </Card>
@@ -379,7 +455,9 @@ export default function ProfilePage() {
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Current Plan</span>
                 <Badge className={subscriptionBadge.color}>
-                  {subscriptionBadge.icon && <subscriptionBadge.icon className="w-3 h-3 mr-1" />}
+                  {subscriptionBadge.icon && (
+                    <subscriptionBadge.icon className="w-3 h-3 mr-1" />
+                  )}
                   {subscriptionBadge.label}
                 </Badge>
               </div>
@@ -387,7 +465,9 @@ export default function ProfilePage() {
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Valid Until</span>
                   <span className="font-semibold">
-                    {new Date(profile.subscription_expires_at).toLocaleDateString("en-US", {
+                    {new Date(
+                      profile.subscription_expires_at,
+                    ).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
@@ -417,15 +497,24 @@ export default function ProfilePage() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Study Time</span>
-                  <span className="font-semibold">{Math.floor((stats.total_study_minutes || 0) / 60)}h {(stats.total_study_minutes || 0) % 60}m</span>
+                  <span className="font-semibold">
+                    {Math.floor((stats.total_study_minutes || 0) / 60)}h{" "}
+                    {(stats.total_study_minutes || 0) % 60}m
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Slides Completed</span>
-                  <span className="font-semibold">{stats.slides_completed || 0}</span>
+                  <span className="text-muted-foreground">
+                    Slides Completed
+                  </span>
+                  <span className="font-semibold">
+                    {stats.slides_completed || 0}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Quizzes Taken</span>
-                  <span className="font-semibold">{stats.quizzes_taken || 0}</span>
+                  <span className="font-semibold">
+                    {stats.quizzes_taken || 0}
+                  </span>
                 </div>
               </CardContent>
             </Card>

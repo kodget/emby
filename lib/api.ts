@@ -1,12 +1,12 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -14,24 +14,24 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   // List of endpoints that should NOT have Authorization header
   const publicEndpoints = [
-    '/auth/signup/',
-    '/auth/login/',
-    '/auth/google-login/',
-    '/auth/verify-email/',
-    '/auth/forgot-password/',
-    '/auth/reset-password/',
-    '/auth/class/validate-code/',
-    '/auth/payment/verify/',
+    "/auth/signup/",
+    "/auth/login/",
+    "/auth/google-login/",
+    "/auth/verify-email/",
+    "/auth/forgot-password/",
+    "/auth/reset-password/",
+    "/auth/class/validate-code/",
+    "/auth/payment/verify/",
   ];
 
   // Check if the current request is to a public endpoint
-  const isPublicEndpoint = publicEndpoints.some(endpoint => 
-    config.url?.includes(endpoint)
+  const isPublicEndpoint = publicEndpoints.some((endpoint) =>
+    config.url?.includes(endpoint),
   );
 
   // Only add token if NOT a public endpoint
-  if (!isPublicEndpoint && typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
+  if (!isPublicEndpoint && typeof window !== "undefined") {
+    const token = sessionStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -50,48 +50,51 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        
+        const refreshToken = sessionStorage.getItem("refreshToken");
+
         if (!refreshToken) {
           // No refresh token, redirect to login
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('token');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('user');
-            window.location.href = '/signin';
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("refreshToken");
+            sessionStorage.removeItem("user");
+            window.location.href = "/signin";
           }
           return Promise.reject(error);
         }
 
         // Try to refresh the token
-        const response = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {
-          refresh: refreshToken,
-        });
+        const response = await axios.post(
+          `${API_BASE_URL}/auth/token/refresh/`,
+          {
+            refresh: refreshToken,
+          },
+        );
 
         const newAccessToken = response.data.access;
-        
-        // Update token in localStorage
-        localStorage.setItem('token', newAccessToken);
-        
+
+        // Update token in sessionStorage
+        sessionStorage.setItem("token", newAccessToken);
+
         // Update the failed request with new token
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        
+
         // Retry the original request
         return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed, redirect to login
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          window.location.href = '/signin';
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("token");
+          sessionStorage.removeItem("refreshToken");
+          sessionStorage.removeItem("user");
+          window.location.href = "/signin";
         }
         return Promise.reject(refreshError);
       }
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 // ==================== TYPES ====================
@@ -103,13 +106,13 @@ export type UserProfile = {
   email: string;
   full_name: string;
   photo_url: string | null;
-  role: 'student' | 'brainstormer' | 'class_head' | 'material_uploader';
+  role: "student" | "brainstormer" | "class_head" | "material_uploader";
   school: number | null;
   school_name: string;
   set_name: string;
   class_group: number | null;
   class_code: string | null;
-  subscription_tier: 'free' | 'premium' | 'class_head';
+  subscription_tier: "free" | "premium" | "class_head";
   subscription_expires_at: string | null;
   is_premium: boolean;
   onboarding_completed: boolean;
@@ -130,7 +133,7 @@ export type AuthTokens = {
 export type OnboardingQuestion = {
   id: number;
   question_text: string;
-  question_type: 'text' | 'choice' | 'select';
+  question_type: "text" | "choice" | "select";
   options: string[];
   order: number;
 };
@@ -184,7 +187,7 @@ export type PaymentTransaction = {
   reference: string;
   amount: string;
   currency: string;
-  status: 'pending' | 'success' | 'failed';
+  status: "pending" | "success" | "failed";
   subscription_months: number;
   created_at: string;
   verified_at: string | null;
@@ -246,11 +249,44 @@ export type Slide = {
   updated_at: string;
 };
 
+// New Slide Deck Types (PDF/PPTX/DOCX rendering)
+export type SlidePage = {
+  id: number;
+  slide_number: number;
+  image_url: string;
+  width: number;
+  height: number;
+  extracted_text: string;
+  created_at: string;
+};
+
+export type SlideDeck = {
+  id: string;
+  title: string;
+  file_type: "pdf" | "pptx" | "ppt" | "docx";
+  file_size: number;
+  processing_status: "pending" | "processing" | "completed" | "failed";
+  processing_error?: string;
+  page_count: number;
+  uploaded_by: number;
+  uploaded_by_name: string;
+  pages?: SlidePage[];
+  created_at: string;
+  updated_at: string;
+};
+
 export type Material = {
   id: string;
   title: string;
   description: string;
-  material_type: 'video' | 'image' | 'pdf' | 'pptx' | 'docx' | 'past_question' | 'other';
+  material_type:
+    | "video"
+    | "image"
+    | "pdf"
+    | "pptx"
+    | "docx"
+    | "past_question"
+    | "other";
   subject: string;
   subject_name: string;
   block: string;
@@ -281,7 +317,7 @@ export type UserProgress = {
 
 export type ScheduleItem = {
   id: number;
-  activity_type: 'read' | 'quiz' | 'flashcards' | 'steeplechase';
+  activity_type: "read" | "quiz" | "flashcards" | "steeplechase";
   title: string;
   slide: string | null;
   slide_title: string | null;
@@ -320,7 +356,7 @@ export type CommunityPost = {
   user: number;
   user_name: string;
   user_photo: string | null;
-  post_type: 'achievement' | 'question' | 'discussion' | 'resource';
+  post_type: "achievement" | "question" | "discussion" | "resource";
   content: string;
   slide: string | null;
   topic: string | null;
@@ -355,8 +391,8 @@ export type UpcomingTest = {
 
 export type QuizQuestion = {
   id: string;
-  question_type: 'mcq' | 'theory';
-  difficulty: 'easy' | 'medium' | 'hard';
+  question_type: "mcq" | "theory";
+  difficulty: "easy" | "medium" | "hard";
   subject: string;
   subject_name: string;
   block: string | null;
@@ -371,7 +407,7 @@ export type QuizQuestion = {
   option_d: string;
   correct_option: string;
   model_answer: string;
-  source_type: 'past_question' | 'ai_generated' | 'manual';
+  source_type: "past_question" | "ai_generated" | "manual";
   created_at: string;
 };
 
@@ -391,7 +427,7 @@ export type QuizAnswer = {
 export type Quiz = {
   id: string;
   user: number;
-  quiz_type: 'mcq' | 'theory';
+  quiz_type: "mcq" | "theory";
   subject: string | null;
   subject_name: string | null;
   block: string | null;
@@ -417,7 +453,7 @@ export const authApi = {
     first_name: string;
     last_name: string;
   }): Promise<{ message: string; user: UserProfile; tokens: AuthTokens }> => {
-    const response = await api.post('/auth/signup/', data);
+    const response = await api.post("/auth/signup/", data);
     return response.data;
   },
 
@@ -426,36 +462,38 @@ export const authApi = {
     email: string;
     password: string;
   }): Promise<{ message: string; user: UserProfile; tokens: AuthTokens }> => {
-    const response = await api.post('/auth/login/', data);
+    const response = await api.post("/auth/login/", data);
     return response.data;
   },
 
   // Google OAuth login
-  googleLogin: async (token: string): Promise<{
+  googleLogin: async (
+    token: string,
+  ): Promise<{
     message: string;
     user: UserProfile;
     tokens: AuthTokens;
     is_new_user: boolean;
   }> => {
-    const response = await api.post('/auth/google-login/', { token });
+    const response = await api.post("/auth/google-login/", { token });
     return response.data;
   },
 
   // Verify email
   verifyEmail: async (token: string): Promise<{ message: string }> => {
-    const response = await api.post('/auth/verify-email/', { token });
+    const response = await api.post("/auth/verify-email/", { token });
     return response.data;
   },
 
   // Resend verification email
   resendVerification: async (): Promise<{ message: string }> => {
-    const response = await api.post('/auth/resend-verification/');
+    const response = await api.post("/auth/resend-verification/");
     return response.data;
   },
 
   // Get current user profile
   getProfile: async (): Promise<UserProfile> => {
-    const response = await api.get('/auth/profile/');
+    const response = await api.get("/auth/profile/");
     return response.data;
   },
 
@@ -465,7 +503,7 @@ export const authApi = {
     last_name?: string;
     photo_url?: string;
   }): Promise<{ message: string; user: UserProfile }> => {
-    const response = await api.put('/auth/profile/update/', data);
+    const response = await api.put("/auth/profile/update/", data);
     return response.data;
   },
 
@@ -474,25 +512,31 @@ export const authApi = {
     old_password: string;
     new_password: string;
   }): Promise<{ message: string }> => {
-    const response = await api.post('/auth/change-password/', data);
+    const response = await api.post("/auth/change-password/", data);
     return response.data;
   },
 
   // Delete account
   deleteAccount: async (): Promise<{ message: string }> => {
-    const response = await api.delete('/auth/profile/');
+    const response = await api.delete("/auth/profile/");
     return response.data;
   },
 
   // Forgot password
   forgotPassword: async (email: string): Promise<{ message: string }> => {
-    const response = await api.post('/auth/forgot-password/', { email });
+    const response = await api.post("/auth/forgot-password/", { email });
     return response.data;
   },
 
   // Reset password
-  resetPassword: async (token: string, new_password: string): Promise<{ message: string }> => {
-    const response = await api.post('/auth/reset-password/', { token, new_password });
+  resetPassword: async (
+    token: string,
+    new_password: string,
+  ): Promise<{ message: string }> => {
+    const response = await api.post("/auth/reset-password/", {
+      token,
+      new_password,
+    });
     return response.data;
   },
 };
@@ -502,17 +546,17 @@ export const authApi = {
 export const onboardingApi = {
   // Get onboarding questions
   getQuestions: async (): Promise<OnboardingQuestion[]> => {
-    const response = await api.get('/auth/onboarding/questions/');
+    const response = await api.get("/auth/onboarding/questions/");
     return response.data;
   },
 
   // Submit onboarding
   submitOnboarding: async (data: {
-    role: 'student' | 'brainstormer' | 'class_head' | 'material_uploader';
+    role: "student" | "brainstormer" | "class_head" | "material_uploader";
     school_name: string;
     set_name: string;
     class_code?: string;
-    subscription_tier: 'free' | 'premium';
+    subscription_tier: "free" | "premium";
     responses?: Array<{ question_id: number; answer: string }>;
   }): Promise<{
     message: string;
@@ -520,19 +564,27 @@ export const onboardingApi = {
     class_code: string | null;
     verification_message?: string;
   }> => {
-    const response = await api.post('/auth/onboarding/submit/', data);
+    const response = await api.post("/auth/onboarding/submit/", data);
     return response.data;
   },
 
   // Update onboarding responses
-  updateResponses: async (responses: Array<{ question_id: number; answer: string }>): Promise<{ message: string }> => {
-    const response = await api.put('/auth/onboarding/responses/update/', { responses });
+  updateResponses: async (
+    responses: Array<{ question_id: number; answer: string }>,
+  ): Promise<{ message: string }> => {
+    const response = await api.put("/auth/onboarding/responses/update/", {
+      responses,
+    });
     return response.data;
   },
 
   // Validate class code without submitting
-  validateClassCode: async (class_code: string): Promise<{ valid: boolean }> => {
-    const response = await api.post('/auth/class/validate-code/', { class_code });
+  validateClassCode: async (
+    class_code: string,
+  ): Promise<{ valid: boolean }> => {
+    const response = await api.post("/auth/class/validate-code/", {
+      class_code,
+    });
     return response.data;
   },
 };
@@ -541,37 +593,45 @@ export const onboardingApi = {
 
 export const classApi = {
   // Join class with code
-  joinClass: async (class_code: string): Promise<{ message: string; class: ClassGroup }> => {
-    const response = await api.post('/auth/class/join/', { class_code });
+  joinClass: async (
+    class_code: string,
+  ): Promise<{ message: string; class: ClassGroup }> => {
+    const response = await api.post("/auth/class/join/", { class_code });
     return response.data;
   },
 
   // Get my class
   getMyClass: async (): Promise<ClassGroup> => {
-    const response = await api.get('/auth/class/my-class/');
+    const response = await api.get("/auth/class/my-class/");
     return response.data;
   },
 
   // Get class members
   getClassMembers: async (): Promise<any[]> => {
-    const response = await api.get('/auth/class/members/');
+    const response = await api.get("/auth/class/members/");
     return response.data;
   },
 
   // Get announcements
   getAnnouncements: async (): Promise<Announcement[]> => {
-    const response = await api.get('/auth/announcements/');
+    const response = await api.get("/auth/announcements/");
     return response.data;
   },
 
   // Create announcement (class head only)
-  createAnnouncement: async (data: { title: string; content: string }): Promise<Announcement> => {
-    const response = await api.post('/auth/announcements/', data);
+  createAnnouncement: async (data: {
+    title: string;
+    content: string;
+  }): Promise<Announcement> => {
+    const response = await api.post("/auth/announcements/", data);
     return response.data;
   },
 
   // Update announcement
-  updateAnnouncement: async (id: number, data: { title?: string; content?: string }): Promise<Announcement> => {
+  updateAnnouncement: async (
+    id: number,
+    data: { title?: string; content?: string },
+  ): Promise<Announcement> => {
     const response = await api.put(`/auth/announcements/${id}/`, data);
     return response.data;
   },
@@ -583,7 +643,7 @@ export const classApi = {
 
   // Get exam countdowns
   getExamCountdowns: async (): Promise<ExamCountdown[]> => {
-    const response = await api.get('/auth/exam-countdowns/');
+    const response = await api.get("/auth/exam-countdowns/");
     return response.data;
   },
 
@@ -595,12 +655,15 @@ export const classApi = {
     description?: string;
     subject?: string;
   }): Promise<ExamCountdown> => {
-    const response = await api.post('/auth/exam-countdowns/', data);
+    const response = await api.post("/auth/exam-countdowns/", data);
     return response.data;
   },
 
   // Update exam countdown
-  updateExamCountdown: async (id: number, data: Partial<ExamCountdown>): Promise<ExamCountdown> => {
+  updateExamCountdown: async (
+    id: number,
+    data: Partial<ExamCountdown>,
+  ): Promise<ExamCountdown> => {
     const response = await api.put(`/auth/exam-countdowns/${id}/`, data);
     return response.data;
   },
@@ -615,14 +678,18 @@ export const classApi = {
 
 export const paymentApi = {
   // Initiate payment
-  initiatePayment: async (months: number): Promise<{ authorization_url: string; reference: string }> => {
-    const response = await api.post('/auth/payment/initiate/', { months });
+  initiatePayment: async (
+    months: number,
+  ): Promise<{ authorization_url: string; reference: string }> => {
+    const response = await api.post("/auth/payment/initiate/", { months });
     return response.data;
   },
 
   // Verify payment
-  verifyPayment: async (reference: string): Promise<{ message: string; user: UserProfile }> => {
-    const response = await api.post('/auth/payment/verify/', { reference });
+  verifyPayment: async (
+    reference: string,
+  ): Promise<{ message: string; user: UserProfile }> => {
+    const response = await api.post("/auth/payment/verify/", { reference });
     return response.data;
   },
 };
@@ -632,14 +699,14 @@ export const paymentApi = {
 export const curriculumApi = {
   // Subjects
   getSubjects: async (): Promise<Subject[]> => {
-    const response = await api.get('/api/subjects/');
+    const response = await api.get("/api/subjects/");
     return response.data;
   },
 
   // Blocks
   getBlocks: async (subjectId?: string): Promise<Block[]> => {
     const params = subjectId ? { subject: subjectId } : {};
-    const response = await api.get('/api/blocks/', { params });
+    const response = await api.get("/api/blocks/", { params });
     return response.data;
   },
 
@@ -651,7 +718,7 @@ export const curriculumApi = {
   // Topics
   getTopics: async (blockId?: string): Promise<Topic[]> => {
     const params = blockId ? { block: blockId } : {};
-    const response = await api.get('/api/topics/', { params });
+    const response = await api.get("/api/topics/", { params });
     return response.data;
   },
 
@@ -661,8 +728,11 @@ export const curriculumApi = {
   },
 
   // Sections
-  getSections: async (filters?: { topic?: string; block?: string }): Promise<Section[]> => {
-    const response = await api.get('/api/sections/', { params: filters });
+  getSections: async (filters?: {
+    topic?: string;
+    block?: string;
+  }): Promise<Section[]> => {
+    const response = await api.get("/api/sections/", { params: filters });
     return response.data;
   },
 
@@ -672,8 +742,13 @@ export const curriculumApi = {
   },
 
   // Slides
-  getSlides: async (filters?: { subject?: string; block?: string; topic?: string; section?: string }): Promise<Slide[]> => {
-    const response = await api.get('/api/slides/', { params: filters });
+  getSlides: async (filters?: {
+    subject?: string;
+    block?: string;
+    topic?: string;
+    section?: string;
+  }): Promise<Slide[]> => {
+    const response = await api.get("/api/slides/", { params: filters });
     return response.data;
   },
 
@@ -692,11 +767,14 @@ export const curriculumApi = {
     file_type: string;
     page_count: number;
   }): Promise<Slide> => {
-    const response = await api.post('/api/slides/', data);
+    const response = await api.post("/api/slides/", data);
     return response.data;
   },
 
-  updateSlide: async (slideId: string, data: Partial<Slide>): Promise<Slide> => {
+  updateSlide: async (
+    slideId: string,
+    data: Partial<Slide>,
+  ): Promise<Slide> => {
     const response = await api.patch(`/api/slides/${slideId}/`, data);
     return response.data;
   },
@@ -705,23 +783,46 @@ export const curriculumApi = {
     await api.delete(`/api/slides/${slideId}/`);
   },
 
-  getSlideContent: async (slideId: string): Promise<{
+  getSlideContent: async (
+    slideId: string,
+  ): Promise<{
     slide_id: string;
     title: string;
     total_pages: number;
     pages: Array<{
       page_number: number;
-      content: string;
-      images: any[];
+      image_url: string;
+      width: number;
+      height: number;
+      text_blocks: any[];
     }>;
   }> => {
     const response = await api.get(`/api/slides/${slideId}/content/`);
     return response.data;
   },
 
+  getSuggestedVideos: async (
+    slideId: string,
+  ): Promise<{
+    videos: Array<{
+      title: string;
+      url: string;
+      reason: string;
+    }>;
+  }> => {
+    const response = await api.get(`/api/slides/${slideId}/suggest-videos/`);
+    return response.data;
+  },
+
   // Materials
-  getMaterials: async (filters?: { subject?: string; block?: string; topic?: string; section?: string; type?: string }): Promise<Material[]> => {
-    const response = await api.get('/api/materials/', { params: filters });
+  getMaterials: async (filters?: {
+    subject?: string;
+    block?: string;
+    topic?: string;
+    section?: string;
+    type?: string;
+  }): Promise<Material[]> => {
+    const response = await api.get("/api/materials/", { params: filters });
     return response.data;
   },
 
@@ -741,11 +842,14 @@ export const curriculumApi = {
     file_url: string;
     file_size?: number;
   }): Promise<Material> => {
-    const response = await api.post('/api/materials/', data);
+    const response = await api.post("/api/materials/", data);
     return response.data;
   },
 
-  updateMaterial: async (materialId: string, data: Partial<Material>): Promise<Material> => {
+  updateMaterial: async (
+    materialId: string,
+    data: Partial<Material>,
+  ): Promise<Material> => {
     const response = await api.patch(`/api/materials/${materialId}/`, data);
     return response.data;
   },
@@ -755,16 +859,87 @@ export const curriculumApi = {
   },
 };
 
+// ==================== SLIDE DECK API (PDF/PPTX/DOCX) ====================
+
+export const deckApi = {
+  /**
+   * Upload a new document (PDF, PPTX, PPT, DOCX)
+   * Returns SlideDeck with processing status
+   */
+  uploadDeck: async (file: File, title: string): Promise<SlideDeck> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("title", title);
+
+    const response = await api.post("/api/decks/", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+
+  /**
+   * List all slide decks for the current user
+   */
+  listDecks: async (): Promise<SlideDeck[]> => {
+    const response = await api.get("/api/decks/");
+    return response.data;
+  },
+
+  /**
+   * Get a specific slide deck with all pages
+   */
+  getDeck: async (deckId: string): Promise<SlideDeck> => {
+    const response = await api.get(`/api/decks/${deckId}/`);
+    return response.data;
+  },
+
+  /**
+   * Get all pages of a slide deck
+   */
+  getPages: async (deckId: string): Promise<SlidePage[]> => {
+    const response = await api.get(`/api/decks/${deckId}/pages/`);
+    return response.data;
+  },
+
+  /**
+   * Get a specific page from a slide deck
+   */
+  getPage: async (deckId: string, pageNumber: number): Promise<SlidePage> => {
+    const response = await api.get(`/api/decks/${deckId}/page/`, {
+      params: { page: pageNumber },
+    });
+    return response.data;
+  },
+
+  /**
+   * Delete a slide deck and all its pages
+   */
+  deleteDeck: async (deckId: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/api/decks/${deckId}/delete_deck/`);
+    return response.data;
+  },
+
+  /**
+   * Poll deck status (for checking if processing is complete)
+   */
+  checkStatus: async (deckId: string): Promise<SlideDeck> => {
+    const response = await api.get(`/api/decks/${deckId}/`);
+    return response.data;
+  },
+};
+
 // ==================== PROGRESS API ====================
 
 export const progressApi = {
   getProgress: async (): Promise<UserProgress[]> => {
-    const response = await api.get('/api/progress/');
+    const response = await api.get("/api/progress/");
     return response.data;
   },
 
   getRecentProgress: async (): Promise<UserProgress[]> => {
-    const response = await api.get('/api/progress/recent/');
+    const response = await api.get("/api/progress/recent/");
     return response.data;
   },
 
@@ -774,7 +949,7 @@ export const progressApi = {
     total_pages: number;
     time_spent_minutes?: number;
   }): Promise<UserProgress> => {
-    const response = await api.post('/api/progress/update_progress/', data);
+    const response = await api.post("/api/progress/update_progress/", data);
     return response.data;
   },
 
@@ -789,7 +964,7 @@ export const progressApi = {
     total_hours: number;
     remaining_minutes: number;
   }> => {
-    const response = await api.get('/api/study-time/weekly/');
+    const response = await api.get("/api/study-time/weekly/");
     return response.data;
   },
 
@@ -801,7 +976,7 @@ export const progressApi = {
     total_today: number;
     total_overall: number;
   }> => {
-    const response = await api.post('/api/study-time/log/', data);
+    const response = await api.post("/api/study-time/log/", data);
     return response.data;
   },
 };
@@ -810,22 +985,22 @@ export const progressApi = {
 
 export const scheduleApi = {
   getSchedule: async (): Promise<ScheduleItem[]> => {
-    const response = await api.get('/api/schedule/');
+    const response = await api.get("/api/schedule/");
     return response.data;
   },
 
   getTodaySchedule: async (): Promise<ScheduleItem[]> => {
-    const response = await api.get('/api/schedule/today/');
+    const response = await api.get("/api/schedule/today/");
     return response.data;
   },
 
   getUpcomingSchedule: async (): Promise<ScheduleItem[]> => {
-    const response = await api.get('/api/schedule/upcoming/');
+    const response = await api.get("/api/schedule/upcoming/");
     return response.data;
   },
 
   createScheduleItem: async (data: {
-    activity_type: 'read' | 'quiz' | 'flashcards' | 'steeplechase';
+    activity_type: "read" | "quiz" | "flashcards" | "steeplechase";
     title: string;
     slide?: string;
     topic?: string;
@@ -834,11 +1009,14 @@ export const scheduleApi = {
     scheduled_time?: string;
     estimated_minutes: number;
   }): Promise<ScheduleItem> => {
-    const response = await api.post('/api/schedule/', data);
+    const response = await api.post("/api/schedule/", data);
     return response.data;
   },
 
-  updateScheduleItem: async (id: number, data: Partial<ScheduleItem>): Promise<ScheduleItem> => {
+  updateScheduleItem: async (
+    id: number,
+    data: Partial<ScheduleItem>,
+  ): Promise<ScheduleItem> => {
     const response = await api.patch(`/api/schedule/${id}/`, data);
     return response.data;
   },
@@ -862,22 +1040,27 @@ export const scheduleApi = {
 
 export const statsApi = {
   getMyStats: async (): Promise<UserStats> => {
-    const response = await api.get('/api/stats/me/');
+    const response = await api.get("/api/stats/me/");
     return response.data;
   },
 
   getLeaderboard: async (limit: number = 10): Promise<UserStats[]> => {
-    const response = await api.get('/api/stats/leaderboard/', { params: { limit } });
+    const response = await api.get("/api/stats/leaderboard/", {
+      params: { limit },
+    });
     return response.data;
   },
 
   awardPoints: async (points: number, reason: string): Promise<UserStats> => {
-    const response = await api.post('/api/stats/award_points/', { points, reason });
+    const response = await api.post("/api/stats/award_points/", {
+      points,
+      reason,
+    });
     return response.data;
   },
 
   updateStreak: async (): Promise<UserStats> => {
-    const response = await api.post('/api/stats/update_streak/');
+    const response = await api.post("/api/stats/update_streak/");
     return response.data;
   },
 };
@@ -886,37 +1069,46 @@ export const statsApi = {
 
 export const communityApi = {
   getPosts: async (): Promise<CommunityPost[]> => {
-    const response = await api.get('/api/community/');
+    const response = await api.get("/api/community/");
     return response.data;
   },
 
   createPost: async (data: {
-    post_type: 'achievement' | 'question' | 'discussion' | 'resource';
+    post_type: "achievement" | "question" | "discussion" | "resource";
     content: string;
     slide?: string;
     topic?: string;
   }): Promise<CommunityPost> => {
-    const response = await api.post('/api/community/', data);
+    const response = await api.post("/api/community/", data);
     return response.data;
   },
 
-  likePost: async (postId: number): Promise<{ liked: boolean; likes_count: number }> => {
+  likePost: async (
+    postId: number,
+  ): Promise<{ liked: boolean; likes_count: number }> => {
     const response = await api.post(`/api/community/${postId}/like/`);
     return response.data;
   },
 
-  unlikePost: async (postId: number): Promise<{ liked: boolean; likes_count: number }> => {
+  unlikePost: async (
+    postId: number,
+  ): Promise<{ liked: boolean; likes_count: number }> => {
     const response = await api.post(`/api/community/${postId}/unlike/`);
     return response.data;
   },
 
   addComment: async (postId: number, content: string): Promise<PostComment> => {
-    const response = await api.post(`/api/community/${postId}/comment/`, { content });
+    const response = await api.post(`/api/community/${postId}/comment/`, {
+      content,
+    });
     return response.data;
   },
 
   // Update post (owner only)
-  updatePost: async (postId: number, data: { content: string; post_type?: string }): Promise<CommunityPost> => {
+  updatePost: async (
+    postId: number,
+    data: { content: string; post_type?: string },
+  ): Promise<CommunityPost> => {
     const response = await api.put(`/api/community/${postId}/`, data);
     return response.data;
   },
@@ -931,7 +1123,7 @@ export const communityApi = {
 
 export const testsApi = {
   getUpcomingTests: async (): Promise<UpcomingTest[]> => {
-    const response = await api.get('/api/tests/');
+    const response = await api.get("/api/tests/");
     return response.data;
   },
 
@@ -944,7 +1136,7 @@ export const testsApi = {
     test_time?: string;
     duration_minutes: number;
   }): Promise<UpcomingTest> => {
-    const response = await api.post('/api/tests/', data);
+    const response = await api.post("/api/tests/", data);
     return response.data;
   },
 };
@@ -953,13 +1145,13 @@ export const testsApi = {
 
 export const quizApi = {
   generateQuiz: async (data: {
-    quiz_type: 'mcq' | 'theory';
+    quiz_type: "mcq" | "theory";
     subject?: string;
     block?: string;
     topic?: string;
     num_questions: number;
   }): Promise<Quiz> => {
-    const response = await api.post('/api/quiz/generate/', data);
+    const response = await api.post("/api/quiz/generate/", data);
     return response.data;
   },
 
@@ -970,7 +1162,7 @@ export const quizApi = {
     text_answer?: string;
     time_taken_seconds: number;
   }): Promise<QuizAnswer> => {
-    const response = await api.post('/api/quiz/answer/', data);
+    const response = await api.post("/api/quiz/answer/", data);
     return response.data;
   },
 
@@ -980,7 +1172,88 @@ export const quizApi = {
   },
 
   getQuizHistory: async (): Promise<Quiz[]> => {
-    const response = await api.get('/api/quiz/history/');
+    const response = await api.get("/api/quiz/history/");
+    return response.data;
+  },
+};
+
+// ==================== AI API ====================
+
+export const aiApi = {
+  chat: async (data: {
+    message: string;
+    slide_id?: string;
+    history?: Array<{ role: string; content: string }>;
+  }): Promise<{ reply: string }> => {
+    const response = await api.post("/api/ai/tutor/", data);
+    return response.data;
+  },
+
+  getRecommendations: async (): Promise<{
+    recommendations: string[];
+    focus_areas: string[];
+  }> => {
+    const response = await api.get("/api/ai/recommendations/");
+    return response.data;
+  },
+
+  // New AI endpoints for reader sidebar
+  getTextbookSuggestions: async (
+    slideId: string,
+  ): Promise<{
+    suggestions: Array<{
+      textbook: string;
+      chapter: string;
+      relevance: string;
+    }>;
+    slide_title: string;
+    subject: string;
+  }> => {
+    const response = await api.post("/api/ai/textbook-suggestions/", {
+      slide_id: slideId,
+    });
+    return response.data;
+  },
+
+  getVideoSuggestions: async (
+    slideId: string,
+  ): Promise<{
+    suggestions: Array<{
+      title: string;
+      channel: string;
+      description: string;
+      duration: string;
+    }>;
+    slide_title: string;
+    subject: string;
+  }> => {
+    const response = await api.post("/api/ai/video-suggestions/", {
+      slide_id: slideId,
+    });
+    return response.data;
+  },
+
+  generateMCQs: async (
+    slideId: string,
+  ): Promise<{
+    mcqs: Array<{
+      question: string;
+      options: {
+        A: string;
+        B: string;
+        C: string;
+        D: string;
+      };
+      correct_answer: string;
+      explanation: string;
+    }>;
+    total_questions: number;
+    slide_title: string;
+    subject: string;
+  }> => {
+    const response = await api.post("/api/ai/generate-mcqs/", {
+      slide_id: slideId,
+    });
     return response.data;
   },
 };

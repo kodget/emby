@@ -55,6 +55,8 @@ def upload_file(request):
                 file,
                 folder=f"emby/{folder}",
                 resource_type=resource_type,
+                access_mode='public',  # Make files publicly accessible
+                type='upload',  # Ensure it's a regular upload, not authenticated
                 timeout=60
             )
             
