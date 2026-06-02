@@ -427,6 +427,41 @@ class SlideProcessor:
                     import traceback
                     traceback.print_exc()
             
+            # Step 5.5: Render pages as images
+            if result['content_extracted']:
+                logger.info("Rendering pages as images...")
+                try:
+                    from ..slide_renderer import render_slide_pages
+                    
+                    rendered_content = render_slide_pages(file_url, actual_file_type, slide.id)
+                    
+                    if rendered_content['total_pages'] > 0:
+                        # Update SlideContent with rendered pages
+                        try:
+                            slide_content = SlideContent.objects.get(slide=slide)
+                            if slide_content.content_data is None:
+                                slide_content.content_data = {}
+                            
+                            slide_content.content_data['pages'] = rendered_content['pages']
+                            slide_content.save()
+                            
+                            # Update slide page count
+                            slide.page_count = rendered_content['total_pages']
+                            slide.save(update_fields=['page_count'])
+                            
+                            result['images_generated'] = True
+                            result['page_count'] = rendered_content['total_pages']
+                            logger.info(f"✓ Rendered {rendered_content['total_pages']} pages as images")
+                        except SlideContent.DoesNotExist:
+                            logger.warning("SlideContent not found for image storage")
+                    else:
+                        logger.warning("No pages rendered from image rendering")
+                        
+                except Exception as e:
+                    logger.error(f"Image rendering failed: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
             # Step 6: Process with RAG if content was extracted
             if result['content_extracted'] and result['content_length'] > 50:
                 logger.info("Processing with RAG system...")

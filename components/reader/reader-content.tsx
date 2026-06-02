@@ -13,12 +13,14 @@ export type SelectionPayload = {
 export function ReaderContent({
   blocks,
   slideContent,
+  currentPageIndex = 0,
   onSelect,
   onExplain,
   fallbackTitle,
 }: {
   blocks: ReaderBlock[];
   slideContent?: any;
+  currentPageIndex?: number;
   onSelect: (s: SelectionPayload | null) => void;
   onExplain: (text: string) => void;
   fallbackTitle: string;
@@ -50,14 +52,12 @@ export function ReaderContent({
 
   // If slideContent from API is available with rendered pages, use image pages
   if (slideContent && slideContent.pages && slideContent.pages.length > 0) {
+    // Show ONLY the current page (controlled by parent via currentPageIndex)
+    const page = slideContent.pages[currentPageIndex] ?? slideContent.pages[0];
     return (
       <article ref={articleRef} aria-label="Study material">
         <HintBar />
-        <div className="space-y-4">
-          {slideContent.pages.map((page: any, i: number) => (
-            <SlideImageBlock key={i} page={page} />
-          ))}
-        </div>
+        <SlideImageBlock key={currentPageIndex} page={page} />
       </article>
     );
   }

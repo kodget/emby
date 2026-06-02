@@ -97,20 +97,88 @@ class SlideViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(topic_id=topic_id)
         if section_id:
             queryset = queryset.filter(section_id=section_id)
+    
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def upload_with_file(self, request):
+        """
+        Upload a file and create a Slide object.
+        
+        This endpoint:
+        1. Uploads file to Cloudinary
+        2. Creates Slide object with the file
+        3. Triggers async processing via signal
+        
+        Expected request:
+        - MultipartForm with 'file', 'title', and optional 'subject_id', 'block_id', 'topic_id', 'section_id'
+        """
+        import uuid
+        import cloudinary.uploader
+        from .utils.file_type_detector import FileTypeDetector
+        
+        # Get file from request
+        if 'file' not in request.FILES:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        file_obj = request.FILES['file']
+        title = request.data.get('title', file_obj.name)
+        
+        # Detect file type
+        file_type = FileTypeDetector.detect_file_type(file_obj.name, method='auto')
+        if not file_type:
+            return Response(
+                {'error': f'Unsupported file type. Supported: pdf, pptx, ppt, docx'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Upload to Cloudinary
+            print(f"Uploading file to Cloudinary: {file_obj.name}")
+            file_obj.seek(0)
+            
+            result = cloudinary.uploader.upload(
+                file_obj,
+                folder='emby/slides',
+                resource_type='auto',
+                type='upload',
+                access_mode='public',
+                timeout=60
+            )
+            
+            print(f"✓ File uploaded to Cloudinary: {result['secure_url']}")
+            
+            # Create Slide object
+            slide_id = f"slide_{str(uuid.uuid4())[:8]}"
+            
+            slide = Slide.objects.create(
+                id=slide_id,
+                title=title,
+                file_type=file_type,
+                file_url=result['secure_url'],  # Store Cloudinary URL
+                uploaded_by=request.user,
+                subject_id=request.data.get('subject_id'),
+                block_id=request.data.get('block_id'),
+                topic_id=request.data.get('topic_id'),
+                section_id=request.data.get('section_id'),
+            )
+            
+            print(f"✓ Slide created: {slide.id}")
+            print(f"Signal will trigger async processing...")
+            
+            serializer = self.get_serializer(slide)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            print(f"Error uploading file: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         return queryset
     
     def perform_create(self, serializer):
-        # Check if user can upload (class_head or material_uploader)
-        profile = self.request.user.profile
-        if profile.role not in ['class_head', 'material_uploader']:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only class heads and material uploaders can upload slides")
-        
         slide = serializer.save(uploaded_by=self.request.user)
-        
-        # The slide will be automatically processed by the Celery signal
-        print(f"Slide {slide.id} created successfully. Processing will start automatically via Celery.")
+        print(f"Slide {slide.id} created. Triggering processing pipeline...")
+        # Signal fires automatically via post_save → see signals.py
 
 
 class MaterialViewSet(viewsets.ModelViewSet):
@@ -472,13 +540,15 @@ def get_slide_content(request, slide_id):
 
     slide_content, _ = SlideContent.objects.get_or_create(slide=slide)
     
-    # Return cached if available
-    if slide_content.is_extracted and slide_content.content_data.get('pages'):
+    # Return cached if available — check both 'pages' exists and has content
+    cached_pages = slide_content.content_data.get('pages', []) if slide_content.content_data else []
+    if slide_content.is_extracted and cached_pages:
+        total = slide_content.content_data.get('total_pages') or slide_content.content_data.get('page_count') or len(cached_pages)
         return Response({
             'slide_id': slide.id,
             'title': slide.title,
-            'total_pages': slide_content.content_data.get('total_pages', 0),
-            'pages': slide_content.content_data.get('pages', []),
+            'total_pages': total,
+            'pages': cached_pages,
         })
 
     # Render on-demand if not cached

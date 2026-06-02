@@ -40,18 +40,23 @@ class LibreOfficeConverter:
             result = subprocess.run(
                 ["where", "soffice"],
                 capture_output=True,
-                text=True
+                text=True,
+                shell=True
             )
-            if result.returncode == 0:
-                return "soffice"
-        except:
-            pass
+            if result.returncode == 0 and result.stdout.strip():
+                path = result.stdout.strip().split('\n')[0]
+                logger.info(f"Found soffice in PATH: {path}")
+                return path
+        except Exception as e:
+            logger.debug(f"PATH check failed: {e}")
         
         # Check common paths
         for path in common_paths:
             if os.path.exists(path):
+                logger.info(f"Found soffice at: {path}")
                 return path
         
+        logger.warning("LibreOffice not found in common paths, will attempt with 'soffice' command")
         # Default to soffice (assume it's in PATH)
         return LibreOfficeConverter.SOFFICE_PATH
 
@@ -67,6 +72,8 @@ class PopplerConverter:
             r"C:\Release-26.02.0-0\poppler-26.02.0\Library\bin",
             r"C:\Release-26.02.0-0\poppler\Library\bin",
             r"C:\poppler\Library\bin",
+            r"C:\Program Files\poppler\Library\bin",
+            r"C:\Program Files (x86)\poppler\Library\bin",
         ]
         
         # First check if pdftoppm is in PATH
@@ -74,12 +81,14 @@ class PopplerConverter:
             result = subprocess.run(
                 ["where", "pdftoppm"],
                 capture_output=True,
-                text=True
+                text=True,
+                shell=True
             )
-            if result.returncode == 0:
+            if result.returncode == 0 and result.stdout.strip():
+                logger.info("Found pdftoppm in PATH")
                 return None  # Already in PATH
-        except:
-            pass
+        except Exception as e:
+            logger.debug(f"PATH check for pdftoppm failed: {e}")
         
         # Check common paths
         for path in common_paths:
@@ -88,7 +97,7 @@ class PopplerConverter:
                 logger.info(f"Found Poppler at: {path}")
                 return path
         
-        logger.warning("Poppler not found in common paths")
+        logger.warning("Poppler not found in common paths, will attempt with 'pdftoppm' command")
         return None
     
     @staticmethod
@@ -109,6 +118,10 @@ class PopplerConverter:
             # Ensure output directory exists
             os.makedirs(output_dir, exist_ok=True)
             
+            logger.info(f"Converting to PPTX using: {soffice_path}")
+            logger.info(f"Input: {input_path}")
+            logger.info(f"Output dir: {output_dir}")
+            
             # Run LibreOffice conversion
             result = subprocess.run([
                 soffice_path,
@@ -120,8 +133,11 @@ class PopplerConverter:
                 output_dir
             ], capture_output=True, text=True, timeout=300)
             
+            logger.info(f"LibreOffice stdout: {result.stdout}")
+            
             if result.returncode != 0:
-                logger.error(f"LibreOffice conversion failed: {result.stderr}")
+                logger.error(f"LibreOffice conversion failed with code {result.returncode}")
+                logger.error(f"stderr: {result.stderr}")
                 return False, ""
             
             # Determine output filename
@@ -129,17 +145,21 @@ class PopplerConverter:
             output_path = os.path.join(output_dir, f"{input_filename}.pptx")
             
             if os.path.exists(output_path):
-                logger.info(f"Successfully converted to PPTX: {output_path}")
+                logger.info(f"✓ Successfully converted to PPTX: {output_path}")
                 return True, output_path
             else:
                 logger.error(f"Converted file not found: {output_path}")
+                # List directory contents for debugging
+                logger.error(f"Directory contents: {os.listdir(output_dir)}")
                 return False, ""
                 
         except subprocess.TimeoutExpired:
-            logger.error("LibreOffice conversion timeout")
+            logger.error("LibreOffice conversion timeout (300s)")
             return False, ""
         except Exception as e:
             logger.error(f"Conversion error: {e}")
+            import traceback
+            traceback.print_exc()
             return False, ""
     
     @staticmethod
@@ -159,6 +179,10 @@ class PopplerConverter:
             
             os.makedirs(output_dir, exist_ok=True)
             
+            logger.info(f"Converting to PDF using: {soffice_path}")
+            logger.info(f"Input: {input_path}")
+            logger.info(f"Output dir: {output_dir}")
+            
             result = subprocess.run([
                 soffice_path,
                 "--headless",
@@ -169,25 +193,32 @@ class PopplerConverter:
                 output_dir
             ], capture_output=True, text=True, timeout=300)
             
+            logger.info(f"LibreOffice stdout: {result.stdout}")
+            
             if result.returncode != 0:
-                logger.error(f"PDF conversion failed: {result.stderr}")
+                logger.error(f"PDF conversion failed with code {result.returncode}")
+                logger.error(f"stderr: {result.stderr}")
                 return False, ""
             
             input_filename = Path(input_path).stem
             output_path = os.path.join(output_dir, f"{input_filename}.pdf")
             
             if os.path.exists(output_path):
-                logger.info(f"Successfully converted to PDF: {output_path}")
+                logger.info(f"✓ Successfully converted to PDF: {output_path}")
                 return True, output_path
             else:
                 logger.error(f"Converted PDF not found: {output_path}")
+                # List directory contents for debugging
+                logger.error(f"Directory contents: {os.listdir(output_dir)}")
                 return False, ""
                 
         except subprocess.TimeoutExpired:
-            logger.error("PDF conversion timeout")
+            logger.error("PDF conversion timeout (300s)")
             return False, ""
         except Exception as e:
             logger.error(f"PDF conversion error: {e}")
+            import traceback
+            traceback.print_exc()
             return False, ""
 
 
@@ -213,12 +244,15 @@ class PDFToImageConverter:
             os.makedirs(output_dir, exist_ok=True)
             
             logger.info(f"Converting PDF to images: {pdf_path}")
+            logger.info(f"DPI: {dpi}, Output dir: {output_dir}")
             
             # Convert PDF pages to images
             pages = convert_from_path(pdf_path, dpi=dpi)
             
             image_paths = []
             pdf_filename = Path(pdf_path).stem
+            
+            logger.info(f"PDF has {len(pages)} pages")
             
             for page_number, page_image in enumerate(pages, 1):
                 # Save as PNG
@@ -227,16 +261,18 @@ class PDFToImageConverter:
                 
                 page_image.save(image_path, 'PNG')
                 image_paths.append(image_path)
-                logger.info(f"Saved page {page_number}: {image_path}")
+                logger.info(f"✓ Saved page {page_number}: {image_path} ({page_image.width}x{page_image.height})")
             
-            logger.info(f"Successfully converted {len(pages)} pages to images")
+            logger.info(f"✓ Successfully converted {len(pages)} pages to images")
             return True, image_paths
             
         except ImportError:
-            logger.error("pdf2image not installed")
+            logger.error("pdf2image not installed - install with: pip install pdf2image")
             return False, []
         except Exception as e:
             logger.error(f"PDF to image conversion error: {e}")
+            import traceback
+            traceback.print_exc()
             return False, []
 
 
@@ -288,13 +324,17 @@ class SlideConverter:
             # Create temporary working directory
             temp_dir = tempfile.mkdtemp(prefix=f"slides_{deck_id}_")
             logger.info(f"Working directory: {temp_dir}")
+            logger.info(f"Input file: {input_file_path}")
+            logger.info(f"File type: {file_type}")
             
             try:
                 # Step 1: If PDF, skip to image conversion
                 if file_type == 'pdf':
+                    logger.info("File is PDF, skipping PPTX conversion")
                     pdf_path = input_file_path
                 else:
                     # Step 2: Convert to PPTX
+                    logger.info(f"Converting {file_type} to PPTX...")
                     convert_dir = os.path.join(temp_dir, 'pptx')
                     success, pptx_path = LibreOfficeConverter.convert_to_pptx(
                         input_file_path, 
@@ -307,8 +347,10 @@ class SlideConverter:
                         return False, result
                     
                     result['converted_pptx'] = pptx_path
+                    logger.info(f"✓ PPTX conversion successful: {pptx_path}")
                     
                     # Step 3: Convert PPTX to PDF
+                    logger.info("Converting PPTX to PDF...")
                     pdf_dir = os.path.join(temp_dir, 'pdf')
                     success, pdf_path = LibreOfficeConverter.convert_to_pdf(pptx_path, pdf_dir)
                     
@@ -318,8 +360,10 @@ class SlideConverter:
                         return False, result
                     
                     result['converted_pdf'] = pdf_path
+                    logger.info(f"✓ PDF conversion successful: {pdf_path}")
                 
                 # Step 4: Convert PDF to images
+                logger.info("Converting PDF to images...")
                 images_dir = os.path.join(temp_dir, 'images')
                 success, image_paths = PDFToImageConverter.convert_pdf_to_images(
                     pdf_path,
@@ -335,7 +379,7 @@ class SlideConverter:
                 result['page_count'] = len(image_paths)
                 result['success'] = True
                 
-                logger.info(f"Successfully converted document: {deck_id} with {len(image_paths)} pages")
+                logger.info(f"✓ Successfully converted document: {deck_id} with {len(image_paths)} pages")
                 
                 return True, result
                 
@@ -346,6 +390,8 @@ class SlideConverter:
         
         except Exception as e:
             logger.error(f"Document conversion pipeline error: {e}")
+            import traceback
+            traceback.print_exc()
             result['error'] = str(e)
             return False, result
     

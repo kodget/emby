@@ -1201,13 +1201,12 @@ export const aiApi = {
   getTextbookSuggestions: async (
     slideId: string,
   ): Promise<{
-    suggestions: Array<{
-      textbook: string;
+    textbooks: Array<{
+      title: string;
+      author: string;
       chapter: string;
-      relevance: string;
+      reason: string;
     }>;
-    slide_title: string;
-    subject: string;
   }> => {
     const response = await api.post("/api/ai/textbook-suggestions/", {
       slide_id: slideId,
@@ -1218,14 +1217,11 @@ export const aiApi = {
   getVideoSuggestions: async (
     slideId: string,
   ): Promise<{
-    suggestions: Array<{
+    videos: Array<{
       title: string;
-      channel: string;
-      description: string;
-      duration: string;
+      query: string;
+      reason: string;
     }>;
-    slide_title: string;
-    subject: string;
   }> => {
     const response = await api.post("/api/ai/video-suggestions/", {
       slide_id: slideId,
@@ -1238,22 +1234,58 @@ export const aiApi = {
   ): Promise<{
     mcqs: Array<{
       question: string;
-      options: {
-        A: string;
-        B: string;
-        C: string;
-        D: string;
-      };
-      correct_answer: string;
+      options: string[];
+      correct: number;
       explanation: string;
     }>;
-    total_questions: number;
-    slide_title: string;
-    subject: string;
   }> => {
     const response = await api.post("/api/ai/generate-mcqs/", {
       slide_id: slideId,
     });
+    return response.data;
+  },
+
+  // Slide-aware chat — backend proxy adds Gemini key, never exposed to frontend
+  chatWithSlide: async (data: {
+    slide_id: string;
+    message: string;
+    slide_image_base64?: string;
+    conversation_history?: Array<{ role: string; content: string }>;
+  }): Promise<{
+    response: string;
+    sources?: string[];
+    youtube?: {
+      title: string;
+      channel: string;
+      length: string;
+      isDissection: boolean;
+    };
+  }> => {
+    const response = await api.post("/api/ai/chat/", data);
+    return response.data;
+  },
+
+  // Generate per-slide resources (YouTube, textbooks, MCQs)
+  // Cached per-slide on the frontend — only called once per slide
+  generateResources: async (data: {
+    slide_id: string;
+    slide_image_base64?: string;
+  }): Promise<{
+    youtube: Array<{ title: string; query: string; reason: string }>;
+    textbooks: Array<{
+      title: string;
+      author: string;
+      chapter: string;
+      reason: string;
+    }>;
+    mcqs: Array<{
+      question: string;
+      options: string[];
+      correct: number;
+      explanation: string;
+    }>;
+  }> => {
+    const response = await api.post("/api/ai/resources/", data);
     return response.data;
   },
 };
