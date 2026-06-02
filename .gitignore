@@ -17,3 +17,34 @@ node_modules
 
 .env.local
 .env.local.example
+
+# Environment variables — NEVER commit these
+.env
+.env.*
+.env.local
+.env.local.example
+backend/.env
+backend/backend/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Node
+node_modules/
+.next/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets — add any other files that contain keys here
+*.pem
+*.key

@@ -15,7 +15,7 @@ from typing import Dict, List, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCMbLJT6VzE4_g17lOeBkqb1uF2b0J7sKU")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 
 def _get_client():
