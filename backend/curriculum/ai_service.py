@@ -15,13 +15,43 @@ from typing import Dict, List, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+def _get_api_key() -> str:
+    """Resolve the Gemini API key from Django settings, falling back to env."""
+    try:
+        from django.conf import settings
+        key = getattr(settings, "GEMINI_API_KEY", "") or ""
+    except Exception:
+        key = ""
+    return key or os.getenv("GEMINI_API_KEY", "")
+
+
+# Backwards-compatible module constant (read lazily where possible)
+GEMINI_API_KEY = _get_api_key()
 
 
 def _get_client():
     """Lazy-initialize the Gemini client."""
+    api_key = _get_api_key()
+    if not api_key:
+        raise RuntimeError(
+            "GEMINI_API_KEY is not configured. Add it to your .env to enable AI features."
+        )
     from google import genai
-    return genai.Client(api_key=GEMINI_API_KEY)
+    return genai.Client(api_key=api_key)
+
+
+def _strip_json_fences(text: str) -> str:
+    """Remove markdown code fences the model sometimes wraps JSON in."""
+    text = (text or "").strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        # Drop the opening fence (``` or ```json) and a trailing fence if present
+        lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines)
+    return text.strip()
 
 
 def _generate(parts: list, model: str = "gemini-2.0-flash") -> str:
@@ -293,6 +323,108 @@ Provide 5 specific study recommendations and 2 focus areas."""
             "recommendations": ["Review recent slides", "Practice MCQs daily", "Use spaced repetition"],
             "focus_areas": ["Anatomy", "Physiology"],
         }
+
+
+def generate_questions_from_text(
+    text: str,
+    subject_name: str = "General",
+    topic_name: str = "",
+    num_mcq: int = 5,
+    num_theory: int = 3,
+) -> Dict[str, Any]:
+    """
+    Generate MCQ and theory questions from arbitrary source text (slide content
+    or past-question text) using Gemini.
+
+    Returns:
+        {
+          "mcqs": [
+            {"question", "option_a", "option_b", "option_c", "option_d",
+             "correct_option" (A-D), "explanation"}
+          ],
+          "theory": [{"question", "model_answer"}],
+          "error": str | None,
+        }
+    """
+    empty = {"mcqs": [], "theory": [], "error": None}
+
+    if not text or not text.strip():
+        return {**empty, "error": "No source text provided"}
+
+    # Keep the prompt bounded — long decks blow past context limits
+    source = text.strip()[:15000]
+    topic_line = f"TOPIC: {topic_name}\n" if topic_name else ""
+
+    prompt = f"""You are an examiner creating assessment questions for Nigerian medical students.
+
+SUBJECT: {subject_name}
+{topic_line}SOURCE MATERIAL:
+{source}
+
+TASK: Create exam questions strictly grounded in the SOURCE MATERIAL above.
+
+RESPOND ONLY WITH VALID JSON. NO MARKDOWN. NO PREAMBLE.
+
+Format:
+{{
+  "mcqs": [
+    {{
+      "question": "Question stem?",
+      "option_a": "First option",
+      "option_b": "Second option",
+      "option_c": "Third option",
+      "option_d": "Fourth option",
+      "correct_option": "A",
+      "explanation": "Why the correct option is right"
+    }}
+  ],
+  "theory": [
+    {{"question": "Open-ended question?", "model_answer": "A concise model answer."}}
+  ]
+}}
+
+Generate exactly {num_mcq} MCQs (each with 4 options and one correct answer A-D)
+and {num_theory} theory questions. Ensure every MCQ has a single unambiguous correct option."""
+
+    raw = ""
+    try:
+        raw = _generate([prompt])
+        data = json.loads(_strip_json_fences(raw))
+
+        mcqs = data.get("mcqs", []) if isinstance(data, dict) else []
+        theory = data.get("theory", []) if isinstance(data, dict) else []
+
+        # Normalise correct_option to an uppercase A-D letter
+        cleaned_mcqs = []
+        for m in mcqs:
+            if not isinstance(m, dict):
+                continue
+            correct = str(m.get("correct_option", "A")).strip().upper()[:1]
+            if correct not in ("A", "B", "C", "D"):
+                correct = "A"
+            cleaned_mcqs.append({
+                "question": m.get("question", ""),
+                "option_a": m.get("option_a", ""),
+                "option_b": m.get("option_b", ""),
+                "option_c": m.get("option_c", ""),
+                "option_d": m.get("option_d", ""),
+                "correct_option": correct,
+                "explanation": m.get("explanation", ""),
+            })
+
+        cleaned_theory = [
+            {"question": t.get("question", ""), "model_answer": t.get("model_answer", "")}
+            for t in theory if isinstance(t, dict)
+        ]
+
+        return {"mcqs": cleaned_mcqs, "theory": cleaned_theory, "error": None}
+
+    except json.JSONDecodeError as e:
+        logger.error(f"generate_questions_from_text JSON parse error: {e}; raw={raw[:300]}")
+        return {**empty, "error": "AI returned malformed JSON"}
+    except Exception as e:
+        logger.error(f"generate_questions_from_text error: {e}")
+        return {**empty, "error": str(e)}
 
 
 def grade_theory_answer(

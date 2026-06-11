@@ -33,7 +33,7 @@ export function LandingHero() {
           </h1>
 
           <p className="mt-5 max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground md:text-base">
-            Your slides, textbook, past questions, timed quizzes and steeplechase practice — in one focused dark app.
+            Your slides, textbook, past questions, timed quizzes and steeplechase practice — in one focused workspace.
             Highlight any line and the AI tutor explains it, quizzes you, and shows the dissection video. No tab
             switching. No guessing what to study next.
           </p>

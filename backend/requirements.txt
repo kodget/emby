@@ -1,21 +1,35 @@
-Django==5.1.1
-djangorestframework==3.15.2
-djangorestframework-simplejwt==5.3.1
-django-cors-headers==4.3.1
-psycopg2-binary==2.9.9
-python-dotenv==1.0.1
-cloudinary==1.41.0
-Pillow==10.2.0
-requests==2.32.3
-google-auth==2.34.0
+# Core — installs cleanly on Python 3.12–3.14
+Django>=5.1,<6.1
+djangorestframework>=3.15.2
+djangorestframework-simplejwt>=5.3.1
+django-cors-headers>=4.3.1
+
+# Postgres driver: psycopg3 (has prebuilt wheels incl. Python 3.14; Django uses it automatically)
+psycopg[binary]>=3.2.0
+
+python-dotenv>=1.0.1
+cloudinary>=1.41.0
+Pillow>=10.4.0
+requests>=2.32.3
+google-auth>=2.34.0
 google-generativeai>=0.8.0
+google-genai>=1.0.0
+
+# File processing / rendering
 PyMuPDF>=1.24.0
 python-pptx>=1.0.0
 python-docx>=1.1.0
 pdfplumber>=0.11.0
+pdf2image>=1.17.0
 
-# Celery for async task processing
-celery==5.4.0
-redis==5.0.1
-django-celery-results==2.5.1
-sentence-transformers>=2.2.0
+bcrypt>=4.1.0
+
+# Celery for async slide processing
+celery>=5.4.0
+redis>=5.0.1
+django-celery-results>=2.5.1
+
+# NOTE: RAG (semantic chat retrieval) is OPTIONAL and heavy (pulls torch).
+# torch has no Python 3.14 wheel yet — install these only on Python 3.12,
+# or skip them entirely (chat falls back to raw slide text automatically):
+#   pip install -r requirements-rag.txt

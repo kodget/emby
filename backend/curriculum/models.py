@@ -632,6 +632,35 @@ class SlideChunk(models.Model):
         return f"{self.slide.title} - Chunk {self.chunk_index}"
 
 
+class SlideChatMessage(models.Model):
+    """
+    Persisted AI chat history, scoped per student per slide (PRD §6.4.3).
+    Used to restore conversation context and to enforce daily free-tier limits.
+    """
+    ROLES = [
+        ('user', 'User'),
+        ('assistant', 'Assistant'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='slide_chat_messages')
+    slide = models.ForeignKey(Slide, on_delete=models.CASCADE, related_name='chat_messages', null=True, blank=True)
+
+    role = models.CharField(max_length=10, choices=ROLES)
+    content = models.TextField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['user', 'slide', 'created_at']),
+            models.Index(fields=['user', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} [{self.role}] {self.content[:40]}"
+
+
 class SlideProcessingStatus(models.Model):
     """Track which slides have been chunked and embedded"""
     slide = models.OneToOneField(Slide, on_delete=models.CASCADE, related_name='processing_status', primary_key=True)

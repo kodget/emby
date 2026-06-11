@@ -128,16 +128,24 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-5">
         <Link
           href="/"
-          className="flex items-center gap-2"
+          className="group flex items-center gap-2.5"
           aria-label="Emby home"
           onClick={onNav}
         >
-          <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <span
+            className="relative flex size-9 items-center justify-center rounded-xl text-primary-foreground transition-transform duration-200 group-hover:scale-105"
+            style={{
+              background:
+                "linear-gradient(140deg, color-mix(in oklab, var(--primary) 100%, white 12%), color-mix(in oklab, var(--primary) 78%, black 8%))",
+              boxShadow:
+                "inset 0 1px 0 0 color-mix(in oklab, white 30%, transparent), 0 6px 18px -6px color-mix(in oklab, var(--primary) 70%, transparent)",
+            }}
+          >
             <FontAwesomeIcon icon={faStethoscope} className="size-4" />
           </span>
           <span className="flex flex-col leading-none">
-            <span className="font-serif text-base">Emby</span>
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+            <span className="font-serif text-lg font-semibold tracking-tight">Emby</span>
+            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
               BMS Edition
             </span>
           </span>
@@ -200,10 +208,10 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       <UploadProgressStrip />
 
       {/* Streak + role */}
-      <div className="m-3 rounded-2xl border border-sidebar-border bg-card p-4">
+      <div className="glass m-3 rounded-2xl p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-full bg-accent text-accent-foreground">
+            <span className="flex size-8 items-center justify-center rounded-full bg-review/15 text-review">
               <FontAwesomeIcon
                 icon={faFire}
                 className="size-4"

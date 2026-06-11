@@ -29,11 +29,11 @@ export function ClassInfoWidget() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-lg p-6 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+      <div className="rounded-2xl border border-border bg-card p-6 animate-pulse">
+        <div className="mb-4 h-6 w-1/2 rounded bg-muted"></div>
         <div className="space-y-3">
-          <div className="h-4 bg-gray-200 rounded"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-4 rounded bg-muted"></div>
+          <div className="h-4 w-3/4 rounded bg-muted"></div>
         </div>
       </div>
     );
@@ -41,12 +41,14 @@ export function ClassInfoWidget() {
 
   if (!profile?.class_group) {
     return (
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Users className="w-6 h-6 text-gray-400" />
-          <h3 className="text-lg font-bold text-gray-900">My Class</h3>
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-learning/12 text-learning">
+            <Users className="size-4" />
+          </span>
+          <h3 className="font-serif text-base font-semibold tracking-tight">My Class</h3>
         </div>
-        <p className="text-gray-600 mb-4">
+        <p className="mb-4 text-sm text-muted-foreground">
           {profile?.role === "class_head"
             ? "Your class will be created after verification"
             : "Join a class to connect with classmates"}
@@ -54,7 +56,7 @@ export function ClassInfoWidget() {
         {profile?.role !== "class_head" && (
           <button
             onClick={() => router.push("/onboarding")}
-            className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+            className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_20px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] transition-colors hover:bg-primary/90"
           >
             Join Class
           </button>
@@ -66,58 +68,60 @@ export function ClassInfoWidget() {
   const isHead = isClassHead();
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <Users className="w-6 h-6 text-purple-600" />
-          <h3 className="text-lg font-bold text-gray-900">My Class</h3>
+    <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-learning/12 text-learning">
+            <Users className="size-4" />
+          </span>
+          <h3 className="font-serif text-base font-semibold tracking-tight">My Class</h3>
         </div>
         {isHead && (
-          <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs font-semibold rounded">
-            <Crown className="w-3 h-3" />
+          <div className="flex items-center gap-1 rounded-full bg-review/15 px-2.5 py-1 text-xs font-semibold text-review">
+            <Crown className="size-3" />
             Head
           </div>
         )}
       </div>
 
-      <div className="space-y-3 mb-4">
-        <div>
-          <div className="text-xl font-bold text-gray-900">{profile.set_name}</div>
+      <div className="mb-4 space-y-2.5">
+        <div className="font-serif text-xl font-semibold tracking-tight text-foreground">
+          {profile.set_name}
         </div>
-        <div className="flex items-center gap-2 text-gray-600">
-          <School className="w-4 h-4" />
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <School className="size-4" />
           <span className="text-sm">{profile.school_name}</span>
         </div>
-        <div className="flex items-center gap-2 text-gray-600">
-          <Hash className="w-4 h-4" />
-          <span className="text-sm font-mono font-semibold text-purple-600">{profile.class_code}</span>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Hash className="size-4" />
+          <span className="font-mono text-sm font-semibold text-learning">{profile.class_code}</span>
         </div>
       </div>
 
       <div className="space-y-2">
         <button
           onClick={() => router.push("/class/announcements")}
-          className="w-full flex items-center justify-between px-4 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors group"
+          className="group flex w-full items-center justify-between rounded-xl border border-border bg-background/50 px-4 py-2.5 transition-colors hover:border-learning/40 hover:bg-learning/5"
         >
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-purple-600" />
-            <span className="text-sm font-medium text-gray-900">Announcements</span>
+            <Calendar className="size-4 text-learning" />
+            <span className="text-sm font-medium text-foreground">Announcements</span>
           </div>
-          <ArrowRight className="w-4 h-4 text-purple-600 group-hover:translate-x-1 transition-transform" />
+          <ArrowRight className="size-4 text-learning transition-transform group-hover:translate-x-0.5" />
         </button>
         <button
           onClick={() => router.push("/class/roster")}
-          className="w-full flex items-center justify-between px-4 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors group"
+          className="group flex w-full items-center justify-between rounded-xl border border-border bg-background/50 px-4 py-2.5 transition-colors hover:border-mastery/40 hover:bg-mastery/5"
         >
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-medium text-gray-900">Class Roster</span>
+            <Users className="size-4 text-mastery" />
+            <span className="text-sm font-medium text-foreground">Class Roster</span>
           </div>
-          <ArrowRight className="w-4 h-4 text-blue-600 group-hover:translate-x-1 transition-transform" />
+          <ArrowRight className="size-4 text-mastery transition-transform group-hover:translate-x-0.5" />
         </button>
         <button
           onClick={() => router.push("/class")}
-          className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm font-medium text-gray-900"
+          className="w-full rounded-xl bg-secondary px-4 py-2.5 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent"
         >
           View All
         </button>

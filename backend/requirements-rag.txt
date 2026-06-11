@@ -1,0 +1,5 @@
+# Optional RAG stack for semantic chat retrieval (Goal #2).
+# Heavy: pulls in torch. Install on Python 3.12 (torch has no 3.14 wheel yet).
+# If not installed, the AI chat gracefully falls back to using the raw slide text.
+sentence-transformers>=2.2.0
+scikit-learn>=1.3.0

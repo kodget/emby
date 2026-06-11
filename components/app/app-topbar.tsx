@@ -33,7 +33,7 @@ export function AppTopbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex min-w-0 h-16 items-center gap-2 border-b border-border bg-background/80 px-3 backdrop-blur-md sm:px-6">
+      <header className="sticky top-0 z-30 flex min-w-0 h-16 items-center gap-2 border-b border-border bg-background/70 px-3 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55 sm:px-6">
         {/* Search */}
         <GlobalSearch />
 
@@ -89,7 +89,7 @@ export function AppTopbar() {
             >
               <FontAwesomeIcon
                 icon={faFire}
-                className="size-3 text-orange-400"
+                className="size-3 text-review"
                 aria-hidden="true"
               />
               <span>{user.streak || 0}</span>

@@ -11,7 +11,7 @@ from .views import (
 )
 from .upload_views import upload_file, delete_file
 # New slide-aware AI views (replaces legacy textbook/video/mcq views)
-from .ai_views import chat_with_slide, generate_resources, textbook_suggestions, video_suggestions, generate_mcqs
+from .ai_views import chat_with_slide, generate_resources, textbook_suggestions, video_suggestions, generate_mcqs, chat_history
 
 router = DefaultRouter()
 router.register(r'subjects', SubjectViewSet, basename='subject')
@@ -40,6 +40,7 @@ urlpatterns = [
     path('study-time/log/', log_study_time, name='log-study-time'),
     # AI endpoints — slide-aware (new implementation)
     path('ai/chat/', chat_with_slide, name='ai-chat'),
+    path('ai/chat/history/', chat_history, name='ai-chat-history'),
     path('ai/resources/', generate_resources, name='ai-resources'),
     path('ai/textbook-suggestions/', textbook_suggestions, name='ai-textbook-suggestions'),
     path('ai/video-suggestions/', video_suggestions, name='ai-video-suggestions'),

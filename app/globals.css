@@ -4,85 +4,91 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  MB Study Buddy — Clinical Dark theme.
-  Students study at night; bright UIs fatigue them. Dark base, medical blue
-  as the focus color, and a strict semantic palette so color always means
-  something:
-    Blue   -> Learning   (primary actions, focus)
-    Green  -> Mastery    (strong topics, correct answers)
-    Red    -> Weakness   (wrong, weak topics, urgent timer)
-    Amber  -> Review     (needs-review, spaced-repetition due)
+  Emby — "Bright Editorial".
+  A calm, warm paper canvas with crisp ink and one confident accent.
+  Reads like a beautifully set study journal, not a clinical terminal.
+  A strict semantic palette keeps color meaningful:
+
+    Indigo  -> Learning   (primary actions, focus, brand)
+    Emerald -> Mastery    (strong topics, correct answers)
+    Rose    -> Weakness   (wrong, weak topics, urgent timer)
+    Amber   -> Review     (needs-review, spaced-repetition due)
+
+  Display: Clash Display (characterful, geometric).  Body: Satoshi (clean).
 */
 
 :root {
-  /* Clinical dark surfaces */
-  --background: oklch(0.14 0.012 240);   /* ~#0B0F14 */
-  --foreground: oklch(0.965 0.006 240);
+  /* Warm paper canvas + cool ink */
+  --background: oklch(0.986 0.005 95);    /* warm near-white */
+  --foreground: oklch(0.24 0.03 282);     /* cool ink, near-black */
 
-  --card: oklch(0.185 0.014 240);        /* ~#121821 surface */
-  --card-foreground: oklch(0.965 0.006 240);
+  /* Cards: clean white that lifts off the warm canvas */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.03 282);
 
-  --popover: oklch(0.2 0.014 240);
-  --popover-foreground: oklch(0.965 0.006 240);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.03 282);
 
-  /* Primary: Medical Blue #3B82F6 */
-  --primary: oklch(0.62 0.185 258);
-  --primary-foreground: oklch(0.98 0.006 240);
+  /* Primary: confident indigo-violet (deliberately NOT medical blue) */
+  --primary: oklch(0.52 0.205 280);
+  --primary-foreground: oklch(0.99 0.004 280);
 
-  /* Secondary: muted slate chip */
-  --secondary: oklch(0.26 0.015 240);
-  --secondary-foreground: oklch(0.96 0.006 240);
+  /* Secondary: soft lavender chip */
+  --secondary: oklch(0.955 0.013 285);
+  --secondary-foreground: oklch(0.32 0.04 285);
 
-  --muted: oklch(0.24 0.013 240);
-  --muted-foreground: oklch(0.72 0.012 240);
+  --muted: oklch(0.962 0.007 95);
+  --muted-foreground: oklch(0.475 0.022 285);
 
-  /* Accent: Emerald (also the "mastery" color) */
-  --accent: oklch(0.72 0.15 165);
-  --accent-foreground: oklch(0.14 0.012 240);
+  /* Accent: a quiet tinted surface for hovers (NOT a loud color) */
+  --accent: oklch(0.955 0.016 285);
+  --accent-foreground: oklch(0.3 0.045 285);
 
-  /* Destructive: red (also "weakness") */
-  --destructive: oklch(0.66 0.22 26);
-  --destructive-foreground: oklch(0.98 0 0);
+  /* Destructive: rose-red (also "weakness") */
+  --destructive: oklch(0.555 0.215 25);
+  --destructive-foreground: oklch(0.99 0.004 25);
 
-  --border: oklch(0.28 0.015 240);
-  --input: oklch(0.28 0.015 240);
-  --ring: oklch(0.62 0.185 258);
+  /* Hairline borders, ink at low alpha so they read on paper */
+  --border: oklch(0.32 0.03 285 / 0.13);
+  --input: oklch(0.32 0.03 285 / 0.2);
+  --ring: oklch(0.52 0.205 280);
 
-  /* Semantic learning-state tokens */
-  --learning: oklch(0.62 0.185 258);   /* blue   */
-  --mastery:  oklch(0.72 0.15 165);    /* emerald */
-  --weakness: oklch(0.66 0.22 26);     /* red    */
-  --review:   oklch(0.8 0.17 78);      /* amber  */
+  /* Semantic learning-state tokens (tuned for contrast on light) */
+  --learning: oklch(0.52 0.205 280);   /* indigo (== primary) */
+  --mastery:  oklch(0.55 0.13 162);    /* emerald */
+  --weakness: oklch(0.555 0.215 25);   /* rose-red */
+  --review:   oklch(0.62 0.15 66);     /* amber */
 
-  /* Chart palette: blue, emerald, red, amber, slate */
-  --chart-1: oklch(0.62 0.185 258);
-  --chart-2: oklch(0.72 0.15 165);
-  --chart-3: oklch(0.66 0.22 26);
-  --chart-4: oklch(0.8 0.17 78);
-  --chart-5: oklch(0.75 0.01 240);
+  /* Chart palette: indigo, emerald, amber, rose, slate */
+  --chart-1: oklch(0.52 0.205 280);
+  --chart-2: oklch(0.55 0.13 162);
+  --chart-3: oklch(0.62 0.15 66);
+  --chart-4: oklch(0.555 0.215 25);
+  --chart-5: oklch(0.55 0.03 285);
 
-  /* Slightly larger radius — brief calls for rounded-2xl surfaces */
-  --radius: 1rem;
+  /* Generous radius — premium, soft surfaces */
+  --radius: 1.1rem;
 
-  /* Sidebar: slightly darker than cards so hierarchy reads */
-  --sidebar: oklch(0.12 0.012 240);
-  --sidebar-foreground: oklch(0.965 0.006 240);
-  --sidebar-primary: oklch(0.62 0.185 258);
-  --sidebar-primary-foreground: oklch(0.98 0.006 240);
-  --sidebar-accent: oklch(0.2 0.014 240);
-  --sidebar-accent-foreground: oklch(0.965 0.006 240);
-  --sidebar-border: oklch(0.24 0.013 240);
-  --sidebar-ring: oklch(0.62 0.185 258);
+  /* Sidebar: a faint lavender plane, distinct from the paper canvas */
+  --sidebar: oklch(0.975 0.009 286);
+  --sidebar-foreground: oklch(0.24 0.03 282);
+  --sidebar-primary: oklch(0.52 0.205 280);
+  --sidebar-primary-foreground: oklch(0.99 0.004 280);
+  --sidebar-accent: oklch(0.945 0.016 286);
+  --sidebar-accent-foreground: oklch(0.27 0.04 285);
+  --sidebar-border: oklch(0.32 0.03 285 / 0.11);
+  --sidebar-ring: oklch(0.52 0.205 280);
 }
 
 @theme inline {
-  /* Inter for body, Sora for display/headings.
-     We alias --font-serif -> Sora so the existing `font-serif` usage
-     across the app becomes our display font without editing 24 files. */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Clash Display for display/headings, Satoshi for body.
+     We alias --font-serif -> Clash Display so the existing `font-serif`
+     usage across the app becomes our display font without editing dozens
+     of files. next/font vars remain as graceful fallbacks. */
+  --font-sans: 'Satoshi', var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-serif: var(--font-sora), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-sora), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Clash Display', var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Clash Display', var(--font-sora), ui-sans-serif, system-ui, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -138,17 +144,27 @@
   }
   html {
     @apply bg-background;
-    color-scheme: dark;
+    color-scheme: light;
   }
   body {
     @apply bg-background text-foreground antialiased;
-    /* Tight body rhythm per brief */
+    /* Comfortable body rhythm */
     font-size: 15px;
-    line-height: 1.55;
+    line-height: 1.6;
+    /* Atmospheric mesh: faint indigo + warm amber washes fixed behind all */
+    background-image:
+      radial-gradient(56% 42% at 84% -10%, color-mix(in oklab, var(--learning) 9%, transparent), transparent 62%),
+      radial-gradient(48% 40% at -6% 104%, color-mix(in oklab, var(--review) 8%, transparent), transparent 56%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
   }
-  /* Display headings use Sora via --font-serif alias */
+  /* Display headings use Clash Display via --font-serif alias */
   h1, h2, h3 {
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
+  }
+  /* Tabular figures everywhere numbers matter feel intentional */
+  .font-mono {
+    font-feature-settings: 'tnum' 1;
   }
 }
 
@@ -161,16 +177,43 @@
   }
 
   /* Immersive scrollbar */
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--primary) 30%, transparent); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--primary) 28%, transparent); border-radius: 99px; }
   ::-webkit-scrollbar-thumb:hover { background: color-mix(in oklab, var(--primary) 55%, transparent); }
+
+  /* ---- Glass surfaces ------------------------------------------------- */
+  /* Frosted white, layered above the paper canvas with a soft cast shadow. */
+  .glass {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, white 92%, transparent),
+        color-mix(in oklab, white 76%, transparent)
+      );
+    backdrop-filter: blur(14px) saturate(1.15);
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+    border: 1px solid var(--border);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
+      0 1px 2px 0 color-mix(in oklab, var(--foreground) 6%, transparent),
+      0 18px 40px -24px color-mix(in oklab, var(--foreground) 22%, transparent);
+  }
+  .glass-strong {
+    background: color-mix(in oklab, white 96%, transparent);
+    backdrop-filter: blur(22px) saturate(1.2);
+    -webkit-backdrop-filter: blur(22px) saturate(1.2);
+    border: 1px solid var(--border);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.8),
+      0 24px 60px -28px color-mix(in oklab, var(--foreground) 26%, transparent);
+  }
 
   /* Ambient background pulse behind hero sections */
   @keyframes ambient-drift {
-    0%, 100% { opacity: 0.4; transform: scale(1) translate(0, 0); }
-    33% { opacity: 0.6; transform: scale(1.05) translate(1%, -1%); }
-    66% { opacity: 0.35; transform: scale(0.97) translate(-1%, 1%); }
+    0%, 100% { opacity: 0.45; transform: scale(1) translate(0, 0); }
+    33% { opacity: 0.65; transform: scale(1.05) translate(1%, -1%); }
+    66% { opacity: 0.4; transform: scale(0.97) translate(-1%, 1%); }
   }
   .ambient-orb {
     animation: ambient-drift 12s ease-in-out infinite;
@@ -190,13 +233,26 @@
     animation: shimmer 3s linear infinite;
   }
 
+  /* Ink -> indigo gradient text for hero headlines / accents */
+  .text-gradient {
+    background: linear-gradient(
+      120deg,
+      var(--foreground) 0%,
+      color-mix(in oklab, var(--primary) 92%, var(--foreground)) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
   /* Hover lift utility */
   .hover-lift {
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
   }
   .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px -8px color-mix(in oklab, var(--primary) 20%, transparent);
+    transform: translateY(-3px);
+    box-shadow: 0 22px 48px -20px color-mix(in oklab, var(--primary) 30%, transparent);
   }
 
   /* Active nav indicator bar */
@@ -204,35 +260,36 @@
     content: '';
     position: absolute;
     left: 0;
-    top: 20%;
-    height: 60%;
+    top: 18%;
+    height: 64%;
     width: 3px;
     border-radius: 0 3px 3px 0;
     background: var(--primary);
-    box-shadow: 0 0 8px 1px color-mix(in oklab, var(--primary) 60%, transparent);
+    box-shadow: 0 0 10px 1px color-mix(in oklab, var(--primary) 50%, transparent);
   }
 
-  /* Reader highlight uses medical blue */
+  /* Reader highlight uses indigo */
   .ai-highlight {
-    background: color-mix(in oklab, var(--learning) 28%, transparent);
-    box-shadow: inset 0 -2px 0 0 color-mix(in oklab, var(--learning) 80%, transparent);
+    background: color-mix(in oklab, var(--learning) 16%, transparent);
+    box-shadow: inset 0 -2px 0 0 color-mix(in oklab, var(--learning) 70%, transparent);
     border-radius: 2px;
     padding: 0 2px;
     color: var(--foreground);
   }
 
-  /* Subtle inner glow for focus cards */
+  /* Soft focus glow + ring for hero / focus cards */
   .study-glow {
     box-shadow:
-      0 0 0 1px color-mix(in oklab, var(--learning) 18%, transparent),
-      0 20px 60px -20px color-mix(in oklab, var(--learning) 25%, transparent);
+      0 0 0 1px color-mix(in oklab, var(--learning) 14%, transparent),
+      0 28px 70px -34px color-mix(in oklab, var(--learning) 40%, transparent),
+      0 10px 30px -18px color-mix(in oklab, var(--foreground) 14%, transparent);
   }
 
   /* Pressure pulse for timers under stress (steeplechase last 5s) */
   @keyframes pressure-pulse {
     0%, 100% {
       transform: scale(1);
-      box-shadow: 0 0 0 0 color-mix(in oklab, var(--destructive) 55%, transparent);
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--destructive) 50%, transparent);
     }
     50% {
       transform: scale(1.03);
@@ -250,7 +307,7 @@
     inset: 0;
     pointer-events: none;
     border-radius: inherit;
-    opacity: 0.03;
+    opacity: 0.025;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-size: 120px;
   }
@@ -258,8 +315,29 @@
   /* Subtle background grid for exam/focus surfaces */
   .grid-surface {
     background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px);
+      linear-gradient(to right, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px);
     background-size: 32px 32px;
+  }
+
+  /* Staggered entrance for page-load reveals */
+  @keyframes rise-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .rise-in {
+    animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ambient-orb,
+    .shimmer-text,
+    .pressure-pulse,
+    .rise-in {
+      animation: none !important;
+    }
+    .hover-lift {
+      transition: none;
+    }
   }
 }

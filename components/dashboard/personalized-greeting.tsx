@@ -217,25 +217,26 @@ export function PersonalizedGreeting() {
 
   if (loading || !greeting || !profile) {
     return (
-      <div className="animate-pulse">
-        <div className="h-8 bg-gray-200 rounded w-3/4 mb-2"></div>
-        <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+      <div className="mb-7 animate-pulse">
+        <div className="mb-3 h-10 w-3/4 rounded-lg bg-muted" />
+        <div className="h-6 w-1/2 rounded-lg bg-muted" />
       </div>
     );
   }
 
   return (
-    <div className="mb-6">
-      <div className="flex items-start gap-3">
-        <div className="flex-1">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-            {greeting.timeGreeting}, {profile.full_name.split(' ')[0]}!
-          </h1>
-          <p className="text-xl md:text-2xl text-white/90">
-            {greeting.motivationalMessage}
-          </p>
-        </div>
-      </div>
+    <div className="rise-in mb-7">
+      <p className="mb-2 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
+        <Sparkles className="size-3.5" aria-hidden="true" />
+        {greeting.timeGreeting}
+      </p>
+      <h1 className="font-serif text-4xl font-semibold leading-[1.05] tracking-tight md:text-5xl">
+        <span className="text-foreground">Welcome back, </span>
+        <span className="text-gradient">{profile.full_name.split(" ")[0]}</span>
+      </h1>
+      <p className="mt-3 max-w-xl text-pretty text-base text-muted-foreground md:text-lg">
+        {greeting.motivationalMessage}
+      </p>
     </div>
   );
 }

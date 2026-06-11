@@ -27,10 +27,10 @@ export function UserMenu() {
   }, []);
 
   const handleLogout = () => {
-    // Clear localStorage
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("refreshToken");
+    // Clear session storage (token/user/refreshToken are stored in sessionStorage)
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("refreshToken");
     
     // Clear Redux store
     dispatch(logout());

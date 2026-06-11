@@ -97,8 +97,8 @@ export default function OnboardingPage() {
   const [responses, setResponses] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem("token");
+    // Check if user is authenticated (token lives in sessionStorage app-wide)
+    const token = sessionStorage.getItem("token");
     if (!token) {
       router.push("/signin");
       return;

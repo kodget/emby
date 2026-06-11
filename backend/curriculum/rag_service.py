@@ -4,10 +4,8 @@ Handles PDF chunking, embedding generation, and similarity search
 """
 
 import logging
-import numpy as np
 from typing import List, Dict, Tuple
-from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
+
 from django.utils import timezone
 
 from .models import Slide, SlideChunk, SlideProcessingStatus
@@ -16,13 +14,26 @@ from .content_extractor import extract_text_from_slide
 logger = logging.getLogger(__name__)
 
 class RAGService:
-    """Service for chunking PDFs and retrieving relevant content"""
-    
+    """Service for chunking PDFs and retrieving relevant content.
+
+    The embedding model (sentence-transformers / torch) is heavy, so it is
+    loaded lazily on first use rather than at import time. This keeps server
+    boot fast and makes RAG an optional dependency.
+    """
+
     def __init__(self):
-        # Use a lightweight model for embeddings (runs locally, no API calls)
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self._model = None
         self.chunk_size = 800  # words per chunk
         self.chunk_overlap = 100  # words overlap between chunks
+
+    @property
+    def model(self):
+        """Lazy-load the embedding model on first access."""
+        if self._model is None:
+            from sentence_transformers import SentenceTransformer
+            logger.info("Loading embedding model 'all-MiniLM-L6-v2' (first use)...")
+            self._model = SentenceTransformer('all-MiniLM-L6-v2')
+        return self._model
     
     def chunk_text(self, text: str, page_number: int = None) -> List[Dict]:
         """Split text into overlapping chunks"""
@@ -142,6 +153,8 @@ class RAGService:
     
     def find_relevant_chunks(self, slide: Slide, query: str, top_k: int = 5) -> List[Tuple[SlideChunk, float]]:
         """Find the most relevant chunks for a query"""
+        import numpy as np
+        from sklearn.metrics.pairwise import cosine_similarity
         try:
             # Ensure slide is processed
             status = SlideProcessingStatus.objects.filter(slide=slide).first()
