@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
-    Subject, Block, Topic, Slide, UserProgress, ScheduleItem,
-    UserStats, CommunityPost, PostComment, PostLike, UpcomingTest
+    Subject, Block, SubBlock, Topic, Slide, UserProgress, ScheduleItem,
+    UserStats, CommunityPost, PostComment, PostLike, UpcomingTest, QuizQuestion
 )
 
 
@@ -20,18 +20,26 @@ class BlockAdmin(admin.ModelAdmin):
     ordering = ['subject', 'order']
 
 
-@admin.register(Topic)
-class TopicAdmin(admin.ModelAdmin):
+@admin.register(SubBlock)
+class SubBlockAdmin(admin.ModelAdmin):
     list_display = ['id', 'block', 'name', 'order', 'created_at']
     list_filter = ['block__subject']
     list_editable = ['order']
     ordering = ['block', 'order']
 
 
+@admin.register(Topic)
+class TopicAdmin(admin.ModelAdmin):
+    list_display = ['id', 'sub_block', 'block', 'name', 'order', 'created_at']
+    list_filter = ['block__subject', 'sub_block']
+    list_editable = ['order']
+    ordering = ['block', 'order']
+
+
 @admin.register(Slide)
 class SlideAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'topic', 'block', 'uploaded_by', 'created_at']
-    list_filter = ['topic__block__subject', 'file_type']
+    list_display = ['id', 'title', 'sub_block', 'block', 'uploaded_by', 'created_at']
+    list_filter = ['sub_block__block__subject', 'file_type']
     search_fields = ['title', 'id']
     readonly_fields = ['created_at', 'updated_at']
 
@@ -96,4 +104,36 @@ class UpcomingTestAdmin(admin.ModelAdmin):
     list_filter = ['subject', 'test_date']
     search_fields = ['title', 'description']
     readonly_fields = ['created_at']
-    filter_horizontal = ['topics']
+    filter_horizontal = ['sub_blocks']
+
+
+@admin.register(QuizQuestion)
+class QuizQuestionAdmin(admin.ModelAdmin):
+    list_display = ['id', 'question_type', 'difficulty', 'subject', 'sub_block', 'source_type', 'created_at']
+    list_filter = ['question_type', 'difficulty', 'subject', 'source_type', 'created_at']
+    search_fields = ['id', 'question_text', 'subject__name', 'sub_block__name']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('id', 'question_type', 'difficulty', 'subject', 'block', 'sub_block')
+        }),
+        ('Question Content', {
+            'fields': ('question_text', 'explanation')
+        }),
+        ('MCQ Options', {
+            'fields': ('option_a', 'option_b', 'option_c', 'option_d', 'correct_option', 'question_options_order'),
+            'classes': ('collapse',)
+        }),
+        ('Theory Question', {
+            'fields': ('model_answer', 'ideal_answer', 'marking_rubric', 'maximum_marks'),
+            'classes': ('collapse',)
+        }),
+        ('Source Information', {
+            'fields': ('source_type', 'source_material', 'source_slide', 'source_text'),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )

@@ -30,13 +30,16 @@ def _ext_of(filename: str) -> str:
 
 
 def _resource_type_for(ext: str) -> str:
+    # Use 'auto' for all document types so Cloudinary serves them with a
+    # publicly accessible URL (raw + free plan = 401 on download).
+    # Images and videos keep their explicit types for CDN optimization.
     if ext in DOCUMENT_EXTS:
-        return 'raw'
+        return 'auto'
     if ext in IMAGE_EXTS:
         return 'image'
     if ext in VIDEO_EXTS:
         return 'video'
-    return 'raw'
+    return 'auto'
 
 
 def _content_looks_valid(ext: str, head: bytes) -> bool:

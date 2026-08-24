@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, useInView, useSpring, useTransform } from "framer-motion";
 import { ArrowRight, BookOpen, Flame, Play, Upload } from "lucide-react";
 import { useAppSelector } from "@/store/hooks";
-import { progressApi } from "@/lib/api";
+import { progressApi, curriculumApi } from "@/lib/api";
 import { canUploadMaterials } from "@/lib/guards";
 
 /**
@@ -32,7 +32,14 @@ export function DashboardHero() {
     try {
       const recentProgress = await progressApi.getRecentProgress();
       if (recentProgress && recentProgress.length > 0) {
-        setLastProgress(recentProgress[0]);
+        const p = recentProgress[0];
+        // Fetch slide details to get block for URL construction
+        try {
+          const slide = await curriculumApi.getSlide(p.slide);
+          setLastProgress({ ...p, slide_block: slide.block || p.slide });
+        } catch {
+          setLastProgress(p);
+        }
       }
     } catch (error) {
       console.error("Failed to load progress:", error);
@@ -89,7 +96,10 @@ export function DashboardHero() {
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <motion.div
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
                 <Link
                   href="/materials/upload"
                   className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-shadow hover:shadow-primary/40"
@@ -176,7 +186,10 @@ export function DashboardHero() {
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <motion.div
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
                 <Link
                   href="/materials"
                   className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-shadow hover:shadow-primary/40"
@@ -294,7 +307,7 @@ export function DashboardHero() {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <Link
-                href={`/read?slide=${lastProgress.slide}`}
+                href={`/read/${lastProgress.slide_block || lastProgress.slide}/${lastProgress.slide}`}
                 className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-shadow hover:shadow-primary/40"
               >
                 Resume reading
@@ -302,7 +315,7 @@ export function DashboardHero() {
               </Link>
             </motion.div>
             <Link
-              href="/materials"
+              href="/read"
               className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-card px-5 text-sm text-muted-foreground transition-colors hover:text-foreground hover:border-primary/50"
             >
               <BookOpen className="size-4" aria-hidden="true" />
@@ -324,11 +337,11 @@ export function DashboardHero() {
             tone="learning"
             delay={0.25}
           />
-          <StatTile 
-            label="Progress" 
-            value={`${Math.round(lastProgress.progress_percentage)}%`} 
-            tone="mastery" 
-            delay={0.3} 
+          <StatTile
+            label="Progress"
+            value={`${Math.round(lastProgress.progress_percentage)}%`}
+            tone="mastery"
+            delay={0.3}
           />
           <StatTile
             label="Class rank"
@@ -344,7 +357,7 @@ export function DashboardHero() {
 
 function StreakTile() {
   const user = useAppSelector((s) => s.user);
-  
+
   return (
     <motion.div
       whileHover={{ scale: 1.03, y: -1 }}

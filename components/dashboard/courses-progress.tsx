@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Loader2 } from "lucide-react";
 import { curriculumApi, progressApi } from "@/lib/api";
-import type { Subject, UserProgress } from "@/lib/api";
+import type { Subject } from "@/lib/api";
 
 export function CoursesProgress() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [progress, setProgress] = useState<UserProgress[]>([]);
+  const [subjectProgressMap, setSubjectProgressMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,34 +17,21 @@ export function CoursesProgress() {
 
   const loadData = async () => {
     try {
-      const [subjectsData, progressData] = await Promise.all([
+      const [subjectsData, progressData] = await Promise.allSettled([
         curriculumApi.getSubjects(),
-        progressApi.getProgress().catch(() => []),
+        progressApi.getSubjectProgress(),
       ]);
-      setSubjects(subjectsData);
-      setProgress(progressData);
+      if (subjectsData.status === "fulfilled") setSubjects(subjectsData.value);
+      if (progressData.status === "fulfilled") {
+        const map: Record<string, number> = {};
+        progressData.value.forEach((p) => { map[p.subject_id] = p.completion_percentage; });
+        setSubjectProgressMap(map);
+      }
     } catch (error) {
       console.error("Failed to load courses:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Calculate progress for each subject
-  const getSubjectProgress = (subjectId: string) => {
-    const subjectProgress = progress.filter((p) => {
-      // This would need to be enhanced based on your data structure
-      // For now, we'll return a basic calculation
-      return true;
-    });
-
-    if (subjectProgress.length === 0) return 0;
-
-    const totalProgress = subjectProgress.reduce(
-      (sum, p) => sum + p.progress_percentage,
-      0
-    );
-    return Math.round(totalProgress / subjectProgress.length);
   };
 
   if (loading) {
@@ -101,7 +88,7 @@ export function CoursesProgress() {
       ) : (
         <ul className="mt-5 grid gap-3 sm:grid-cols-2">
           {subjects.slice(0, 4).map((subject) => {
-            const subjectProgress = getSubjectProgress(subject.id);
+            const subjectProgress = subjectProgressMap[subject.id] ?? 0;
             return (
               <li key={subject.id}>
                 <Link

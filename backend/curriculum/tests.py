@@ -295,6 +295,229 @@ class QuizViewTest(TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Quiz attempt endpoints (Task 4.4 - Answer saving endpoint)
+# ---------------------------------------------------------------------------
+
+class QuizAttemptAnswerSavingTest(TestCase):
+    """Test cases for the submit_answer endpoint in QuizAttemptViewSet"""
+    
+    def setUp(self):
+        self.subject, self.block, self.topic = make_curriculum()
+        self.user = make_user()
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        
+        # Create test questions
+        self.mcq_question = QuizQuestion.objects.create(
+            id="mcq-test-1",
+            question_type="mcq",
+            subject=self.subject,
+            block=self.block,
+            topic=self.topic,
+            question_text="What is the largest bone in the human body?",
+            option_a="Femur",
+            option_b="Tibia",
+            option_c="Humerus", 
+            option_d="Radius",
+            correct_option="A",
+            explanation="The femur is the largest bone."
+        )
+        
+        self.theory_question = QuizQuestion.objects.create(
+            id="theory-test-1",
+            question_type="theory",
+            subject=self.subject,
+            block=self.block,
+            topic=self.topic,
+            question_text="Describe the structure and function of the femur.",
+            model_answer="The femur is a long bone that supports body weight and enables locomotion.",
+            maximum_marks=20
+        )
+        
+        # Create test attempt
+        from curriculum.models import QuizAttempt, QuizAttemptResponse
+        self.attempt = QuizAttempt.objects.create(
+            id="attempt-test-1",
+            user=self.user,
+            subject=self.subject,
+            block=self.block,
+            topic=self.topic,
+            exam_type="practice",
+            is_timed=False,
+            status="in_progress",
+            question_ids=[str(self.mcq_question.id), str(self.theory_question.id)],
+            mcq_total=1,
+            theory_total=1
+        )
+        
+        # Create response records
+        QuizAttemptResponse.objects.create(
+            attempt=self.attempt,
+            question=self.mcq_question,
+            ai_evaluation_status='na'
+        )
+        QuizAttemptResponse.objects.create(
+            attempt=self.attempt,
+            question=self.theory_question,
+            ai_evaluation_status='pending'
+        )
+    
+    def test_submit_mcq_answer_success(self):
+        """Test successful MCQ answer submission"""
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "question_id": str(self.mcq_question.id),
+            "selected_option": "A"
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.data["success"])
+        self.assertEqual(resp.data["message"], "Answer saved successfully")
+        self.assertEqual(resp.data["response"]["selected_option"], "A")
+        self.assertTrue(resp.data["response"]["is_correct"])
+    
+    def test_submit_theory_answer_success(self):
+        """Test successful theory answer submission"""
+        theory_text = "The femur is the longest and strongest bone in the human body, located in the thigh."
+        
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "question_id": str(self.theory_question.id),
+            "text_answer": theory_text
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.data["success"])
+        self.assertEqual(resp.data["response"]["text_answer"], theory_text)
+        self.assertIsNone(resp.data["response"]["is_correct"])  # Theory questions don't have immediate correctness
+        self.assertEqual(resp.data["response"]["ai_evaluation_status"], "pending")
+    
+    def test_submit_answer_invalid_question_id(self):
+        """Test submission with invalid question ID"""
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "question_id": "invalid-question-id",
+            "selected_option": "A"
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 404)
+        self.assertIn("Question does not belong to this attempt", resp.data["error"])
+    
+    def test_submit_answer_missing_question_id(self):
+        """Test submission without question_id"""
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "selected_option": "A"
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.data["error"], "question_id is required")
+    
+    def test_submit_mcq_invalid_option(self):
+        """Test MCQ submission with invalid option"""
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "question_id": str(self.mcq_question.id),
+            "selected_option": "X"
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("selected_option must be A, B, C, or D", resp.data["error"])
+    
+    def test_submit_mcq_missing_option(self):
+        """Test MCQ submission without selected_option"""
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "question_id": str(self.mcq_question.id)
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("selected_option is required for MCQ questions", resp.data["error"])
+    
+    def test_submit_theory_missing_text(self):
+        """Test theory submission without text_answer"""
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "question_id": str(self.theory_question.id)
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("text_answer is required for theory questions", resp.data["error"])
+    
+    def test_submit_answer_completed_attempt(self):
+        """Test submission to completed attempt (should fail)"""
+        self.attempt.status = "submitted"
+        self.attempt.save()
+        
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "question_id": str(self.mcq_question.id),
+            "selected_option": "A"
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Cannot submit answers to completed attempts", resp.data["error"])
+    
+    def test_submit_answer_expired_attempt(self):
+        """Test submission to expired timed attempt"""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Make the attempt timed and expired
+        self.attempt.is_timed = True
+        self.attempt.deadline = timezone.now() - timedelta(minutes=5)  # 5 minutes ago
+        self.attempt.save()
+        
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "question_id": str(self.mcq_question.id),
+            "selected_option": "A"
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Time limit exceeded", resp.data["error"])
+        
+        # Check that attempt status was updated to expired
+        self.attempt.refresh_from_db()
+        self.assertEqual(self.attempt.status, "expired")
+    
+    def test_submit_answer_updates_timestamps(self):
+        """Test that submission updates answered_at and attempt updated_at"""
+        from django.utils import timezone
+        
+        original_updated = self.attempt.updated_at
+        
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "question_id": str(self.mcq_question.id),
+            "selected_option": "B"
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 200)
+        
+        # Check response timestamp
+        response_obj = self.attempt.responses.get(question=self.mcq_question)
+        self.assertIsNotNone(response_obj.answered_at)
+        
+        # Check attempt timestamp update
+        self.attempt.refresh_from_db()
+        self.assertGreater(self.attempt.updated_at, original_updated)
+    
+    def test_submit_answer_autosave_functionality(self):
+        """Test that answers can be updated (autosave functionality)"""
+        # First submission
+        resp1 = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "question_id": str(self.mcq_question.id),
+            "selected_option": "A"
+        }, format="json")
+        self.assertEqual(resp1.status_code, 200)
+        self.assertTrue(resp1.data["response"]["is_correct"])
+        
+        # Second submission (update)
+        resp2 = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/submit_answer/", {
+            "question_id": str(self.mcq_question.id),
+            "selected_option": "B"
+        }, format="json")
+        self.assertEqual(resp2.status_code, 200)
+        self.assertFalse(resp2.data["response"]["is_correct"])
+        
+        # Verify database was updated
+        response_obj = self.attempt.responses.get(question=self.mcq_question)
+        self.assertEqual(response_obj.selected_option, "B")
+        self.assertFalse(response_obj.is_correct)
+
+
+# ---------------------------------------------------------------------------
 # AI tutor endpoint
 # ---------------------------------------------------------------------------
 
@@ -324,3 +547,255 @@ class AITutorEndpointTest(TestCase):
     def test_ai_tutor_requires_message(self):
         resp = self.client.post("/api/ai/tutor/", {}, format="json")
         self.assertEqual(resp.status_code, 400)
+
+
+# ---------------------------------------------------------------------------
+# Quiz attempt flag toggle endpoint (Task 4.5)
+# ---------------------------------------------------------------------------
+
+class QuizAttemptFlagToggleTest(TestCase):
+    """Test cases for the toggle_flag endpoint in QuizAttemptViewSet (Task 4.5)"""
+    
+    def setUp(self):
+        self.subject, self.block, self.topic = make_curriculum()
+        self.user = make_user()
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        
+        # Create test questions
+        self.question1 = QuizQuestion.objects.create(
+            id="flag-q1",
+            question_type="mcq",
+            subject=self.subject,
+            block=self.block,
+            topic=self.topic,
+            question_text="Question 1?",
+            option_a="A", option_b="B", option_c="C", option_d="D",
+            correct_option="A",
+            explanation="Explanation 1"
+        )
+        
+        self.question2 = QuizQuestion.objects.create(
+            id="flag-q2",
+            question_type="theory",
+            subject=self.subject,
+            block=self.block,
+            topic=self.topic,
+            question_text="Question 2?",
+            model_answer="Answer 2",
+            maximum_marks=20
+        )
+        
+        # Create test attempt with multiple questions
+        from curriculum.models import QuizAttempt
+        self.attempt = QuizAttempt.objects.create(
+            id="flag-attempt-1",
+            user=self.user,
+            subject=self.subject,
+            exam_type="practice",
+            status="in_progress",
+            question_ids=[str(self.question1.id), str(self.question2.id)],
+            flagged_questions=[],  # Start with no flagged questions
+            mcq_total=1,
+            theory_total=1
+        )
+    
+    def test_flag_question_success(self):
+        """Test successfully flagging a question"""
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": str(self.question1.id)
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.data["success"])
+        self.assertEqual(resp.data["message"], "Question flagged")
+        self.assertIn(str(self.question1.id), resp.data["flagged_questions"])
+        self.assertEqual(resp.data["flagged_count"], 1)
+        
+        # Verify database was updated
+        self.attempt.refresh_from_db()
+        self.assertIn(str(self.question1.id), self.attempt.flagged_questions)
+    
+    def test_unflag_question_success(self):
+        """Test successfully unflagging a previously flagged question"""
+        # First, flag the question
+        self.attempt.flagged_questions = [str(self.question1.id)]
+        self.attempt.save()
+        
+        # Now unflag it
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": str(self.question1.id)
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.data["success"])
+        self.assertEqual(resp.data["message"], "Question unflagged")
+        self.assertNotIn(str(self.question1.id), resp.data["flagged_questions"])
+        self.assertEqual(resp.data["flagged_count"], 0)
+        
+        # Verify database was updated
+        self.attempt.refresh_from_db()
+        self.assertNotIn(str(self.question1.id), self.attempt.flagged_questions)
+    
+    def test_toggle_multiple_questions(self):
+        """Test flagging multiple questions"""
+        # Flag question 1
+        resp1 = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": str(self.question1.id)
+        }, format="json")
+        self.assertEqual(resp1.status_code, 200)
+        self.assertEqual(resp1.data["flagged_count"], 1)
+        
+        # Flag question 2
+        resp2 = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": str(self.question2.id)
+        }, format="json")
+        self.assertEqual(resp2.status_code, 200)
+        self.assertEqual(resp2.data["flagged_count"], 2)
+        self.assertIn(str(self.question1.id), resp2.data["flagged_questions"])
+        self.assertIn(str(self.question2.id), resp2.data["flagged_questions"])
+        
+        # Unflag question 1
+        resp3 = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": str(self.question1.id)
+        }, format="json")
+        self.assertEqual(resp3.status_code, 200)
+        self.assertEqual(resp3.data["flagged_count"], 1)
+        self.assertNotIn(str(self.question1.id), resp3.data["flagged_questions"])
+        self.assertIn(str(self.question2.id), resp3.data["flagged_questions"])
+    
+    def test_flag_question_missing_question_id(self):
+        """Test flagging without providing question_id"""
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {}, format="json")
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.data["error"], "question_id is required")
+    
+    def test_flag_question_invalid_question_id(self):
+        """Test flagging with question_id not belonging to this attempt"""
+        other_question = QuizQuestion.objects.create(
+            id="flag-q-other",
+            question_type="mcq",
+            subject=self.subject,
+            question_text="Other question?",
+            option_a="A", option_b="B", option_c="C", option_d="D",
+            correct_option="A"
+        )
+        
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": str(other_question.id)
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 404)
+        self.assertIn("Question does not belong to this attempt", resp.data["error"])
+    
+    def test_flag_question_completed_attempt(self):
+        """Test flagging in completed attempt (should fail)"""
+        self.attempt.status = "submitted"
+        self.attempt.save()
+        
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": str(self.question1.id)
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Cannot flag questions in completed attempts", resp.data["error"])
+        self.assertEqual(resp.data["current_status"], "submitted")
+    
+    def test_flag_question_auto_submitted_attempt(self):
+        """Test flagging in auto-submitted attempt (should fail)"""
+        self.attempt.status = "auto_submitted"
+        self.attempt.save()
+        
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": str(self.question1.id)
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Cannot flag questions in completed attempts", resp.data["error"])
+    
+    def test_flag_question_expired_attempt(self):
+        """Test flagging in expired attempt (should fail)"""
+        self.attempt.status = "expired"
+        self.attempt.save()
+        
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": str(self.question1.id)
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Cannot flag questions in completed attempts", resp.data["error"])
+    
+    def test_flag_updates_last_activity_timestamp(self):
+        """Test that flagging updates the attempt's updated_at timestamp"""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Set original timestamp to earlier
+        original_time = timezone.now() - timedelta(minutes=10)
+        self.attempt.updated_at = original_time
+        self.attempt.save()
+        
+        # Flag a question
+        resp = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": str(self.question1.id)
+        }, format="json")
+        
+        self.assertEqual(resp.status_code, 200)
+        
+        # Verify timestamp was updated
+        self.attempt.refresh_from_db()
+        self.assertGreater(self.attempt.updated_at, original_time)
+    
+    def test_flag_question_idempotent_toggle(self):
+        """Test that toggling flag is idempotent (flag -> unflag -> flag)"""
+        question_id = str(self.question1.id)
+        
+        # Initial state: not flagged
+        self.assertEqual(len(self.attempt.flagged_questions), 0)
+        
+        # First toggle: flag
+        resp1 = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": question_id
+        }, format="json")
+        self.assertEqual(resp1.data["message"], "Question flagged")
+        self.assertEqual(resp1.data["flagged_count"], 1)
+        
+        # Second toggle: unflag
+        resp2 = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": question_id
+        }, format="json")
+        self.assertEqual(resp2.data["message"], "Question unflagged")
+        self.assertEqual(resp2.data["flagged_count"], 0)
+        
+        # Third toggle: flag again
+        resp3 = self.client.post(f"/api/quiz-attempts/{self.attempt.id}/toggle_flag/", {
+            "question_id": question_id
+        }, format="json")
+        self.assertEqual(resp3.data["message"], "Question flagged")
+        self.assertEqual(resp3.data["flagged_count"], 1)
+    
+    def test_flag_question_user_ownership(self):
+        """Test that users can only flag questions in their own attempts"""
+        # Create another user
+        other_user = make_user(username="otheruser")
+        
+        # Create attempt for other user
+        from curriculum.models import QuizAttempt
+        other_attempt = QuizAttempt.objects.create(
+            id="other-attempt",
+            user=other_user,
+            subject=self.subject,
+            exam_type="practice",
+            status="in_progress",
+            question_ids=[str(self.question1.id)],
+            flagged_questions=[]
+        )
+        
+        # Try to flag question in other user's attempt (should fail via get_object filtering)
+        resp = self.client.post(f"/api/quiz-attempts/{other_attempt.id}/toggle_flag/", {
+            "question_id": str(self.question1.id)
+        }, format="json")
+        
+        # Should get 404 because get_queryset filters by user
+        self.assertEqual(resp.status_code, 404)

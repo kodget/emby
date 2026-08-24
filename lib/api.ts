@@ -106,7 +106,7 @@ export type UserProfile = {
   email: string;
   full_name: string;
   photo_url: string | null;
-  role: "student" | "brainstormer" | "class_head" | "material_uploader";
+  class_role: "student" | "class_head" | "material_uploader";
   school: number | null;
   school_name: string;
   set_name: string;
@@ -206,15 +206,17 @@ export type Topic = {
   name: string;
   description: string;
   order: number;
-  sections: Section[];
   created_at: string;
 };
 
-export type Section = {
+export type Section = Topic;
+
+export type SubBlock = {
   id: string;
   name: string;
   description: string;
   order: number;
+  topics: Topic[];
   created_at: string;
 };
 
@@ -224,8 +226,8 @@ export type Block = {
   name: string;
   description: string;
   order: number;
+  sub_blocks: SubBlock[];
   topics: Topic[];
-  sections: Section[];
   created_at: string;
 };
 
@@ -236,10 +238,12 @@ export type Slide = {
   subject_name: string | null;
   block: string | null;
   block_name: string | null;
+  sub_block: string | null;
+  sub_block_name: string | null;
   topic: string | null;
   topic_name: string | null;
-  section: string | null;
-  section_name: string | null;
+  section?: string | null;
+  section_name?: string | null;
   file_url: string;
   file_type: string;
   page_count: number;
@@ -349,6 +353,14 @@ export type UserStats = {
   total_study_minutes: number;
   slides_completed: number;
   quizzes_taken: number;
+  usage?: {
+    aiQuestionsUsed: number;
+    flashcardsCreated: number;
+    pastQuestionsUsed: number;
+    quizzesTaken: number;
+    steeplechaseAttempts: number;
+    lastReset: string;
+  };
 };
 
 export type CommunityPost = {
@@ -441,6 +453,15 @@ export type Quiz = {
   completed_at: string | null;
   created_at: string;
   answers: QuizAnswer[];
+};
+
+export type SteeplechaseQuestion = {
+  id: string;
+  image_url: string;
+  prompt: string;
+  accepted_answers: string[];
+  explanation: string;
+  source_file: string;
 };
 
 // ==================== AUTHENTICATION API ====================
@@ -552,7 +573,7 @@ export const onboardingApi = {
 
   // Submit onboarding
   submitOnboarding: async (data: {
-    role: "student" | "brainstormer" | "class_head" | "material_uploader";
+    class_role: "student" | "class_head" | "material_uploader";
     school_name: string;
     set_name: string;
     class_code?: string;
@@ -715,9 +736,28 @@ export const curriculumApi = {
     return response.data;
   },
 
-  // Topics
-  getTopics: async (blockId?: string): Promise<Topic[]> => {
+  // SubBlocks
+  getSubBlocks: async (blockId?: string): Promise<SubBlock[]> => {
     const params = blockId ? { block: blockId } : {};
+    const response = await api.get("/api/sub-blocks/", { params });
+    return response.data;
+  },
+
+  getSubBlock: async (subBlockId: string): Promise<SubBlock> => {
+    const response = await api.get(`/api/sub-blocks/${subBlockId}/`);
+    return response.data;
+  },
+
+  // Topics
+  getTopics: async (filters?: {
+    sub_block?: string;
+    block?: string;
+    topic?: string;
+  }): Promise<Topic[]> => {
+    const params = {
+      sub_block: filters?.sub_block || filters?.topic,
+      block: filters?.block
+    };
     const response = await api.get("/api/topics/", { params });
     return response.data;
   },
@@ -727,17 +767,24 @@ export const curriculumApi = {
     return response.data;
   },
 
-  // Sections
+  // Backward compatibility alias methods
   getSections: async (filters?: {
     topic?: string;
     block?: string;
-  }): Promise<Section[]> => {
-    const response = await api.get("/api/sections/", { params: filters });
-    return response.data;
+  }): Promise<Topic[]> => {
+    return curriculumApi.getTopics({
+      sub_block: filters?.topic,
+      block: filters?.block
+    });
   },
 
-  getSection: async (sectionId: string): Promise<Section> => {
-    const response = await api.get(`/api/sections/${sectionId}/`);
+  getSection: async (sectionId: string): Promise<Topic> => {
+    return curriculumApi.getTopic(sectionId);
+  },
+
+  // Steeplechase
+  getSteeplechaseQuestions: async (): Promise<SteeplechaseQuestion[]> => {
+    const response = await api.get("/api/steeplechase/");
     return response.data;
   },
 
@@ -745,10 +792,16 @@ export const curriculumApi = {
   getSlides: async (filters?: {
     subject?: string;
     block?: string;
+    sub_block?: string;
     topic?: string;
     section?: string;
   }): Promise<Slide[]> => {
-    const response = await api.get("/api/slides/", { params: filters });
+    const params = {
+      ...filters,
+      sub_block: filters?.sub_block || filters?.topic,
+      topic: filters?.topic || filters?.section,
+    };
+    const response = await api.get("/api/slides/", { params });
     return response.data;
   },
 
@@ -761,6 +814,7 @@ export const curriculumApi = {
     title: string;
     subject?: string;
     block?: string;
+    sub_block?: string;
     topic?: string;
     section?: string;
     file_url: string;
@@ -979,6 +1033,17 @@ export const progressApi = {
     const response = await api.post("/api/study-time/log/", data);
     return response.data;
   },
+
+  getSubjectProgress: async (): Promise<
+    Array<{
+      subject_id: string;
+      subject_name: string;
+      completion_percentage: number;
+    }>
+  > => {
+    const response = await api.get("/api/progress/subject_progress/");
+    return response.data;
+  },
 };
 
 // ==================== SCHEDULE API ====================
@@ -1036,6 +1101,39 @@ export const scheduleApi = {
   },
 };
 
+// ==================== STUDY PLANNER API ====================
+
+export interface StudyProfile {
+  id?: number;
+  exam_date?: string;
+  daily_study_minutes?: number;
+  target_subjects?: number[];
+  focus_areas?: string[];
+}
+
+export const studyPlannerApi = {
+  getProfile: async (): Promise<StudyProfile> => {
+    const response = await api.get("/api/study-profile/");
+    // returns an array, we want the first element
+    return response.data.length > 0 ? response.data[0] : null;
+  },
+
+  updateProfile: async (id: number, data: StudyProfile): Promise<StudyProfile> => {
+    const response = await api.patch(`/api/study-profile/${id}/`, data);
+    return response.data;
+  },
+
+  createProfile: async (data: StudyProfile): Promise<StudyProfile> => {
+    const response = await api.post("/api/study-profile/", data);
+    return response.data;
+  },
+
+  generatePlan: async (): Promise<{ detail: string }> => {
+    const response = await api.post("/api/study-profile/generate_plan/");
+    return response.data;
+  },
+};
+
 // ==================== STATS API ====================
 
 export const statsApi = {
@@ -1061,6 +1159,11 @@ export const statsApi = {
 
   updateStreak: async (): Promise<UserStats> => {
     const response = await api.post("/api/stats/update_streak/");
+    return response.data;
+  },
+
+  getRecommendations: async (): Promise<any> => {
+    const response = await api.get("/api/ai/recommendations/");
     return response.data;
   },
 };
@@ -1103,6 +1206,8 @@ export const communityApi = {
     });
     return response.data;
   },
+
+
 
   // Update post (owner only)
   updatePost: async (
@@ -1152,6 +1257,41 @@ export const quizApi = {
     num_questions: number;
   }): Promise<Quiz> => {
     const response = await api.post("/api/quiz/generate/", data);
+    return response.data;
+  },
+
+  // Create a new quiz attempt with full configuration
+  createQuizAttempt: async (config: {
+    subject?: string;
+    block?: string;
+    topic?: string;
+    slide?: string;
+    exam_type: "practice" | "mock" | "formal";
+    is_timed: boolean;
+    duration_minutes?: number;
+    configuration: {
+      mcq_count: number;
+      theory_count: number;
+      difficulty: "easy" | "medium" | "hard";
+    };
+  }): Promise<{ id: string; message: string }> => {
+    // Transform the config to match backend expectations
+    const payload = {
+      subject: config.subject || null,
+      block: config.block || null,
+      topic: config.topic || null,
+      slide: config.slide || null,
+      exam_type: config.exam_type,
+      is_timed: config.is_timed,
+      duration_minutes: config.duration_minutes || null,
+      configuration: {
+        mcq_count: config.configuration.mcq_count,
+        theory_count: config.configuration.theory_count,
+        difficulty: config.configuration.difficulty,
+      },
+    };
+
+    const response = await api.post("/api/quiz-attempts/", payload);
     return response.data;
   },
 
@@ -1245,6 +1385,20 @@ export const aiApi = {
     return response.data;
   },
 
+  generateFlashcards: async (
+    slideId: string,
+    count: number = 5,
+  ): Promise<{
+    message: string;
+    task_id: string;
+  }> => {
+    const response = await api.post("/api/ai/generate-flashcards/", {
+      slide_id: slideId,
+      count: count,
+    });
+    return response.data;
+  },
+
   // Slide-aware chat — backend proxy adds Gemini key, never exposed to frontend
   chatWithSlide: async (data: {
     slide_id: string;
@@ -1288,6 +1442,202 @@ export const aiApi = {
     const response = await api.post("/api/ai/resources/", data);
     return response.data;
   },
+};
+
+// -------------------------
+// FLASHCARD TYPES
+// -------------------------
+export interface FlashcardProgress {
+  id: number;
+  due_date: string;
+  interval: number;
+  repetitions: number;
+  ease_factor: number;
+  last_reviewed: string | null;
+  is_due: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Flashcard {
+  id: number;
+  user: number;
+  subject: string | null;
+  subject_name: string | null;
+  block: string | null;
+  block_name: string | null;
+  sub_block: number | null;
+  sub_block_name: string | null;
+  topic: number | null;
+  topic_name: string | null;
+  source_question: number | null;
+  source_question_text: string | null;
+  front: string;
+  back: string;
+  explanation: string;
+  source: "manual" | "quiz_mistake" | "ai" | "pdf" | "lecture_note";
+  progress: FlashcardProgress | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FlashcardDeckStat {
+  subject_id: string;
+  subject_name: string;
+  total_cards: number;
+  due_today: number;
+}
+
+export interface FlashcardStats {
+  total_cards: number;
+  due_today: number;
+  total_reviews: number;
+  retention_rate: number;
+  decks: FlashcardDeckStat[];
+}
+
+export type FlashcardRating = "again" | "hard" | "good" | "easy";
+
+export interface FlashcardReviewResult {
+  success: boolean;
+  rating: FlashcardRating;
+  next_review: string;
+  interval_days: number;
+  interval_minutes: number;
+  repetitions: number;
+  ease_factor: number;
+}
+
+// -------------------------
+// FLASHCARD API
+// -------------------------
+export const flashcardApi = {
+  /** List all flashcards for the authenticated user */
+  getAll: async (params?: {
+    subject?: string;
+    block?: string;
+    sub_block?: number;
+    topic?: number;
+    source?: string;
+    search?: string;
+  }): Promise<{ count: number; results: Flashcard[] }> => {
+    const response = await api.get("/api/flashcards/", { params });
+    // DRF router list may return array or paginated object
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return { count: data.length, results: data };
+    }
+    return data;
+  },
+
+  /** Get flashcards that are due for review */
+  getDue: async (params?: {
+    subject?: string;
+    block?: string;
+    sub_block?: number;
+    topic?: number;
+  }): Promise<{ count: number; results: Flashcard[] }> => {
+    const response = await api.get("/api/flashcards/due/", { params });
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return { count: data.length, results: data };
+    }
+    return data;
+  },
+
+  /** Get a single flashcard */
+  getOne: async (id: number): Promise<Flashcard> => {
+    const response = await api.get(`/api/flashcards/${id}/`);
+    return response.data;
+  },
+
+  /** Create a manual flashcard */
+  create: async (data: {
+    front: string;
+    back: string;
+    explanation?: string;
+    subject?: string;
+    block?: string;
+    sub_block?: number;
+    topic?: number;
+  }): Promise<Flashcard> => {
+    const response = await api.post("/api/flashcards/", {
+      ...data,
+      source: "manual",
+    });
+    return response.data;
+  },
+
+  /** Update a flashcard */
+  update: async (
+    id: number,
+    data: Partial<Pick<Flashcard, "front" | "back" | "explanation" | "subject" | "block" | "sub_block" | "topic">>
+  ): Promise<Flashcard> => {
+    const response = await api.patch(`/api/flashcards/${id}/`, data);
+    return response.data;
+  },
+
+  /** Delete a flashcard */
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/api/flashcards/${id}/`);
+  },
+
+  /** Submit a review rating */
+  review: async (
+    id: number,
+    rating: FlashcardRating
+  ): Promise<FlashcardReviewResult> => {
+    const response = await api.post(`/api/flashcards/${id}/review/`, { rating });
+    return response.data;
+  },
+
+  /** Get aggregate stats + deck overview */
+  getStats: async (): Promise<FlashcardStats> => {
+    const response = await api.get("/api/flashcards/stats/");
+    return response.data;
+  },
+};
+
+export const challengeApi = {
+  getChallenges: async (): Promise<any[]> => {
+    const response = await api.get("/api/challenges/");
+    return response.data;
+  },
+  createChallenge: async (data: { challenged: number; topic?: string }): Promise<any> => {
+    const response = await api.post("/api/challenges/", data);
+    return response.data;
+  },
+  acceptChallenge: async (id: number): Promise<any> => {
+    const response = await api.post(`/api/challenges/${id}/accept/`);
+    return response.data;
+  },
+  submitScore: async (id: number, score: number): Promise<any> => {
+    const response = await api.post(`/api/challenges/${id}/submit_score/`, { score });
+    return response.data;
+  }
+};
+
+export const battleApi = {
+  getBattles: async (): Promise<any[]> => {
+    const response = await api.get("/api/battles/");
+    return response.data;
+  },
+  createBattle: async (data: { title: string; description?: string; topic?: string; num_questions?: number }): Promise<any> => {
+    const response = await api.post("/api/battles/", data);
+    return response.data;
+  },
+  joinBattle: async (id: number): Promise<any> => {
+    const response = await api.post(`/api/battles/${id}/join/`);
+    return response.data;
+  },
+  startBattle: async (id: number): Promise<any> => {
+    const response = await api.post(`/api/battles/${id}/start/`);
+    return response.data;
+  },
+  endBattle: async (id: number): Promise<any> => {
+    const response = await api.post(`/api/battles/${id}/end/`);
+    return response.data;
+  }
 };
 
 export default api;

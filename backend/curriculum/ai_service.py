@@ -54,7 +54,7 @@ def _strip_json_fences(text: str) -> str:
     return text.strip()
 
 
-def _generate(parts: list, model: str = "gemini-2.0-flash") -> str:
+def _generate(parts: list, model: str = "gemini-3.6-flash") -> str:
     """
     Core helper: call Gemini with a list of parts (text and/or images).
     Returns the text response, or raises on failure.
@@ -302,13 +302,36 @@ def suggest_related_videos(slide_id: str) -> List[Dict[str, Any]]:
     return resources.get("youtube", [])
 
 
-def get_study_recommendations(user=None) -> Dict[str, Any]:
+def get_study_recommendations(history=None, weak_topics=None, upcoming=None, user=None) -> Dict[str, Any]:
     """Legacy function used by views.py ai_study_recommendations endpoint."""
-    prompt = """You are an AI study coach for a Nigerian medical student.
+    history_str = json.dumps(history) if history else "[]"
+    weak_topics_str = ", ".join(weak_topics) if weak_topics else "None"
+    upcoming_str = ", ".join(upcoming) if upcoming else "None"
+    
+    prompt = f"""You are an AI study coach for a Nigerian medical student.
 Respond ONLY with valid JSON. No markdown. No explanation.
 Format:
-{"recommendations": ["rec 1", "rec 2", "rec 3", "rec 4", "rec 5"], "focus_areas": ["area 1", "area 2"]}
-Provide 5 specific study recommendations and 2 focus areas."""
+{{
+  "recommendations": [
+    {{
+      "type": "quiz_weak", 
+      "title": "Review Anatomy", 
+      "description": "Your scores in Upper Limb anatomy were low. Review the slides.", 
+      "action_label": "Review Slides", 
+      "action_url": "/dashboard/curriculum"
+    }}
+  ],
+  "focus_areas": ["area 1", "area 2"]
+}}
+Allowed types: "flashcard", "quiz_missed", "quiz_weak", "mixed".
+Action URLs can be "/dashboard/curriculum", "/dashboard/flashcards", or "/steeplechase".
+
+Student Context:
+- Recent Quiz History: {history_str}
+- Weak Topics: {weak_topics_str}
+- Upcoming Topics: {upcoming_str}
+
+Provide 3 specific study recommendations and 2 focus areas tailored to this student's context."""
 
     try:
         raw = _generate([prompt])
@@ -320,7 +343,22 @@ Provide 5 specific study recommendations and 2 focus areas."""
     except Exception as e:
         logger.error(f"get_study_recommendations error: {e}")
         return {
-            "recommendations": ["Review recent slides", "Practice MCQs daily", "Use spaced repetition"],
+            "recommendations": [
+                {
+                    "type": "mixed",
+                    "title": "Review Recent Material",
+                    "description": "Go over the latest slides to reinforce your memory.",
+                    "action_label": "Go to Curriculum",
+                    "action_url": "/dashboard/curriculum"
+                },
+                {
+                    "type": "quiz_weak",
+                    "title": "Practice MCQs",
+                    "description": "Test yourself on recent topics to identify weak points.",
+                    "action_label": "Take a Quiz",
+                    "action_url": "/dashboard/quizzes"
+                }
+            ],
             "focus_areas": ["Anatomy", "Physiology"],
         }
 
@@ -448,3 +486,27 @@ Score out of 10."""
     except Exception as e:
         logger.error(f"grade_theory_answer error: {e}")
         return {"score": 0, "feedback": "Grading unavailable. Please review the model answer."}
+
+
+def generate_battle_questions(topic: str, num_questions: int = 10, difficulty: str = "mixed") -> List[Dict[str, Any]]:
+    """Generates multiple choice questions for a Brain Battle or Friend Challenge."""
+    prompt = f"""Generate {num_questions} quiz questions for medical students about the topic: '{topic}'.
+Target Difficulty Level: {difficulty.upper()} (ensure the cognitive complexity matches this level).
+Mix standard 4-option multiple choice questions and True/False questions randomly.
+Respond ONLY with valid JSON in this exact structure:
+[
+  {{
+    "question": "What is...?",
+    "options": ["A", "B", "C", "D"], // Use ["True", "False"] for true/false questions
+    "correct_index": 0,
+    "explanation": "Because..."
+  }}
+]"""
+
+    try:
+        raw = _generate([prompt])
+        text = _strip_json_fences(raw)
+        return json.loads(text)
+    except Exception as e:
+        logger.error(f"generate_battle_questions error: {e}")
+        return []

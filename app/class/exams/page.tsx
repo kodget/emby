@@ -26,7 +26,7 @@ export default function ExamCountdownsPage() {
       const profileData = await authApi.getProfile();
       setProfile(profileData);
 
-      if (profileData.role !== "class_head" || !profileData.class_head_verified) {
+      if (profileData.class_role !== "class_head" || !profileData.class_head_verified) {
         router.push("/class");
         return;
       }
@@ -127,7 +127,7 @@ export default function ExamCountdownsPage() {
           {/* Info Banner */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
             <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Exam countdowns will be visible to all students, material uploaders, and brainstormers in your class on their dashboards.
+              <strong>Note:</strong> Exam countdowns will be visible to all students and material uploaders in your class on their dashboards.
             </p>
           </div>
 

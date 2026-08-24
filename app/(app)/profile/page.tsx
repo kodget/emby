@@ -74,6 +74,21 @@ export default function ProfilePage() {
           streak: profileData.streak,
           points: statsData?.points || 0,
           rank: statsData?.rank || 0,
+          // Map backend role to frontend role
+          role:
+            profileData.class_role === "class_head"
+              ? "class-rep"
+              : profileData.class_role === "material_uploader"
+                ? "uploader"
+                : "student",
+          isVerifiedClassHead: profileData.class_head_verified,
+          subscription: {
+            status:
+              profileData.subscription_tier === "premium" ? "active" : "free",
+            tier:
+              profileData.subscription_tier === "premium" ? "premium" : "free",
+            expiresAt: profileData.subscription_expires_at,
+          },
         }),
       );
 
@@ -235,12 +250,12 @@ export default function ProfilePage() {
     },
   }[profile.subscription_tier];
 
-  const roleBadge = {
+  const ROLE_BADGES = {
     student: { label: "Student", icon: Users },
     class_head: { label: "Class Head", icon: Shield },
-    brainstormer: { label: "Brainstormer", icon: Award },
     material_uploader: { label: "Material Uploader", icon: Upload },
-  }[profile.role];
+  };
+  const roleBadge = ROLE_BADGES[profile.class_role] || ROLE_BADGES.student;
 
   const getInitials = (name: string) => {
     const parts = name.split(" ");
@@ -433,7 +448,7 @@ export default function ProfilePage() {
                   <span className="text-muted-foreground">School</span>
                   <span className="font-semibold">{profile.school_name}</span>
                 </div>
-                {profile.class_code && profile.role !== "class_head" && (
+                {profile.class_code && profile.class_role !== "class_head" && (
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Class Code</span>
                     <code className="font-mono font-semibold text-primary bg-primary/10 px-2 py-1 rounded">

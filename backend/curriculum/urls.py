@@ -1,31 +1,61 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    SubjectViewSet, BlockViewSet, TopicViewSet, SectionViewSet, SlideViewSet, MaterialViewSet,
-    UserProgressViewSet, ScheduleItemViewSet, UserStatsViewSet,
-    CommunityPostViewSet, UpcomingTestViewSet, get_weekly_study_data, log_study_time, get_slide_content,
-    generate_quiz, submit_quiz_answer, complete_quiz, get_quiz_history,
-    ai_tutor, generate_questions_from_slide_view, ai_study_recommendations, suggest_videos,
+    SubjectViewSet,
+    BlockViewSet,
+    SubBlockViewSet,
+    TopicViewSet,
+    SlideViewSet,
+    MaterialViewSet,
+    UserProgressViewSet,
+    ScheduleItemViewSet,
+    UserStatsViewSet,
+    CommunityPostViewSet,
+    UpcomingTestViewSet,
+    get_weekly_study_data,
+    log_study_time,
+    get_slide_content,
+    generate_quiz,
+    submit_quiz_answer,
+    complete_quiz,
+    get_quiz_history,
+    ai_tutor,
+    generate_questions_from_slide_view,
+    ai_study_recommendations,
+    suggest_videos,
     SlideDeckViewSet,
-    reprocess_slide, reprocess_failed_slides, slide_processing_status, processing_overview,
+    reprocess_slide,
+    reprocess_failed_slides,
+    slide_processing_status,
+    processing_overview,
+    SteeplechaseQuestionViewSet,
+    FriendChallengeViewSet,
+    BrainBattleViewSet,
+    FlashcardViewSet
 )
 from .upload_views import upload_file, delete_file
 # New slide-aware AI views (replaces legacy textbook/video/mcq views)
-from .ai_views import chat_with_slide, generate_resources, textbook_suggestions, video_suggestions, generate_mcqs, chat_history
+from .ai_views import chat_with_slide, generate_resources, textbook_suggestions, video_suggestions, generate_mcqs, chat_history, generate_flashcards
 
 router = DefaultRouter()
+router.register(r'steeplechase', SteeplechaseQuestionViewSet, basename='steeplechase')
 router.register(r'subjects', SubjectViewSet, basename='subject')
 router.register(r'blocks', BlockViewSet, basename='block')
+router.register(r'sub-blocks', SubBlockViewSet, basename='sub-block')
+
 router.register(r'topics', TopicViewSet, basename='topic')
-router.register(r'sections', SectionViewSet, basename='section')
 router.register(r'slides', SlideViewSet, basename='slide')
 router.register(r'materials', MaterialViewSet, basename='material')
 router.register(r'progress', UserProgressViewSet, basename='progress')
+
 router.register(r'schedule', ScheduleItemViewSet, basename='schedule')
 router.register(r'stats', UserStatsViewSet, basename='stats')
 router.register(r'community', CommunityPostViewSet, basename='community')
 router.register(r'tests', UpcomingTestViewSet, basename='test')
 router.register(r'decks', SlideDeckViewSet, basename='deck')
+router.register(r'challenges', FriendChallengeViewSet, basename='challenge')
+router.register(r'battles', BrainBattleViewSet, basename='battle')
+router.register(r'flashcards', FlashcardViewSet, basename='flashcard')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -33,6 +63,7 @@ urlpatterns = [
     path('delete-file/', delete_file, name='delete-file'),
     path('slides/<str:slide_id>/content/', get_slide_content, name='slide-content'),
     path('quiz/generate/', generate_quiz, name='generate-quiz'),
+
     path('quiz/answer/', submit_quiz_answer, name='submit-quiz-answer'),
     path('quiz/<str:quiz_id>/complete/', complete_quiz, name='complete-quiz'),
     path('quiz/history/', get_quiz_history, name='quiz-history'),
@@ -45,6 +76,7 @@ urlpatterns = [
     path('ai/textbook-suggestions/', textbook_suggestions, name='ai-textbook-suggestions'),
     path('ai/video-suggestions/', video_suggestions, name='ai-video-suggestions'),
     path('ai/generate-mcqs/', generate_mcqs, name='ai-generate-mcqs'),
+    path('ai/generate-flashcards/', generate_flashcards, name='ai-generate-flashcards'),
     # Legacy AI endpoints (no path conflicts)
     path('ai/tutor/', ai_tutor, name='ai-tutor'),
     path('ai/recommendations/', ai_study_recommendations, name='ai-recommendations'),

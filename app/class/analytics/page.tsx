@@ -22,7 +22,7 @@ export default function AnalyticsPage() {
       const profileData = await authApi.getProfile();
       setProfile(profileData);
 
-      if (profileData.role !== "class_head" || !profileData.class_head_verified) {
+      if (!profileData || profileData.class_role !== "class_head" || !profileData.class_head_verified) {
         router.push("/class");
         return;
       }

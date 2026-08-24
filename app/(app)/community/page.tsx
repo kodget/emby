@@ -342,6 +342,7 @@ export default function CommunityPage() {
                     post={p}
                     hasPremium={hasPremium}
                     currentUserId={profile?.id}
+                    isModerator={profile?.class_role === 'class_head'}
                     onLike={() => handleLike(p.id)}
                     commentInput={commentInputs[p.id] || ""}
                     onCommentChange={(v) =>
@@ -433,6 +434,7 @@ function PostInner({
   post,
   hasPremium,
   currentUserId,
+  isModerator,
   onLike,
   commentInput,
   onCommentChange,
@@ -461,9 +463,11 @@ function PostInner({
   onSaveEdit: () => void;
   onCancelEdit: () => void;
   submitting: boolean;
+  isModerator?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const isOwner = currentUserId === post.user;
+  const canDelete = isOwner || isModerator;
 
   return (
     <div className="flex gap-4">
@@ -512,7 +516,7 @@ function PostInner({
           <span>{new Date(post.created_at).toLocaleDateString()}</span>
           
           {/* Edit/Delete Menu */}
-          {isOwner && (
+          {(isOwner || canDelete) && (
             <div className="ml-auto relative">
               <button
                 onClick={() => setShowMenu(!showMenu)}
@@ -522,17 +526,20 @@ function PostInner({
               </button>
               {showMenu && (
                 <div className="absolute right-0 mt-1 w-32 bg-card border border-border rounded-lg shadow-lg z-10">
-                  <button
-                    onClick={() => {
-                      onEdit();
-                      setShowMenu(false);
-                    }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 rounded-t-lg"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                    Edit
-                  </button>
-                  <button
+                  {isOwner && (
+                    <button
+                      onClick={() => {
+                        onEdit();
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 rounded-t-lg"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
                     onClick={() => {
                       onDelete();
                       setShowMenu(false);
@@ -541,7 +548,8 @@ function PostInner({
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Delete
-                  </button>
+                    </button>
+                  )}
                 </div>
               )}
             </div>

@@ -12,6 +12,7 @@ export default function CourseMaterialsPage() {
   const router = useRouter();
   const [slides, setSlides] = useState<Slide[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [pageTitle, setPageTitle] = useState("Course Materials");
   const [loading, setLoading] = useState(true);
 
   // Extract IDs from params
@@ -37,47 +38,71 @@ export default function CourseMaterialsPage() {
 
   const loadMaterials = async () => {
     try {
-      const filters: any = { subject: subjectId, block: blockId };
+      // Build the most specific filter possible.
+      // We query at each level of specificity and merge, so materials uploaded
+      // at the block level also appear when viewing a specific section.
+      const baseFilters: Record<string, string> = { block: blockId };
+      if (topicId) baseFilters.topic = topicId;
+      if (sectionId) baseFilters.section = sectionId;
 
-      // Add topic filter if present (4-segment path)
-      if (topicId) {
-        filters.topic = topicId;
+      // Also fetch at block level (without section/topic) so nothing is missed
+      const blockOnlyFilters: Record<string, string> = { block: blockId };
+
+      const fetchAtLevel = async (filters: Record<string, string>) => {
+        const [s, m] = await Promise.all([
+          curriculumApi.getSlides(filters).catch(() => [] as typeof slides),
+          curriculumApi
+            .getMaterials(filters)
+            .catch(() => [] as typeof materials),
+        ]);
+        return { slides: s, materials: m };
+      };
+
+      // Resolve a human-readable title from the deepest available segment
+      try {
+        if (sectionId) {
+          const section = await curriculumApi
+            .getSection(sectionId)
+            .catch(() => null);
+          if (section) setPageTitle(section.name);
+        } else if (topicId) {
+          const topic = await curriculumApi.getTopic(topicId).catch(() => null);
+          if (topic) setPageTitle(topic.name);
+        } else {
+          const block = await curriculumApi.getBlock(blockId).catch(() => null);
+          if (block) setPageTitle(block.name);
+        }
+      } catch {
+        // title stays as default
       }
+      if (sectionId || topicId) {
+        const [specific, blockLevel] = await Promise.all([
+          fetchAtLevel(baseFilters),
+          fetchAtLevel(blockOnlyFilters),
+        ]);
 
-      // Add section filter if present (3 or 4-segment path)
-      if (sectionId) {
-        filters.section = sectionId;
+        // Merge, deduplicating by id
+        const mergedSlides = [
+          ...specific.slides,
+          ...blockLevel.slides.filter(
+            (b) => !specific.slides.some((s) => s.id === b.id),
+          ),
+        ];
+        const mergedMaterials = [
+          ...specific.materials,
+          ...blockLevel.materials.filter(
+            (b) => !specific.materials.some((m) => m.id === b.id),
+          ),
+        ];
+
+        setSlides(mergedSlides);
+        setMaterials(mergedMaterials);
+      } else {
+        // Block-level only
+        const result = await fetchAtLevel(blockOnlyFilters);
+        setSlides(result.slides);
+        setMaterials(result.materials);
       }
-
-      console.log("Loading materials with filters:", filters);
-      console.log("Path segments:", pathSegments);
-      console.log(
-        "Subject:",
-        subjectId,
-        "Block:",
-        blockId,
-        "Topic:",
-        topicId,
-        "Section:",
-        sectionId,
-      );
-
-      const [slidesData, materialsData] = await Promise.all([
-        curriculumApi.getSlides(filters).catch((err) => {
-          console.error("Failed to load slides:", err);
-          return [];
-        }),
-        curriculumApi.getMaterials(filters).catch((err) => {
-          console.error("Failed to load materials:", err);
-          return [];
-        }),
-      ]);
-
-      console.log("Loaded slides:", slidesData);
-      console.log("Loaded materials:", materialsData);
-
-      setSlides(slidesData);
-      setMaterials(materialsData);
     } catch (error) {
       console.error("Failed to load materials:", error);
     } finally {
@@ -106,7 +131,7 @@ export default function CourseMaterialsPage() {
       </button>
 
       <div className="mb-8">
-        <h1 className="font-serif text-4xl font-bold mb-2">Course Materials</h1>
+        <h1 className="font-serif text-4xl font-bold mb-2">{pageTitle}</h1>
         <p className="text-muted-foreground">
           {hasContent
             ? "Click on any material to start reading"

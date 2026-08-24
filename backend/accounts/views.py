@@ -15,10 +15,11 @@ import secrets
 import hashlib
 from datetime import timedelta
 
+from accounts.permissions import can_manage_class
 from .models import (
     Profile, School, ClassGroup, OnboardingQuestion,
     OnboardingResponse, Announcement, PaymentTransaction,
-    SubscriptionTier, UserRole, ExamCountdown
+    SubscriptionTier, ClassRole, ExamCountdown
 )
 from .serializers import (
     SignupSerializer, LoginSerializer, GoogleAuthSerializer,
@@ -65,7 +66,7 @@ def signup(request):
         # Create profile
         profile = Profile.objects.create(
             user=user,
-            role=UserRole.STUDENT,  # Default role, will be updated in onboarding
+            class_role=ClassRole.STUDENT,  # Default role, will be updated in onboarding
             email_verification_token=secrets.token_urlsafe(32)
         )
         
@@ -176,7 +177,7 @@ def google_login(request):
             profile, profile_created = Profile.objects.get_or_create(
                 user=user,
                 defaults={
-                    'role': UserRole.STUDENT,
+                    'role': ClassRole.STUDENT,
                     'photo_url': photo_url,
                     'email_verified': True  # Google emails are pre-verified
                 }
@@ -420,7 +421,7 @@ def submit_onboarding(request):
             user = request.user
             profile = user.profile
             
-            role = serializer.validated_data['role']
+            role = serializer.validated_data['class_role']
             school_name = serializer.validated_data['school_name']
             set_name = serializer.validated_data['set_name']
             class_code = serializer.validated_data.get('class_code', '')
@@ -431,15 +432,14 @@ def submit_onboarding(request):
             school, _ = School.objects.get_or_create(name=school_name)
             
             # Update profile
-            profile.role = role
+            profile.class_role = role
             profile.school = school
             profile.set_name = set_name
             
             # Handle class code logic
-            if role == UserRole.CLASS_HEAD:
+            if role == ClassRole.CLASS_HEAD:
                 # Request verification for class head
                 profile.class_head_verification_requested = True
-                profile.subscription_tier = SubscriptionTier.CLASS_HEAD
                 
                 # Check if class already exists for this school and set
                 class_group = ClassGroup.objects.filter(
@@ -538,7 +538,7 @@ def submit_onboarding(request):
             }
             
             # Add verification message for class heads
-            if role == UserRole.CLASS_HEAD:
+            if role == ClassRole.CLASS_HEAD:
                 response_data['verification_message'] = 'Your class head account is pending verification. You will receive an email once approved.'
             
             return Response(response_data, status=status.HTTP_200_OK)
@@ -619,7 +619,7 @@ def request_class_head_verification(request):
     """Request class head verification"""
     profile = request.user.profile
     
-    if profile.role != UserRole.CLASS_HEAD:
+    if profile.class_role != ClassRole.CLASS_HEAD:
         return Response({
             'error': 'Only class heads can request verification'
         }, status=status.HTTP_400_BAD_REQUEST)
@@ -651,9 +651,13 @@ def verify_class_head(request):
     rejection_reason = request.data.get('rejection_reason', '')
     
     try:
-        profile = Profile.objects.get(user_id=user_id, role=UserRole.CLASS_HEAD)
+        profile = Profile.objects.get(user_id=user_id, class_role=ClassRole.CLASS_HEAD)
         
         if approved:
+            # Enforce max 3 class heads limit at the time of verification
+            if profile.class_group and profile.class_group.class_heads.count() >= 3:
+                return Response({'error': 'This class already has the maximum of 3 verified class heads.'}, status=status.HTTP_400_BAD_REQUEST)
+                
             profile.class_head_verified = True
             profile.class_head_verification_requested = False
             profile.class_head_rejection_reason = ''
@@ -733,7 +737,7 @@ def pending_class_head_verifications(request):
         }, status=status.HTTP_403_FORBIDDEN)
     
     pending_profiles = Profile.objects.filter(
-        role=UserRole.CLASS_HEAD,
+        class_role=ClassRole.CLASS_HEAD,
         class_head_verification_requested=True,
         class_head_verified=False
     )
@@ -823,8 +827,8 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         profile = self.request.user.profile
         
-        # Only verified class heads can create announcements
-        if not profile.is_class_head:
+        # Only class managers can create announcements
+        if not can_manage_class(profile):
             raise PermissionError("Only verified class heads can create announcements")
         
         if not profile.class_group:
@@ -855,8 +859,8 @@ class ExamCountdownViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         profile = self.request.user.profile
         
-        # Only verified class heads can create exam countdowns
-        if not profile.is_class_head:
+        # Only class managers can create exam countdowns
+        if not can_manage_class(profile):
             raise PermissionError("Only verified class heads can create exam countdowns")
         
         if not profile.class_group:

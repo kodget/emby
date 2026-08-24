@@ -1,4 +1,5 @@
 // lib/curriculum.ts
+import api from "./api";
 // Canonical modular curriculum structure.
 // This is the single source of truth used by the upload modal,
 // quiz generator, steeplechase, and course pages.
@@ -52,28 +53,14 @@ export async function loadCurriculum(): Promise<Subject[]> {
   if (cachedCurriculum) return cachedCurriculum;
 
   try {
-    const token =
-      typeof window !== "undefined" ? sessionStorage.getItem("token") : null;
-    const headers: HeadersInit = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const response = await fetch("http://localhost:8000/api/subjects/", {
-      headers,
-    });
-    if (!response.ok) throw new Error("Failed to fetch subjects");
-    const subjects = await response.json();
+    const response = await api.get(`/api/subjects/`);
+    const subjects = response.data;
 
     const curriculum: Subject[] = [];
 
     for (const subject of subjects) {
-      const blocksResponse = await fetch(
-        `http://localhost:8000/api/blocks/?subject=${subject.id}`,
-        { headers },
-      );
-      if (!blocksResponse.ok) throw new Error("Failed to fetch blocks");
-      const blocks = await blocksResponse.json();
+      const blocksResponse = await api.get(`/api/blocks/?subject=${subject.id}`);
+      const blocks = blocksResponse.data;
 
       const subjectData: Subject = {
         id: subject.id as SubjectId,
@@ -98,32 +85,28 @@ export async function loadCurriculum(): Promise<Subject[]> {
       };
 
       for (const block of blocks) {
-        const topicsResponse = await fetch(
-          `http://localhost:8000/api/topics/?block=${block.id}`,
-          { headers },
-        );
-        if (!topicsResponse.ok) throw new Error("Failed to fetch topics");
-        const topics = await topicsResponse.json();
+        const topicsResponse = await api.get(`/api/sub-blocks/?block=${block.id}`);
+        const topics = topicsResponse.data;
 
-        // Fetch sections that belong directly to the block (no topic)
-        const blockSectionsResponse = await fetch(
-          `http://localhost:8000/api/sections/?block=${block.id}`,
-          { headers },
-        );
-        const blockSections = blockSectionsResponse.ok
-          ? await blockSectionsResponse.json()
-          : [];
+        // Fetch sections (topics in new schema) that belong directly to the block (no topic)
+        let blockSections: any[] = [];
+        try {
+          const blockSectionsResponse = await api.get(`/api/topics/?block=${block.id}`);
+          blockSections = blockSectionsResponse.data;
+        } catch (e) {
+          console.warn(`Failed to fetch sections for block ${block.id}`, e);
+        }
 
         const blockTopics: Topic[] = [];
         for (const topic of topics) {
-          // Fetch sections for this topic
-          const topicSectionsResponse = await fetch(
-            `http://localhost:8000/api/sections/?topic=${topic.id}`,
-            { headers },
-          );
-          const topicSections = topicSectionsResponse.ok
-            ? await topicSectionsResponse.json()
-            : [];
+          // Fetch sections (topics in new schema) for this topic
+          let topicSections: any[] = [];
+          try {
+            const topicSectionsResponse = await api.get(`/api/topics/?sub_block=${topic.id}`);
+            topicSections = topicSectionsResponse.data;
+          } catch (e) {
+            console.warn(`Failed to fetch sections for topic ${topic.id}`, e);
+          }
 
           blockTopics.push({
             id: topic.id,
@@ -155,7 +138,8 @@ export async function loadCurriculum(): Promise<Subject[]> {
     return curriculum;
   } catch (error) {
     console.error("Failed to load curriculum:", error);
-    return [];
+    // Don't swallow the error - let the caller handle it
+    throw error;
   }
 }
 

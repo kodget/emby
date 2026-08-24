@@ -43,7 +43,7 @@ class ProfileAdmin(admin.ModelAdmin):
 
     list_display = (
         'user',
-        'role',
+        'class_role',
         'school',
         'class_group',
         'class_head_verified',
@@ -53,7 +53,7 @@ class ProfileAdmin(admin.ModelAdmin):
     )
 
     list_filter = (
-        'role',
+        'class_role',
         'subscription_tier',
         'class_head_verified',
         'email_verified',
@@ -66,7 +66,7 @@ class ProfileAdmin(admin.ModelAdmin):
     )
 
     list_editable = (
-        'role',
+        'class_role',
         'class_head_verified',
     )
 

@@ -654,3 +654,44 @@ def chat_history(request):
         for m in reversed(list(messages))
     ]
     return Response({'messages': data, 'disclaimer': AI_DISCLAIMER}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_flashcards(request):
+    """
+    Generate AI-powered Flashcards for a slide (Premium Feature).
+    It triggers a Celery task that generates and saves the flashcards for the user.
+    
+    Request body:
+    {
+        "slide_id": "123",
+        "count": 5 // Optional
+    }
+    """
+    if not has_premium_access(request.user):
+        return Response(
+            {'error': 'Premium access required', 'premium_required': True},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    slide_id = request.data.get('slide_id')
+    count = request.data.get('count', 5)
+    
+    if not slide_id:
+        return Response({'error': 'slide_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        from .tasks import generate_ai_flashcards_from_slide_task
+        task = generate_ai_flashcards_from_slide_task.delay(slide_id, request.user.id, int(count))
+        
+        return Response({
+            'message': 'Flashcard generation started',
+            'task_id': task.id
+        }, status=status.HTTP_202_ACCEPTED)
+        
+    except Exception as e:
+        logger.error(f"Flashcard generation API error: {e}")
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

@@ -1,56 +1,35 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import type { Flashcard } from "@/lib/data";
+﻿/**
+ * Flashcard Redux slice -- minimal UI state only.
+ * All flashcard data is fetched from the server via flashcardApi (lib/api.ts).
+ * This slice previously held local mock data; that has been removed.
+ */
+import { createSlice } from "@reduxjs/toolkit";
 
 interface FlashcardsState {
-  userCards: Flashcard[];
+  loading: boolean;
+  error: string | null;
 }
 
 const initialState: FlashcardsState = {
-  userCards: [],
+  loading: false,
+  error: null,
 };
 
 const flashcardsSlice = createSlice({
   name: "flashcards",
   initialState,
   reducers: {
-    addCard: (
-      state,
-      action: PayloadAction<
-        Omit<
-          Flashcard,
-          | "id"
-          | "due"
-          | "easeFactor"
-          | "interval"
-          | "repetitions"
-          | "nextReview"
-        >
-      >,
-    ) => {
-      const newCard: Flashcard = {
-        ...action.payload,
-        id: Date.now().toString(),
-        due: true,
-        easeFactor: 2.5,
-        interval: 1,
-        repetitions: 0,
-        nextReview: new Date(),
-      };
-      state.userCards.push(newCard);
-    },
-    updateCard: (state, action: PayloadAction<Flashcard>) => {
-      const index = state.userCards.findIndex(
-        (c) => c.id === action.payload.id,
-      );
-      if (index !== -1) {
-        state.userCards[index] = action.payload;
-      }
-    },
-    deleteCard: (state, action: PayloadAction<string>) => {
-      state.userCards = state.userCards.filter((c) => c.id !== action.payload);
-    },
+    setLoading: (state, action) => { state.loading = action.payload; },
+    setError: (state, action) => { state.error = action.payload; },
+    clearError: (state) => { state.error = null; },
   },
 });
 
-export const { addCard, updateCard, deleteCard } = flashcardsSlice.actions;
+export const { setLoading, setError, clearError } = flashcardsSlice.actions;
+
+// Legacy no-op stubs so any remaining import does not crash
+export const addCard = () => ({ type: "flashcards/noop" });
+export const updateCard = () => ({ type: "flashcards/noop" });
+export const deleteCard = () => ({ type: "flashcards/noop" });
+
 export default flashcardsSlice.reducer;

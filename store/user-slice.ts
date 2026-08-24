@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-export type UserRole = "student" | "uploader" | "brainstormer" | "class-rep";
+export type UserRole = "student" | "uploader" | "class-rep";
 
 export type AuthProvider = "email" | "google" | null;
 export type SubscriptionTier = "free" | "premium";
@@ -23,7 +23,7 @@ type UserState = {
   school: string;
   setName: string;
   role: UserRole;
-  isClassRep: boolean;
+  isVerifiedClassHead: boolean; // true only when role=class_head AND class_head_verified=true
   authProvider: AuthProvider;
   isSignedIn: boolean;
   isOnboarded: boolean;
@@ -39,25 +39,25 @@ type UserState = {
     pastQuestionsUsed: number;
     flashcardsCreated: number;
     steeplechaseAttempts: number;
-    lastReset: string; // ISO date
+    lastReset: string;
   };
 };
 
 const initialState: UserState = {
-  id: "user-you",
-  name: "Chioma O.",
-  username: "chioma_o",
-  email: "chioma@example.com",
+  id: "",
+  name: "",
+  username: "",
+  email: "",
   photoUrl: null,
-  school: "Calabar Medical College",
-  setName: "Invictus",
-  role: "class-rep",
-  isClassRep: true,
-  authProvider: "email",
-  isSignedIn: true,
-  isOnboarded: true,
-  points: 2480,
-  rank: 5,
+  school: "",
+  setName: "",
+  role: "student",
+  isVerifiedClassHead: false,
+  authProvider: null,
+  isSignedIn: false,
+  isOnboarded: false,
+  points: 0,
+  rank: 0,
   streak: 0,
   publicProfile: true,
   publicRank: true,
@@ -74,7 +74,7 @@ const initialState: UserState = {
     pastQuestionsUsed: 0,
     flashcardsCreated: 0,
     steeplechaseAttempts: 0,
-    lastReset: new Date().toISOString().split("T")[0], // YYYY-MM-DD
+    lastReset: new Date().toISOString().split("T")[0],
   },
 };
 
@@ -92,17 +92,28 @@ export const userSlice = createSlice({
   reducers: {
     setRole(state, action: PayloadAction<UserRole>) {
       state.role = action.payload;
-      state.isClassRep = action.payload === "class-rep";
     },
     setClassRep(state, action: PayloadAction<boolean>) {
-      state.isClassRep = action.payload;
+      state.isVerifiedClassHead = action.payload;
       if (action.payload) state.role = "class-rep";
     },
-    updateUserProfile(state, action: PayloadAction<Partial<UserState>>) {
-      Object.assign(state, action.payload);
-      if (action.payload.role) {
-        state.isClassRep = action.payload.role === "class-rep";
+    updateUserProfile(
+      state,
+      action: PayloadAction<Partial<UserState> & { backendRole?: string }>,
+    ) {
+      const payload = { ...action.payload };
+      if (payload.backendRole) {
+        const roleMap: Record<string, UserRole> = {
+          class_head: "class-rep",
+          material_uploader: "uploader",
+          student: "student",
+        };
+        payload.role = roleMap[payload.backendRole] || "student";
+        delete payload.backendRole;
       }
+      Object.assign(state, payload);
+      // isVerifiedClassHead must be explicitly set via the payload
+      // It defaults to false unless explicitly provided
     },
     completeOnboarding(state) {
       state.isOnboarded = true;
@@ -150,7 +161,7 @@ export const userSlice = createSlice({
     incrementUsage(
       state,
       action: PayloadAction<
-        "aiQuestions" | "quizzes" | "flashcards" | "steeplechase"
+        "aiQuestions" | "quizzes" | "flashcards" | "steeplechase" | "pastQuestions"
       >,
     ) {
       const today = new Date().toISOString().split("T")[0];

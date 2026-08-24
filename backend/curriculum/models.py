@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from cloudinary.models import CloudinaryField
 from datetime import date
+from django.utils import timezone
 
 
 # -------------------------
@@ -38,10 +39,10 @@ class Block(models.Model):
         return f"{self.subject.name} - {self.name}"
 
 
-class Topic(models.Model):
-    """Topic within a block (e.g., Gross Anatomy, Histology, Embryology)"""
+class SubBlock(models.Model):
+    """Sub-block within a block (e.g., Gross Anatomy, Histology, Embryology)"""
     id = models.CharField(max_length=50, primary_key=True)  # e.g., 'gross-anatomy'
-    block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='topics')
+    block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='sub_blocks')
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     order = models.IntegerField(default=0)
@@ -54,11 +55,11 @@ class Topic(models.Model):
         return f"{self.block.name} - {self.name}"
 
 
-class Section(models.Model):
-    """Section within a topic (e.g., Upper Limb, Lower Limb within Gross Anatomy Block 1)"""
+class Topic(models.Model):
+    """Topic within a sub-block or directly under a block"""
     id = models.CharField(max_length=50, primary_key=True)  # e.g., 'upper-limb'
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='sections', null=True, blank=True)
-    block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='sections', null=True, blank=True)
+    sub_block = models.ForeignKey(SubBlock, on_delete=models.CASCADE, related_name='topics', null=True, blank=True)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='topics', null=True, blank=True)
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     order = models.IntegerField(default=0)
@@ -68,7 +69,7 @@ class Section(models.Model):
         ordering = ['order']
 
     def __str__(self):
-        parent = self.topic or self.block
+        parent = self.sub_block or self.block
         return f"{parent.name if parent else 'No Parent'} - {self.name}"
 
 
@@ -83,8 +84,8 @@ class Slide(models.Model):
     # Link to curriculum hierarchy
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='slides', null=True, blank=True)
     block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='slides', null=True, blank=True)
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='slides', null=True, blank=True)
-    section = models.ForeignKey('Section', on_delete=models.CASCADE, related_name='slides', null=True, blank=True)
+    sub_block = models.ForeignKey(SubBlock, on_delete=models.CASCADE, related_name='slides', null=True, blank=True)
+    topic = models.ForeignKey('Topic', on_delete=models.CASCADE, related_name='slides', null=True, blank=True)
     
     # File information - stored in Cloudinary
     file = CloudinaryField('file', null=True, blank=True, resource_type='auto')
@@ -116,6 +117,11 @@ class Slide(models.Model):
     def block_name(self):
         """Return block name if block exists"""
         return self.block.name if self.block else None
+    
+    @property
+    def sub_block_name(self):
+        """Return sub-block name if sub-block exists"""
+        return self.sub_block.name if self.sub_block else None
     
     @property
     def topic_name(self):
@@ -164,8 +170,8 @@ class Material(models.Model):
     # Link to curriculum hierarchy
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='materials')
     block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='materials')
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='materials', null=True, blank=True)
-    section = models.ForeignKey('Section', on_delete=models.CASCADE, related_name='materials', null=True, blank=True)
+    sub_block = models.ForeignKey(SubBlock, on_delete=models.CASCADE, related_name='materials', null=True, blank=True)
+    topic = models.ForeignKey('Topic', on_delete=models.CASCADE, related_name='materials', null=True, blank=True)
     
     # File information - stored in Cloudinary
     file = CloudinaryField('file', null=True, blank=True, resource_type='auto')
@@ -222,6 +228,25 @@ class UserProgress(models.Model):
         return int((self.current_page / self.total_pages) * 100)
 
 
+class StudyProfile(models.Model):
+    """User's personal study goals and configurations for the planner"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='study_profile')
+    exam_date = models.DateField(null=True, blank=True)
+    daily_study_minutes = models.IntegerField(default=120)
+    
+    # Store subject IDs or course codes they are focusing on
+    target_subjects = models.ManyToManyField('Subject', blank=True, related_name='targeted_by_profiles')
+    
+    # JSON array of specific topic strings or IDs to focus on
+    focus_areas = models.JSONField(default=list, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s Study Profile"
+
+
 # -------------------------
 # SCHEDULE & ACTIVITIES
 # -------------------------
@@ -230,8 +255,10 @@ class ScheduleItem(models.Model):
     ACTIVITY_TYPES = [
         ('read', 'Read'),
         ('quiz', 'Quiz'),
+        ('theory', 'Theory Questions'),
         ('flashcards', 'Flashcards'),
         ('steeplechase', 'Steeplechase'),
+        ('histology', 'Histology'),
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='schedule_items')
@@ -240,7 +267,7 @@ class ScheduleItem(models.Model):
     
     # Link to content
     slide = models.ForeignKey(Slide, on_delete=models.CASCADE, null=True, blank=True)
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, null=True, blank=True)
+    sub_block = models.ForeignKey(SubBlock, on_delete=models.CASCADE, null=True, blank=True)
     block = models.ForeignKey(Block, on_delete=models.CASCADE, null=True, blank=True)
     
     # Scheduling
@@ -311,12 +338,14 @@ class CommunityPost(models.Model):
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
+    class_group = models.ForeignKey('accounts.ClassGroup', on_delete=models.CASCADE, null=True, blank=True, related_name='community_posts')
     post_type = models.CharField(max_length=20, choices=POST_TYPES)
     content = models.TextField()
     
     # Optional links
     slide = models.ForeignKey(Slide, on_delete=models.SET_NULL, null=True, blank=True)
-    topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True)
+    sub_block = models.ForeignKey(SubBlock, on_delete=models.SET_NULL, null=True, blank=True)
+    topic = models.ForeignKey('Topic', on_delete=models.SET_NULL, null=True, blank=True)
     
     # Engagement
     likes_count = models.IntegerField(default=0)
@@ -366,7 +395,7 @@ class UpcomingTest(models.Model):
     
     # Link to curriculum
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='tests')
-    topics = models.ManyToManyField(Topic, blank=True)
+    sub_blocks = models.ManyToManyField(SubBlock, blank=True)
     
     # Scheduling
     test_date = models.DateField()
@@ -403,6 +432,41 @@ class DailyStudySession(models.Model):
 
 
 # -------------------------
+# STEEPLECHASE SYSTEM
+# -------------------------
+class SteeplechaseQuestion(models.Model):
+    """Image-based identification questions (Steeplechase)"""
+    id = models.CharField(max_length=50, primary_key=True)
+    
+    # Curriculum links
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='steeplechase_questions', null=True, blank=True)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='steeplechase_questions', null=True, blank=True)
+    
+    # Question content
+    image = CloudinaryField('image', resource_type='image', null=True, blank=True)
+    image_url = models.URLField(blank=True)  # Local relative URL for now
+    
+    prompt = models.TextField()
+    accepted_answers = models.JSONField(default=list)
+    explanation = models.TextField(blank=True)
+    
+    # Extraction metadata
+    source_file = models.CharField(max_length=200, blank=True)
+    source_page = models.IntegerField(default=0)
+    needs_review = models.BooleanField(default=False)
+    review_reason = models.CharField(max_length=200, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['source_file', 'source_page', 'id']
+        
+    def __str__(self):
+        return f"{self.id} - {self.prompt[:50]}"
+
+
+# -------------------------
 # QUIZ SYSTEM
 # -------------------------
 class QuizQuestion(models.Model):
@@ -425,7 +489,7 @@ class QuizQuestion(models.Model):
     # Link to curriculum
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='questions')
     block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='questions', null=True, blank=True)
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='questions', null=True, blank=True)
+    sub_block = models.ForeignKey(SubBlock, on_delete=models.CASCADE, related_name='questions', null=True, blank=True)
     
     # Question content
     question_text = models.TextField()
@@ -449,6 +513,13 @@ class QuizQuestion(models.Model):
     ], default='ai_generated')
     source_material = models.ForeignKey(Material, on_delete=models.SET_NULL, null=True, blank=True)
     source_slide = models.ForeignKey(Slide, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # New fields for quiz examination system
+    ideal_answer = models.TextField(blank=True, help_text='Ideal answer for theory questions - used by AI evaluation')
+    marking_rubric = models.JSONField(default=list, blank=True, help_text='Structured marking criteria')
+    maximum_marks = models.IntegerField(default=20, help_text='Maximum marks for theory questions')
+    source_text = models.TextField(blank=True, help_text='Original slide text used to generate this question')
+    question_options_order = models.JSONField(default=list, blank=True, help_text='Randomized option order')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -469,7 +540,7 @@ class Quiz(models.Model):
     quiz_type = models.CharField(max_length=10, choices=[('mcq', 'MCQ'), ('theory', 'Theory')])
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='quizzes', null=True, blank=True)
     block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='quizzes', null=True, blank=True)
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='quizzes', null=True, blank=True)
+    sub_block = models.ForeignKey(SubBlock, on_delete=models.CASCADE, related_name='quizzes', null=True, blank=True)
     
     questions = models.ManyToManyField(QuizQuestion, related_name='quizzes')
     total_questions = models.IntegerField(default=0)
@@ -634,7 +705,7 @@ class SlideChunk(models.Model):
 
 class SlideChatMessage(models.Model):
     """
-    Persisted AI chat history, scoped per student per slide (PRD §6.4.3).
+    Persisted AI chat history, scoped per student per slide (PRD Â§6.4.3).
     Used to restore conversation context and to enforce daily free-tier limits.
     """
     ROLES = [
@@ -692,3 +763,343 @@ class SlideProcessingStatus(models.Model):
     
     def __str__(self):
         return f"{self.slide.title} - Status: {self.status}, Chunked: {self.is_chunked}, Embedded: {self.is_embedded}"
+
+# -------------------------
+# QUIZ EXAMINATION SYSTEM
+# -------------------------
+class QuizAttempt(models.Model):
+    """Formal quiz/examination attempt with timing and configuration"""
+    STATUS_CHOICES = [
+        ("in_progress", "In Progress"),
+        ("submitted", "Submitted"),
+        ("auto_submitted", "Auto-Submitted"),
+        ("expired", "Expired"),
+    ]
+    
+    id = models.CharField(max_length=50, primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="quiz_attempts")
+    
+    # Configuration
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="quiz_attempts", null=True, blank=True)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name="quiz_attempts", null=True, blank=True)
+    sub_block = models.ForeignKey(SubBlock, on_delete=models.CASCADE, related_name="quiz_attempts", null=True, blank=True)
+    slide = models.ForeignKey(Slide, on_delete=models.CASCADE, related_name="quiz_attempts", null=True, blank=True)
+    
+    # Exam type and configuration
+    exam_type = models.CharField(max_length=20, choices=[
+        ("practice", "Practice"),
+        ("timed", "Timed Exam"),
+        ("untimed", "Untimed Exam"),
+        ("mock", "Mock Exam"),
+        ("formal", "Formal Exam"),
+    ])
+    is_timed = models.BooleanField(default=False)
+    duration_minutes = models.IntegerField(null=True, blank=True)
+    
+    # Question configuration stored as JSON
+    configuration = models.JSONField(default=dict)
+    
+    # Ordered question IDs to preserve randomization
+    question_ids = models.JSONField(default=list, help_text="Ordered list of question IDs")
+    flagged_questions = models.JSONField(default=list, help_text="List of flagged question IDs")
+    
+    # Status and timing
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="in_progress")
+    started_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    deadline = models.DateTimeField(null=True, blank=True)
+    
+    # Scoring
+    mcq_score = models.IntegerField(default=0)
+    mcq_total = models.IntegerField(default=0)
+    theory_score = models.IntegerField(default=0)
+    theory_total = models.IntegerField(default=0)
+    overall_percentage = models.FloatField(default=0.0)
+    
+    # Theory evaluation status
+    theory_grading_pending = models.BooleanField(default=False)
+    theory_grading_completed = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "status"]),
+            models.Index(fields=["user", "created_at"]),
+            models.Index(fields=["status", "deadline"]),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.exam_type} - {self.created_at.date()}"
+    
+    @property
+    def is_expired(self):
+        """Check if timed exam has expired"""
+        if self.is_timed and self.deadline and self.status == "in_progress":
+            from django.utils import timezone
+            return timezone.now() > self.deadline
+        return False
+    
+    @property
+    def theory_grading_complete(self):
+        """Check if all theory questions have been graded"""
+        return not self.theory_grading_pending or self.theory_grading_completed
+
+class QuizAttemptResponse(models.Model):
+    """Individual question response within a quiz attempt"""
+    AI_EVALUATION_STATUS = [
+        ("pending", "Pending"),
+        ("processing", "Processing"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
+    ]
+    
+    attempt = models.ForeignKey(QuizAttempt, on_delete=models.CASCADE, related_name="responses")
+    question = models.ForeignKey(QuizQuestion, on_delete=models.CASCADE)
+    
+    # MCQ Response
+    selected_option = models.CharField(max_length=1, blank=True, help_text="A, B, C, or D for MCQ questions")
+    is_correct = models.BooleanField(null=True, blank=True, help_text="True/False for MCQ, null for theory")
+    
+    # Theory Response
+    text_answer = models.TextField(blank=True, help_text="Written answer for theory questions")
+    
+    # AI Evaluation (for theory questions)
+    ai_evaluation_status = models.CharField(max_length=20, choices=AI_EVALUATION_STATUS, default="pending")
+    ai_score = models.IntegerField(null=True, blank=True, help_text="AI-assigned score out of maximum marks")
+    ai_feedback = models.JSONField(default=dict, blank=True, help_text="Structured AI feedback")
+    ai_rubric_breakdown = models.JSONField(default=list, blank=True, help_text="Detailed rubric scoring breakdown")
+    ai_evaluation_attempts = models.IntegerField(default=0, help_text="Number of AI evaluation retry attempts")
+    
+    # Metadata
+    answered_at = models.DateTimeField(null=True, blank=True)
+    time_taken_seconds = models.IntegerField(default=0)
+    is_flagged = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ["attempt", "question"]
+        indexes = [
+            models.Index(fields=["attempt", "question"]),
+            models.Index(fields=["attempt", "ai_evaluation_status"]),
+            models.Index(fields=["question", "is_correct"]),
+        ]
+    
+    def __str__(self):
+        return f"{self.attempt.user.username} - {self.question.id}"
+    
+    @property
+    def needs_ai_evaluation(self):
+        """Check if response needs AI evaluation"""
+        return (
+            self.question.question_type == "theory" 
+            and self.text_answer.strip() 
+            and self.ai_evaluation_status == "pending"
+        )
+    
+    @property
+    def is_ai_evaluation_complete(self):
+        """Check if AI evaluation is complete"""
+        return self.ai_evaluation_status == "completed"
+
+
+# -------------------------
+# FLASHCARD SYSTEM
+# -------------------------
+class Flashcard(models.Model):
+    """A user's flashcard — created manually or auto-generated from quiz mistakes."""
+
+    SOURCE_CHOICES = [
+        ("manual", "Manual"),
+        ("quiz_mistake", "Quiz Mistake"),
+        ("ai", "AI Generated"),
+        ("pdf", "PDF"),
+        ("lecture_note", "Lecture Note"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="flashcards")
+
+    # Curriculum links (optional)
+    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True, related_name="flashcards")
+    block = models.ForeignKey(Block, on_delete=models.SET_NULL, null=True, blank=True, related_name="flashcards")
+    sub_block = models.ForeignKey(SubBlock, on_delete=models.SET_NULL, null=True, blank=True, related_name="flashcards")
+    topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True, related_name="flashcards")
+
+    # Source quiz question (for auto-generated cards)
+    source_question = models.ForeignKey(
+        QuizQuestion,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="generated_flashcards",
+    )
+
+    front = models.TextField()
+    back = models.TextField()
+    explanation = models.TextField(blank=True)
+
+    source = models.CharField(max_length=30, choices=SOURCE_CHOICES, default="manual")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            # One auto-generated card per user per source question (quiz mistakes only)
+            models.UniqueConstraint(
+                fields=["user", "source_question"],
+                condition=models.Q(source="quiz_mistake"),
+                name="unique_quiz_mistake_flashcard_per_user",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["user", "source"]),
+            models.Index(fields=["user", "subject"]),
+            models.Index(fields=["user", "topic"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.front[:50]} ({self.source})"
+
+
+class FlashcardProgress(models.Model):
+    """SM-2 spaced repetition state for a user's flashcard."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="flashcard_progress")
+    flashcard = models.ForeignKey(Flashcard, on_delete=models.CASCADE, related_name="progress_records")
+
+    due_date = models.DateTimeField(default=timezone.now)
+    interval = models.IntegerField(default=0)        # days until next review
+    repetitions = models.IntegerField(default=0)     # successful reviews in a row
+    ease_factor = models.FloatField(default=2.5)     # SM-2 ease factor
+    last_reviewed = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ["user", "flashcard"]
+        ordering = ["due_date"]
+        indexes = [
+            models.Index(fields=["user", "due_date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} — card {self.flashcard_id} due {self.due_date.date()}"
+
+    @property
+    def is_due(self):
+        return timezone.now() >= self.due_date
+
+
+class FlashcardReview(models.Model):
+    """History record of a single review session for analytics."""
+
+    RATING_CHOICES = [
+        ("again", "Again"),
+        ("hard", "Hard"),
+        ("good", "Good"),
+        ("easy", "Easy"),
+    ]
+
+    progress = models.ForeignKey(FlashcardProgress, on_delete=models.CASCADE, related_name="reviews")
+    rating = models.CharField(max_length=10, choices=RATING_CHOICES)
+    reviewed_at = models.DateTimeField(auto_now_add=True)
+    previous_interval = models.IntegerField(default=0)
+    next_interval = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ["-reviewed_at"]
+
+    def __str__(self):
+        return f"{self.progress.user.username} — {self.rating} — {self.reviewed_at.date()}"
+
+
+# -------------------------
+# SOCIAL & COMPETITION (PHASE 4)
+# -------------------------
+class FriendChallenge(models.Model):
+    """1-on-1 friend challenges."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('completed', 'Completed'),
+        ('declined', 'Declined'),
+    ]
+
+    challenger = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_challenges')
+    challenged = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_challenges')
+    topic = models.CharField(max_length=200, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    challenger_score = models.IntegerField(default=0)
+    challenged_score = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.challenger.username} vs {self.challenged.username} - {self.status}"
+
+
+class BrainBattle(models.Model):
+    """Live synchronous class-wide quizzes."""
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+    ]
+    DIFFICULTY_CHOICES = [
+        ('easy', 'Easy'),
+        ('medium', 'Medium'),
+        ('hard', 'Hard'),
+        ('mixed', 'Mixed'),
+    ]
+
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    topic = models.CharField(max_length=200, blank=True, help_text="Topic for AI question generation")
+    
+    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='mixed')
+    time_per_question = models.IntegerField(default=20, help_text="Seconds per question")
+    
+    linked_subject = models.ForeignKey('Subject', on_delete=models.SET_NULL, null=True, blank=True, related_name='battles')
+    linked_block = models.ForeignKey('Block', on_delete=models.SET_NULL, null=True, blank=True, related_name='battles')
+    linked_sub_block = models.ForeignKey('SubBlock', on_delete=models.SET_NULL, null=True, blank=True, related_name='battles')
+    linked_topic = models.ForeignKey('Topic', on_delete=models.SET_NULL, null=True, blank=True, related_name='battles')
+
+    questions = models.JSONField(default=list, blank=True, help_text="List of AI-generated questions")
+    current_question_index = models.IntegerField(default=-1, help_text="-1 means not started")
+    
+    class_group = models.ForeignKey('accounts.ClassGroup', on_delete=models.CASCADE, related_name='brain_battles')
+    host = models.ForeignKey(User, on_delete=models.CASCADE, related_name='hosted_battles')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    start_time = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.class_group.name})"
+
+
+class BattleParticipant(models.Model):
+    """Tracks a user's participation and score in a BrainBattle."""
+    battle = models.ForeignKey(BrainBattle, on_delete=models.CASCADE, related_name='participants')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='battle_participations')
+    score = models.IntegerField(default=0)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['battle', 'user']
+        ordering = ['-score', 'joined_at']
+
+    def __str__(self):
+        return f"{self.user.username} in {self.battle.title} - Score: {self.score}"

@@ -1,5 +1,6 @@
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
+import type { SubscriptionStatus, SubscriptionTier } from "@/store/user-slice";
 
 export type Feature =
   | "unlimited_ai_explanations"
@@ -12,47 +13,42 @@ export type Feature =
   | "unlimited_ai_chat"
   | "unlimited_past_questions";
 
-const FREE_FEATURES: Feature[] = [];
-const PREMIUM_FEATURES: Feature[] = [
-  "unlimited_ai_explanations",
-  "all_past_questions",
-  "steeplechase",
-  "spaced_repetition_flashcards",
-  "community_posting",
-  "weekly_analytics",
-  "offline_pdf_reader",
-];
+/**
+ * Access rules:
+ *
+ * Verified class heads  → full premium (all features)
+ * Premium paid/trial    → full premium (all features)
+ * Students / uploaders  → free tier only (no premium features)
 
+ */
 export function useFeatureAccess() {
   const subscription = useSelector(
     (state: RootState) => state.user.subscription,
   );
+  const isVerifiedClassHead = useSelector(
+    (state: RootState) => state.user.isVerifiedClassHead,
+  );
 
-  // Safety check: ensure subscription exists with default values
-  const safeSubscription = subscription || {
-    status: "free" as SubscriptionStatus,
-    tier: "free" as SubscriptionTier,
-  };
+  const safe: { status: SubscriptionStatus; tier: SubscriptionTier } =
+    subscription ?? { status: "free", tier: "free" };
 
-  const hasAccess = (feature: Feature): boolean => {
-    if (safeSubscription.tier === "premium" && safeSubscription.status === "active") {
-      return true;
-    }
-    if (safeSubscription.status === "trial") {
-      return true; // Trial users have access to all features
-    }
-    return FREE_FEATURES.includes(feature);
-  };
+  // Verified class head always gets full access regardless of subscription
+  const hasPaidPremium =
+    safe.tier === "premium" &&
+    (safe.status === "active" || safe.status === "trial");
 
-  const isPremium = safeSubscription.tier === "premium";
-  const isTrial = safeSubscription.status === "trial";
-  const isFree = safeSubscription.tier === "free" || safeSubscription.status === "free";
+  const isPremium = isVerifiedClassHead || hasPaidPremium;
+  const isTrial = safe.status === "trial" && !isVerifiedClassHead;
+  const isFree = !isPremium;
+
+  const hasAccess = (feature: Feature): boolean => isPremium;
 
   return {
     hasAccess,
     isPremium,
     isTrial,
     isFree,
-    subscription: safeSubscription,
+    isClassHead: isVerifiedClassHead,
+    subscription: safe,
   };
 }

@@ -46,7 +46,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ['id', 'username', 'email', 'full_name', 'photo_url', 'role',
+        fields = ['id', 'username', 'email', 'full_name', 'photo_url', 'class_role',
                   'school', 'school_name', 'set_name', 'class_group', 'class_code',
                   'subscription_tier', 'subscription_expires_at', 'is_premium',
                   'onboarding_completed', 'email_verified', 'class_head_verified',
@@ -124,7 +124,7 @@ class OnboardingResponseSerializer(serializers.ModelSerializer):
 
 class OnboardingSubmitSerializer(serializers.Serializer):
     """Submit all onboarding data at once"""
-    role = serializers.ChoiceField(choices=['student', 'brainstormer', 'class_head', 'material_uploader'])
+    class_role = serializers.ChoiceField(choices=['student', 'class_head', 'material_uploader'])
     school_name = serializers.CharField(max_length=200)
     set_name = serializers.CharField(max_length=100)
     class_code = serializers.CharField(max_length=6, required=False, allow_blank=True)

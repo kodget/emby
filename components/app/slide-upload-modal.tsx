@@ -15,7 +15,7 @@ import {
   useAppDispatch,
   useAppSelector,
   useCanUpload,
-  useIsClassRep,
+  useIsVerifiedClassHead,
 } from "@/store/hooks";
 import {
   closeUploadModal,
@@ -33,7 +33,7 @@ import {
 export function SlideUploadModal() {
   const dispatch = useAppDispatch();
   const canUpload = useCanUpload();
-  const isClassRep = useIsClassRep();
+  const isVerifiedClassHead = useIsVerifiedClassHead();
   const { isModalOpen } = useAppSelector((s) => s.uploads);
   const userName = useAppSelector((s) => s.user.name);
   const userSchool = useAppSelector((s) => s.user.school);
@@ -54,6 +54,7 @@ export function SlideUploadModal() {
   const [selectedBlock, setSelectedBlock] = useState<BlockId | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<TopicId | null>(null);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [customSectionName, setCustomSectionName] = useState("");
 
   // Load curriculum from API
   useEffect(() => {
@@ -121,64 +122,71 @@ export function SlideUploadModal() {
         setName: userSetName,
       }),
     );
+    const apiBase =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
     dispatch(closeUploadModal());
 
     try {
-      // Upload file to API
-      const uploadFormData = new FormData();
-      uploadFormData.append("file", file);
-      uploadFormData.append("type", "slides");
+      // Send the raw file directly to Django — it processes, converts to JPGs,
+      // uploads to Cloudinary, and returns the finished Slide record.
+      // This avoids the frontend→Cloudinary→backend download 401 problem.
+      let sectionId = selectedSection;
 
-      const uploadResponse = await fetch("http://localhost:8000/api/upload/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-        },
-        body: uploadFormData,
-      });
-
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        console.error("Upload failed:", errorText);
-        throw new Error("Failed to upload file");
+      if (customSectionName.trim()) {
+        const createSecResponse = await fetch(`${apiBase}/api/topics/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            name: customSectionName.trim(),
+            sub_block: selectedTopic,
+            topic: selectedTopic,
+            block: selectedBlock,
+          }),
+        });
+        if (createSecResponse.ok) {
+          const newSec = await createSecResponse.json();
+          sectionId = newSec.id;
+        } else {
+          const errorData = await createSecResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to create new topic");
+        }
       }
 
-      const uploadData = await uploadResponse.json();
-      const fileUrl = uploadData.url;
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("title", title.trim());
+      formData.append("subject", selectedSubject);
+      formData.append("block", selectedBlock);
+      if (selectedTopic) formData.append("sub_block", selectedTopic);
+      if (selectedTopic) formData.append("topic", selectedTopic);
+      if (sectionId) formData.append("topic", sectionId);
+      if (sectionId) formData.append("section", sectionId);
 
       dispatch(
-        updateProgress({
-          id: uploadId,
-          progress: 60,
-          status: "processing",
-        }),
+        updateProgress({ id: uploadId, progress: 30, status: "uploading" }),
       );
 
-      // Let backend handle PDF rendering - just create slide record with file URL
-      const slideResponse = await fetch("http://localhost:8000/api/slides/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+      const response = await fetch(
+        `${apiBase}/api/slides/upload_and_process/`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+          body: formData,
         },
-        body: JSON.stringify({
-          title: title.trim(),
-          subject: selectedSubject,
-          block: selectedBlock,
-          topic: selectedTopic || null,
-          section: selectedSection || null,
-          file_url: fileUrl,
-          file_type: file.name.endsWith(".pdf") ? "pdf" : "pptx",
-        }),
-      });
+      );
 
-      if (!slideResponse.ok) {
-        const errorData = await slideResponse.json();
-        console.error("Slide creation error:", errorData);
-        throw new Error(errorData.detail || "Failed to create slide");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Upload failed");
       }
 
-      const slideData = await slideResponse.json();
+      const slideData = await response.json();
 
       dispatch(
         updateProgress({
@@ -207,6 +215,7 @@ export function SlideUploadModal() {
     setSelectedBlock(null);
     setSelectedTopic(null);
     setSelectedSection(null);
+    setCustomSectionName("");
   }
 
   const subject = selectedSubject
@@ -249,8 +258,8 @@ export function SlideUploadModal() {
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-widest text-primary">
                   {canUpload
-                    ? isClassRep
-                      ? "Class Rep · Upload"
+                    ? isVerifiedClassHead
+                      ? "Class Head · Upload"
                       : "Uploader · Upload"
                     : "Restricted"}
                 </p>
@@ -301,6 +310,16 @@ export function SlideUploadModal() {
                 <p className="text-sm text-muted-foreground">
                   Loading courses...
                 </p>
+              </div>
+            ) : errorMsg ? (
+              /* ── Error state ── */
+              <div className="flex flex-col items-center gap-4 rounded-2xl border border-destructive/20 bg-destructive/5 py-10 text-center">
+                <span className="flex size-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="size-6" />
+                </span>
+                <div className="space-y-1">
+                  <p className="font-semibold text-destructive">{errorMsg}</p>
+                </div>
               </div>
             ) : curriculum.length === 0 ? (
               /* ── No curriculum ── */
@@ -399,29 +418,48 @@ export function SlideUploadModal() {
                 )}
 
                 {/* Section Selection (subsections) */}
-                {selectedBlock && sections.length > 0 && (
-                  <div>
-                    <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-                      Section{" "}
-                      <span className="text-[9px] text-muted-foreground/60">
-                        (Optional)
-                      </span>
-                    </label>
-                    <div className="mt-1.5 grid grid-cols-2 gap-2">
-                      {sections.map((section) => (
-                        <button
-                          key={section.id}
-                          type="button"
-                          onClick={() => setSelectedSection(section.id)}
-                          className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
-                            selectedSection === section.id
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border bg-background hover:border-primary/50"
-                          }`}
-                        >
-                          {section.title}
-                        </button>
-                      ))}
+                {selectedBlock && (
+                  <div className="space-y-3">
+                    {sections.length > 0 && (
+                      <div>
+                        <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+                          Select Existing Topic
+                        </label>
+                        <div className="mt-1.5 grid grid-cols-2 gap-2">
+                          {sections.map((section) => (
+                            <button
+                              key={section.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedSection(section.id);
+                                setCustomSectionName("");
+                              }}
+                              className={`rounded-xl border px-3 py-2 text-sm truncate transition-colors ${
+                                selectedSection === section.id
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-border bg-background hover:border-primary/50"
+                              }`}
+                            >
+                              {section.title}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+                        {sections.length > 0 ? "Or Enter New Topic Name" : "Topic Name (Optional)"}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Upper Limb"
+                        value={customSectionName}
+                        onChange={(e) => {
+                          setCustomSectionName(e.target.value);
+                          setSelectedSection(null);
+                        }}
+                        className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
+                      />
                     </div>
                   </div>
                 )}

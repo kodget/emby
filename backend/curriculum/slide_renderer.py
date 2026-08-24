@@ -29,74 +29,39 @@ def _upload_page_image(image_bytes, slide_id, page_num):
 
 
 def _render_pdf_from_bytes(pdf_bytes, slide_id):
-    """Render PDF pages as images using pdf2image for high quality."""
-    from pdf2image import convert_from_bytes
-    
-    print(f"Converting PDF to images...")
-    
-    try:
-        # Convert PDF to images at 150 DPI (good balance of quality and size)
-        images = convert_from_bytes(
-            pdf_bytes,
-            dpi=150,
-            fmt='jpeg',
-            thread_count=2
-        )
-        
-        print(f"Converted {len(images)} pages")
-        
-        pages = []
-        for page_num, img in enumerate(images, 1):
-            # Convert to JPEG bytes
-            buf = io.BytesIO()
-            img.save(buf, format='JPEG', quality=85, optimize=True)
-            
-            print(f"Uploading page {page_num}...")
-            image_url = _upload_page_image(buf.getvalue(), slide_id, page_num)
-            if not image_url:
-                print(f"Upload failed for page {page_num}")
-                continue
-            
-            pages.append({
-                "page_number": page_num,
-                "image_url": image_url,
-                "width": img.width,
-                "height": img.height,
-                "text_blocks": [],
-            })
-        
-        return pages
-        
-    except Exception as e:
-        print(f"pdf2image conversion failed: {e}")
-        print("Falling back to PyMuPDF...")
-        
-        # Fallback to PyMuPDF if pdf2image fails
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        pages = []
-        for page_num in range(len(doc)):
-            page = doc[page_num]
-            zoom = 2
-            mat = fitz.Matrix(zoom, zoom)
-            pix = page.get_pixmap(matrix=mat, alpha=False)
+    """Render PDF pages as images using PyMuPDF (no extra system deps needed)."""
+    print(f"Converting PDF to images via PyMuPDF...")
 
-            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-            buf = io.BytesIO()
-            img.save(buf, format='JPEG', quality=88, optimize=True)
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    pages = []
 
-            image_url = _upload_page_image(buf.getvalue(), slide_id, page_num + 1)
-            if not image_url:
-                continue
+    for page_num in range(len(doc)):
+        page = doc[page_num]
+        # 2× zoom → ~144 DPI, good balance of quality vs upload size
+        mat = fitz.Matrix(2, 2)
+        pix = page.get_pixmap(matrix=mat, alpha=False)
 
-            pages.append({
-                "page_number": page_num + 1,
-                "image_url": image_url,
-                "width": pix.width,
-                "height": pix.height,
-                "text_blocks": [],
-            })
-        doc.close()
-        return pages
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG', quality=88, optimize=True)
+
+        print(f"Uploading page {page_num + 1}/{len(doc)}...")
+        image_url = _upload_page_image(buf.getvalue(), slide_id, page_num + 1)
+        if not image_url:
+            print(f"Upload failed for page {page_num + 1}")
+            continue
+
+        pages.append({
+            "page_number": page_num + 1,
+            "image_url": image_url,
+            "width": pix.width,
+            "height": pix.height,
+            "text_blocks": [],
+        })
+
+    doc.close()
+    print(f"PDF rendering complete: {len(pages)} pages")
+    return pages
 
 
 def _render_pptx_from_bytes(pptx_bytes, slide_id):

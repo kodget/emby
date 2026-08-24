@@ -123,9 +123,9 @@ export function TodayPlan() {
             Your{" "}
             {minutesLeft +
               (done > 0
-                ? todayItems
+                ? items
                     .filter((i) => i.completed)
-                    .reduce((s, i) => s + i.estimatedMinutes, 0)
+                    .reduce((s: number, i: any) => s + (i.estimated_minutes || 0), 0)
                 : 0)}
             -minute plan
           </h2>

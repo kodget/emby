@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { CalendarClock, ArrowRight } from "lucide-react"
-import { testsApi, type UpcomingTest } from "@/lib/api"
+import { testsApi, progressApi, type UpcomingTest } from "@/lib/api"
 
 function readinessTone(pct: number) {
   if (pct >= 70) return { text: "text-mastery", bar: "bg-mastery", label: "Ready" }
@@ -28,13 +28,22 @@ function calculateDaysAway(dateString: string): number {
 
 export function UpcomingTests() {
   const [tests, setTests] = useState<UpcomingTest[]>([])
+  const [subjectProgressMap, setSubjectProgressMap] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchTests() {
       try {
-        const data = await testsApi.getUpcomingTests()
-        setTests(data.slice(0, 3)) // Show top 3
+        const [data, progressData] = await Promise.allSettled([
+          testsApi.getUpcomingTests(),
+          progressApi.getSubjectProgress(),
+        ])
+        if (data.status === "fulfilled") setTests(data.value.slice(0, 3))
+        if (progressData.status === "fulfilled") {
+          const map: Record<string, number> = {}
+          progressData.value.forEach((p) => { map[p.subject_id] = p.completion_percentage })
+          setSubjectProgressMap(map)
+        }
       } catch (error) {
         console.error('Error fetching tests:', error)
       } finally {
@@ -103,8 +112,8 @@ export function UpcomingTests() {
         <ul className="mt-4 space-y-2">
           {tests.map((t) => {
             const daysAway = calculateDaysAway(t.test_date)
-            const readinessPct = 50 // TODO: Calculate from user progress
-            const tone = readinessTone(readinessPct)
+            const readinessPct = subjectProgressMap[t.subject] ?? null
+            const tone = readinessPct !== null ? readinessTone(readinessPct) : { text: "text-muted-foreground", bar: "bg-muted", label: "No data" }
             const href = `/quiz/${t.id}`
             
             return (
@@ -129,12 +138,12 @@ export function UpcomingTests() {
                       <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
                         <div
                           className={`h-full rounded-full ${tone.bar}`}
-                          style={{ width: `${readinessPct}%` }}
+                          style={{ width: `${readinessPct ?? 0}%` }}
                           aria-hidden="true"
                         />
                       </div>
                       <span className={`font-mono text-[11px] tabular-nums ${tone.text}`}>
-                        {tone.label}
+                        {readinessPct !== null ? tone.label : "—"}
                       </span>
                     </div>
                   </div>

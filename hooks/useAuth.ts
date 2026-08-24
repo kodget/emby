@@ -13,10 +13,11 @@ type BackendUser = {
   name: string;
   email: string;
   photo_url: string | null;
-  role: UserRole;
-  is_class_rep: boolean;
+  class_role: string;
+  class_head_verified: boolean;
+  is_premium: boolean;
+  subscription_tier: string;
   streak?: number;
-  subscription: any;
 };
 
 export function useAuth() {
@@ -55,20 +56,21 @@ export function useAuth() {
             name: backendUser.name,
             email: backendUser.email,
             photoUrl: backendUser.photo_url,
-            role: backendUser.role,
-            isClassRep: backendUser.is_class_rep,
+            backendRole: backendUser.class_role,
+            isVerifiedClassHead: backendUser.class_head_verified,
             streak: stats?.current_streak || backendUser.streak || 0,
             points: stats?.points || 0,
             rank: stats?.rank || 0,
             school: stats?.school || "",
             setName: stats?.set_name || "",
-            subscription: backendUser.subscription || {
-              status: "free",
-              tier: "free",
+            subscription: {
+              status: backendUser.is_premium ? "active" : "free",
+              tier: backendUser.is_premium ? "premium" : "free",
               expiresAt: null,
               paymentCardBrand: null,
               paymentLast4: null,
             },
+            usage: stats?.usage,
           }),
         );
       } catch (error) {
@@ -99,12 +101,12 @@ export function useAuth() {
           name: backendUser.name,
           email: backendUser.email,
           photoUrl: backendUser.photo_url,
-          role: backendUser.role,
-          isClassRep: backendUser.is_class_rep,
+          backendRole: backendUser.class_role,
+          isVerifiedClassHead: backendUser.class_head_verified,
           streak: backendUser.streak || 0,
-          subscription: backendUser.subscription || {
-            status: "free",
-            tier: "free",
+          subscription: {
+            status: backendUser.is_premium ? "active" : "free",
+            tier: backendUser.is_premium ? "premium" : "free",
             expiresAt: null,
             paymentCardBrand: null,
             paymentLast4: null,
@@ -122,20 +124,21 @@ export function useAuth() {
               name: backendUser.name,
               email: backendUser.email,
               photoUrl: backendUser.photo_url,
-              role: backendUser.role,
-              isClassRep: backendUser.is_class_rep,
+              backendRole: backendUser.class_role,
+              isVerifiedClassHead: backendUser.class_head_verified,
               streak: stats.current_streak,
               points: stats.points,
               rank: stats.rank,
               school: stats.school,
               setName: stats.set_name,
-              subscription: backendUser.subscription || {
-                status: "free",
-                tier: "free",
+              subscription: {
+                status: backendUser.is_premium ? "active" : "free",
+                tier: backendUser.is_premium ? "premium" : "free",
                 expiresAt: null,
                 paymentCardBrand: null,
                 paymentLast4: null,
               },
+              usage: stats.usage,
             }),
           );
         })

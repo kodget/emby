@@ -16,7 +16,7 @@ export function TextbookPanel({ slideId }: { slideId: string }) {
       setLoading(true);
       setError(null);
       const data = await aiApi.getTextbookSuggestions(slideId);
-      setSuggestions(data.textbooks || data.suggestions || []);
+      setSuggestions(data.textbooks || (data as any).suggestions || []);
     } catch (err: any) {
       console.error("Error fetching textbook suggestions:", err);
 
@@ -157,7 +157,7 @@ export function VideosPanel({
       setLoading(true);
       setError(null);
       const data = await aiApi.getVideoSuggestions(slideId);
-      setSuggestions(data.videos || data.suggestions || []);
+      setSuggestions(data.videos || (data as any).suggestions || []);
     } catch (err: any) {
       console.error("Error fetching video suggestions:", err);
 

@@ -4,6 +4,7 @@ import userReducer from "./user-slice";
 import progressReducer from "./progress-slice";
 import scheduleReducer from "./schedule-slice";
 import flashcardsReducer from "./flashcards-slice";
+import quizAttemptReducer from "./quiz-attempt-slice";
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     progress: progressReducer,
     schedule: scheduleReducer,
     flashcards: flashcardsReducer,
+    quizAttempt: quizAttemptReducer,
   },
 });
 

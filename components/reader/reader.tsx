@@ -29,6 +29,7 @@ import {
   Sparkles,
   X,
   Highlighter,
+  Layers,
 } from "lucide-react";
 
 import type { Slide } from "@/lib/api";
@@ -52,7 +53,7 @@ import { ResourcePanel } from "./resource-panel";
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Tab = "ai" | "textbook" | "videos" | "quiz";
+type Tab = "ai" | "textbook" | "videos" | "quiz" | "flashcards";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Reader
@@ -72,6 +73,7 @@ export function Reader({
   courseBreadcrumb: string;
 }) {
   const [panelOpen, setPanelOpen] = useState(true);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [tab, setTab] = useState<Tab>("ai");
   const [selection, setSelection] = useState<SelectionPayload | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,7 +85,7 @@ export function Reader({
   const usage = useAppSelector((s) => s.user.usage);
   const user = useAppSelector((s) => s.user);
 
-  const isClassHead = user.role === "class-rep" || user.isClassRep;
+  const isClassHead = user.role === "class-rep" || user.isVerifiedClassHead;
   const hasPremiumAccess = isPremium || isTrial || isClassHead;
   const hasUnlimitedAI =
     hasAccess("unlimited_ai_explanations") || hasPremiumAccess;
@@ -283,10 +285,48 @@ export function Reader({
         slideTitle={slide.title}
         panelOpen={panelOpen}
         onTogglePanel={() => setPanelOpen((v) => !v)}
+        leftPanelOpen={leftPanelOpen}
+        onToggleLeftPanel={() => setLeftPanelOpen((v) => !v)}
       />
 
-      <div className="flex flex-1 min-h-0">
-        {/* ── Left: Slide Viewer ────────────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0 relative">
+        {/* ── Collapsible Left Outline Panel ───────────────────────────── */}
+        {leftPanelOpen && (
+          <aside className="w-64 border-r border-border bg-card flex flex-col shrink-0">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <span className="font-serif text-sm font-semibold text-foreground">Outline</span>
+              <button
+                type="button"
+                onClick={() => setLeftPanelOpen(false)}
+                className="p-1 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Close outline"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {slides.map((s, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => goToPage(idx)}
+                  className={cn(
+                    "w-full text-left px-3 py-2 rounded-xl text-xs transition-colors flex items-center justify-between",
+                    idx === currentSlideIndex
+                      ? "bg-primary text-primary-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <span className="truncate pr-2">{s.title || `Page ${idx + 1}`}</span>
+                  <span className={cn("text-[10px] shrink-0 ml-1", idx === currentSlideIndex ? "text-primary-foreground/70" : "text-muted-foreground/40")}>
+                    {idx + 1}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </aside>
+        )}
+
+        {/* ── Center: Slide Viewer ────────────────────────────────────────── */}
         <div
           className={cn(
             "flex-1 min-w-0 overflow-y-auto border-r border-border transition-[margin]",
@@ -361,8 +401,8 @@ export function Reader({
                   </div>
                 ))}
 
-              {/* Resources: textbook + videos + MCQs */}
-              {(tab === "textbook" || tab === "videos" || tab === "quiz") &&
+              {/* Resources: textbook + videos + MCQs + Flashcards */}
+              {(tab === "textbook" || tab === "videos" || tab === "quiz" || tab === "flashcards") &&
                 (hasPremiumAccess ? (
                   <ResourcePanel
                     slideId={slide.id}
@@ -414,18 +454,31 @@ function ReaderToolbar({
   slideTitle,
   panelOpen,
   onTogglePanel,
+  leftPanelOpen,
+  onToggleLeftPanel,
 }: {
   courseId: string;
   courseBreadcrumb: string;
   slideTitle: string;
   panelOpen: boolean;
   onTogglePanel: () => void;
+  leftPanelOpen: boolean;
+  onToggleLeftPanel: () => void;
 }) {
   return (
     <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/90 px-4 py-2.5 backdrop-blur-md sm:px-6">
+      <button
+        type="button"
+        onClick={onToggleLeftPanel}
+        aria-pressed={leftPanelOpen}
+        aria-label={leftPanelOpen ? "Hide outline" : "Show outline"}
+        className="flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground"
+      >
+        <BookOpenText className="size-4" />
+      </button>
       <Link
         href={`/courses/${courseId}`}
-        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground ml-1"
       >
         <ArrowLeft className="size-4" />
         <span className="hidden sm:inline">Back</span>
@@ -478,6 +531,7 @@ function PanelTabs({
     { id: "textbook", label: "Books", icon: BookOpenText },
     { id: "videos", label: "Videos", icon: Play },
     { id: "quiz", label: "Quiz", icon: ListChecks },
+    { id: "flashcards", label: "Cards", icon: Layers },
   ];
   return (
     <div className="flex items-center gap-1 border-b border-border px-3 py-2">

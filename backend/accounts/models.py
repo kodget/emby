@@ -11,15 +11,21 @@ import string
 class SubscriptionTier(models.TextChoices):
     FREE = "free", "Free"
     PREMIUM = "premium", "Premium"
-    CLASS_HEAD = "class_head", "Class Head (Full Access)"
 
 
 # -------------------------
-# USER ROLES
+# PLATFORM ROLES
 # -------------------------
-class UserRole(models.TextChoices):
+class PlatformRole(models.TextChoices):
+    USER = "user", "User"
+    ADMIN = "admin", "Admin"
+
+
+# -------------------------
+# CLASS ROLES
+# -------------------------
+class ClassRole(models.TextChoices):
     STUDENT = "student", "Student"
-    BRAINSTORMER = "brainstormer", "Brainstormer"
     CLASS_HEAD = "class_head", "Class Head"
     MATERIAL_UPLOADER = "material_uploader", "Material Uploader"
 
@@ -82,7 +88,9 @@ class Profile(models.Model):
     
     # Basic info
     photo_url = models.URLField(null=True, blank=True)
-    role = models.CharField(max_length=20, choices=UserRole.choices)
+    platform_role = models.CharField(max_length=20, choices=PlatformRole.choices, default=PlatformRole.USER)
+    class_role = models.CharField(max_length=20, choices=ClassRole.choices, default=ClassRole.STUDENT)
+    class_capabilities = models.JSONField(default=list, blank=True, help_text="List of additional capabilities e.g. ['SLIDE_UPLOADER']")
     
     # School & Class
     school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True)
@@ -116,30 +124,35 @@ class Profile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.role}"
+        return f"{self.user.username} - {self.class_role}"
 
     @property
     def is_premium(self):
-        """Check if user has active premium subscription"""
+        """Check if user has active premium subscription or entitlement"""
+        # Platform admins get full access
+        if self.platform_role == PlatformRole.ADMIN:
+            return True
+            
         # Class heads get full access automatically
-        if self.role == UserRole.CLASS_HEAD and self.class_head_verified:
+        if self.class_role == ClassRole.CLASS_HEAD and self.class_head_verified:
             return True
         
-        if self.subscription_tier == SubscriptionTier.FREE:
-            return False
-        if self.subscription_expires_at and self.subscription_expires_at < timezone.now():
-            return False
-        return True
+        # Paid premium
+        if self.subscription_tier == SubscriptionTier.PREMIUM:
+            if not self.subscription_expires_at or self.subscription_expires_at > timezone.now():
+                return True
+                
+        return False
 
     @property
     def is_class_head(self):
-        return self.role == UserRole.CLASS_HEAD and self.class_head_verified
+        return self.class_role == ClassRole.CLASS_HEAD and self.class_head_verified
     
     @property
     def can_access_app(self):
         """Check if user can access the app"""
         # Class heads must be verified
-        if self.role == UserRole.CLASS_HEAD:
+        if self.class_role == ClassRole.CLASS_HEAD:
             return self.class_head_verified
         # Other users can access immediately
         return True

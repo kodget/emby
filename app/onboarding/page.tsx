@@ -22,7 +22,8 @@ import { onboardingApi, authApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import type { OnboardingQuestion } from "@/lib/api";
 import Link from "next/link";
-
+import { useAppDispatch } from "@/store/hooks";
+import { updateUserProfile } from "@/store/user-slice";
 const roles = [
   {
     value: "student",
@@ -31,13 +32,7 @@ const roles = [
       "Access course materials, track progress, and study with your classmates",
     icon: GraduationCap,
   },
-  {
-    value: "brainstormer",
-    title: "Brainstormer",
-    description:
-      "Organize brainstorming sessions and quiz competitions for your class",
-    icon: Sparkles,
-  },
+
   {
     value: "class_head",
     title: "Class Head",
@@ -82,6 +77,7 @@ const subscriptionTiers = [
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -190,8 +186,8 @@ export default function OnboardingPage() {
         }),
       );
 
-      const data = {
-        role: role as any,
+      const data: Parameters<typeof onboardingApi.submitOnboarding>[0] = {
+        class_role: role as "student" | "class_head" | "material_uploader",
         school_name: schoolName,
         set_name: setName,
         class_code:
@@ -209,6 +205,24 @@ export default function OnboardingPage() {
       // Update sessionStorage with new user data
       const updatedUser = { ...result.user, onboarding_completed: true };
       sessionStorage.setItem("user", JSON.stringify(updatedUser));
+      
+      const isVerifiedClassHead = updatedUser.class_role === "class_head" && updatedUser.class_head_verified === true;
+      dispatch(
+        updateUserProfile({
+          id: updatedUser.id?.toString() || "",
+          name: updatedUser.full_name,
+          username: updatedUser.username,
+          email: updatedUser.email,
+          photoUrl: updatedUser.photo_url,
+          school: updatedUser.school_name,
+          setName: updatedUser.set_name,
+          backendRole: updatedUser.class_role,
+          isVerifiedClassHead,
+          isSignedIn: true,
+          isOnboarded: updatedUser.onboarding_completed,
+          streak: updatedUser.streak,
+        })
+      );
 
       toast({
         title: "Onboarding complete!",

@@ -1,299 +1,276 @@
 """
 Slide Conversion Pipeline
 
-EXACT FLOW:
-ANY FILE TYPE → PPTX → PDF (for text extraction) → IMAGES (for rendering in frontend)
+FLOW:
+  PDF            → PyMuPDF renders each page as JPG
+  PPTX/PPT       → LibreOffice → PDF → PyMuPDF renders each page as JPG
+  DOCX/DOC       → LibreOffice → PDF → PyMuPDF renders each page as JPG
 
-This service handles the complete conversion pipeline.
+Output: list of local JPG file paths (one per page), kept in temp_dir.
+Caller (tasks.py) uploads them to Cloudinary then deletes temp_dir.
 """
 
+import io
 import os
+import re
+import shutil
 import subprocess
 import tempfile
-import shutil
-from pathlib import Path
-from typing import Tuple, Dict, Any, List
 import logging
+from pathlib import Path
+from typing import Dict, Any, List, Tuple
 
 logger = logging.getLogger(__name__)
 
 
-class SlideConversionPipeline:
-    """Complete slide conversion pipeline"""
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _libreoffice_path() -> str:
+    """Return the soffice executable path, checking common locations."""
+    candidates = [
+        r"C:\Program Files\LibreOffice\program\soffice.exe",
+        r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+        "/usr/bin/soffice",
+        "/usr/local/bin/soffice",
+        "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+    ]
+    try:
+        cmd = ["where", "soffice"] if os.name == "nt" else ["which", "soffice"]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        if r.returncode == 0:
+            return r.stdout.strip().splitlines()[0]
+    except Exception:
+        pass
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return "soffice"
+
+
+def _convert_to_pdf_via_libreoffice(input_path: str, output_dir: str) -> str:
+    """
+    Use LibreOffice headless to convert input_path → PDF in output_dir.
+    Returns the PDF path on success, raises RuntimeError on failure.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    soffice = _libreoffice_path()
+    logger.info(f"LibreOffice convert → PDF: {input_path}")
+    result = subprocess.run(
+        [soffice, "--headless", "--convert-to", "pdf", input_path, "--outdir", output_dir],
+        capture_output=True, text=True, timeout=300,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"LibreOffice failed: {result.stderr.strip()}")
+    pdf_path = os.path.join(output_dir, Path(input_path).stem + ".pdf")
+    if not os.path.exists(pdf_path):
+        raise RuntimeError(f"PDF not produced at expected path: {pdf_path}")
+    logger.info(f"✓ LibreOffice produced: {pdf_path}")
+    return pdf_path
+
+
+def _pdf_to_jpg_pages(pdf_path: str, output_dir: str, dpi: int = 150) -> List[str]:
+    """
+    Render every page of a PDF as a JPEG using PyMuPDF.
+    Returns a list of absolute paths to the produced JPG files.
+    """
+    import fitz  # PyMuPDF
+
+    os.makedirs(output_dir, exist_ok=True)
+    zoom = dpi / 72.0
+    mat = fitz.Matrix(zoom, zoom)
+
+    doc = fitz.open(pdf_path)
+    logger.info(f"PDF has {len(doc)} pages — rendering at {dpi} DPI")
+
+    jpg_paths: List[str] = []
+    for i in range(len(doc)):
+        page = doc[i]
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+
+        # Save directly as JPEG (PyMuPDF supports jpg natively)
+        jpg_filename = f"page_{i + 1:04d}.jpg"
+        jpg_path = os.path.join(output_dir, jpg_filename)
+        pix.save(jpg_path)  # extension determines format
+        jpg_paths.append(jpg_path)
+        logger.info(f"  ✓ page {i + 1}: {jpg_path}")
+
+    doc.close()
+    logger.info(f"✓ Rendered {len(jpg_paths)} pages")
+    return jpg_paths
+
+
+def _extract_text_from_pdf(pdf_path: str) -> str:
+    """Extract plain text from a PDF for RAG / search."""
+    try:
+        import fitz
+        doc = fitz.open(pdf_path)
+        parts = []
+        for i in range(len(doc)):
+            parts.append(doc[i].get_text())
+            parts.append("\n---PAGE BREAK---\n")
+        doc.close()
+        text = "".join(parts)
+        logger.info(f"Extracted {len(text)} chars from PDF")
+        return text
+    except Exception as e:
+        logger.warning(f"Text extraction failed (non-fatal): {e}")
+        return ""
+
+
+def _download_from_cloudinary(cloudinary_url: str, timeout: int = 60) -> bytes:
+    """
+    Download file bytes from Cloudinary.
     
-    @staticmethod
-    def get_libreoffice_path() -> str:
-        """Get LibreOffice executable path"""
-        common_paths = [
-            r"C:\Program Files\LibreOffice\program\soffice.exe",
-            r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
-            "/usr/bin/soffice",
-            "/Applications/LibreOffice.app/Contents/MacOS/soffice"
-        ]
-        
-        # Check if soffice is in PATH
+    Strategy:
+    1. Try plain GET (works for truly public assets)
+    2. On 401, extract resource_type + public_id from the URL, 
+       generate a proper signed download URL using the correct resource_type,
+       and retry.
+    3. If still failing, use cloudinary.api.resource() to get the secure_url 
+       then sign that.
+    """
+    import requests
+    import cloudinary.utils
+    import cloudinary.api
+
+    def _try_get(url: str) -> bytes | None:
+        resp = requests.get(url, timeout=timeout)
+        if resp.status_code == 200:
+            return resp.content
+        return None
+
+    # ── Attempt 1: plain URL ─────────────────────────────────────────────────
+    data = _try_get(cloudinary_url)
+    if data:
+        return data
+
+    logger.warning(f"Plain download failed — trying signed URL…")
+
+    # ── Parse URL components ─────────────────────────────────────────────────
+    # URL shape: https://res.cloudinary.com/<cloud>/<rtype>/upload/v<ver>/<public_id_with_ext>
+    m = re.search(
+        r"cloudinary\.com/[^/]+/(image|raw|video|auto)/upload/(?:v\d+/)?(.+)",
+        cloudinary_url,
+    )
+    if not m:
+        raise IOError(f"Cannot parse Cloudinary URL: {cloudinary_url}")
+
+    detected_rtype = m.group(1)  # what the URL says (may be wrong for PDFs)
+    public_id_with_ext = m.group(2)
+
+    # ── Attempt 2: sign with detected resource_type, keep extension ─────────
+    # For PDFs stored under image/ we still need to include the extension
+    # in the signed URL so Cloudinary knows what to serve.
+    for rtype in [detected_rtype, "raw", "image", "auto"]:
         try:
-            result = subprocess.run(
-                ["where", "soffice"] if os.name == 'nt' else ["which", "soffice"],
-                capture_output=True,
-                text=True,
-                timeout=5
+            signed_url, _ = cloudinary.utils.cloudinary_url(
+                public_id_with_ext,      # include extension
+                resource_type=rtype,
+                type="upload",
+                sign_url=True,
+                secure=True,
             )
-            if result.returncode == 0:
-                return result.stdout.strip().split('\n')[0]
-        except:
-            pass
-        
-        # Check common paths
-        for path in common_paths:
-            if os.path.exists(path):
-                return path
-        
-        logger.warning("LibreOffice not found, will try 'soffice' command")
-        return "soffice"
-    
+            logger.info(f"Trying signed URL (resource_type={rtype}): {signed_url[:100]}…")
+            data = _try_get(signed_url)
+            if data:
+                logger.info(f"✓ Signed URL worked with resource_type={rtype}")
+                return data
+        except Exception as exc:
+            logger.debug(f"  resource_type={rtype} failed: {exc}")
+
+    raise IOError(
+        f"Cannot download from Cloudinary after multiple attempts. "
+        f"URL: {cloudinary_url}"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Public API
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SlideConversionPipeline:
+    """
+    Convert an uploaded slide file into per-page JPG images.
+
+    process_slide() returns a dict:
+      {
+        'success': bool,
+        'slide_id': str,
+        'image_paths': ['/tmp/.../page_0001.jpg', ...],   # local paths
+        'text_content': str,
+        'page_count': int,
+        'temp_dir': str,   # caller MUST delete after uploading images
+        'error': str | None,
+      }
+    """
+
     @staticmethod
-    def step1_to_pptx(input_file_path: str, output_dir: str) -> Tuple[bool, str]:
-        """
-        STEP 1: Convert ANY file type to PPTX
-        
-        Supported inputs: PDF, PPT, PPTX, DOCX, DOC
-        Output: PPTX file
-        """
-        try:
-            os.makedirs(output_dir, exist_ok=True)
-            input_file_name = Path(input_file_path).stem
-            output_path = os.path.join(output_dir, f"{input_file_name}.pptx")
-            
-            # If already PPTX, just copy
-            if input_file_path.lower().endswith('.pptx'):
-                shutil.copy(input_file_path, output_path)
-                logger.info(f"✓ File is already PPTX: {output_path}")
-                return True, output_path
-            
-            # Convert to PPTX using LibreOffice
-            soffice_path = SlideConversionPipeline.get_libreoffice_path()
-            logger.info(f"Converting to PPTX using: {soffice_path}")
-            
-            result = subprocess.run([
-                soffice_path,
-                "--headless",
-                "--convert-to", "pptx",
-                input_file_path,
-                "--outdir", output_dir
-            ], capture_output=True, text=True, timeout=300)
-            
-            if result.returncode != 0:
-                logger.error(f"PPTX conversion failed: {result.stderr}")
-                return False, ""
-            
-            if os.path.exists(output_path):
-                logger.info(f"✓ Successfully converted to PPTX: {output_path}")
-                return True, output_path
-            else:
-                logger.error(f"Output PPTX not found: {output_path}")
-                logger.error(f"Directory contents: {os.listdir(output_dir)}")
-                return False, ""
-        
-        except Exception as e:
-            logger.error(f"Step 1 (to PPTX) failed: {e}")
-            return False, ""
-    
-    @staticmethod
-    def step2_to_pdf(pptx_file_path: str, output_dir: str) -> Tuple[bool, str]:
-        """
-        STEP 2: Convert PPTX to PDF for text extraction
-        
-        Input: PPTX file
-        Output: PDF file
-        """
-        try:
-            os.makedirs(output_dir, exist_ok=True)
-            input_file_name = Path(pptx_file_path).stem
-            output_path = os.path.join(output_dir, f"{input_file_name}.pdf")
-            
-            soffice_path = SlideConversionPipeline.get_libreoffice_path()
-            logger.info(f"Converting PPTX to PDF: {pptx_file_path}")
-            
-            result = subprocess.run([
-                soffice_path,
-                "--headless",
-                "--convert-to", "pdf",
-                pptx_file_path,
-                "--outdir", output_dir
-            ], capture_output=True, text=True, timeout=300)
-            
-            if result.returncode != 0:
-                logger.error(f"PDF conversion failed: {result.stderr}")
-                return False, ""
-            
-            if os.path.exists(output_path):
-                logger.info(f"✓ Successfully converted to PDF: {output_path}")
-                return True, output_path
-            else:
-                logger.error(f"Output PDF not found: {output_path}")
-                return False, ""
-        
-        except Exception as e:
-            logger.error(f"Step 2 (to PDF) failed: {e}")
-            return False, ""
-    
-    @staticmethod
-    def step3_pdf_to_images(pdf_file_path: str, output_dir: str, dpi: int = 150) -> Tuple[bool, List[str]]:
-        """
-        STEP 3: Convert PDF to PNG images for frontend rendering
-        
-        Input: PDF file
-        Output: PNG images (one per page)
-        """
-        try:
-            from pdf2image import convert_from_path
-            
-            os.makedirs(output_dir, exist_ok=True)
-            
-            logger.info(f"Converting PDF to images (DPI={dpi}): {pdf_file_path}")
-            
-            # Convert PDF pages to images
-            pages = convert_from_path(pdf_file_path, dpi=dpi)
-            logger.info(f"PDF has {len(pages)} pages")
-            
-            image_paths = []
-            for page_number, page_image in enumerate(pages, 1):
-                image_filename = f"page_{page_number:04d}.png"
-                image_path = os.path.join(output_dir, image_filename)
-                
-                page_image.save(image_path, 'PNG')
-                image_paths.append(image_path)
-                logger.info(f"✓ Saved page {page_number}: {image_path}")
-            
-            logger.info(f"✓ Successfully converted {len(pages)} pages to images")
-            return True, image_paths
-        
-        except ImportError:
-            logger.error("pdf2image not installed: pip install pdf2image")
-            return False, []
-        except Exception as e:
-            logger.error(f"Step 3 (PDF to images) failed: {e}")
-            return False, []
-    
-    @staticmethod
-    def extract_text_from_pdf(pdf_file_path: str) -> str:
-        """Extract text from PDF for RAG processing"""
-        try:
-            import fitz  # PyMuPDF
-            
-            doc = fitz.open(pdf_file_path)
-            text = ""
-            for page_num in range(len(doc)):
-                page = doc[page_num]
-                text += page.get_text()
-                text += "\n---PAGE BREAK---\n"
-            
-            doc.close()
-            logger.info(f"Extracted {len(text)} characters from PDF")
-            return text
-        except Exception as e:
-            logger.error(f"Text extraction failed: {e}")
-            return ""
-    
-    @staticmethod
-    def process_slide(cloudinary_url: str, slide_id: str, original_file_type: str) -> Dict[str, Any]:
-        """
-        COMPLETE PIPELINE: Download → PPTX → PDF → IMAGES
-        
-        Args:
-            cloudinary_url: URL of file in Cloudinary
-            slide_id: ID of the slide
-            original_file_type: Original file type (pdf, pptx, docx, etc.)
-            
-        Returns:
-            Dictionary with results including image paths, text content, etc.
-        """
-        result = {
-            'success': False,
-            'slide_id': slide_id,
-            'file_type': original_file_type,
-            'image_paths': [],
-            'text_content': '',
-            'page_count': 0,
-            'error': None
+    def process_slide(
+        cloudinary_url: str,
+        slide_id: str,
+        original_file_type: str,
+    ) -> Dict[str, Any]:
+        result: Dict[str, Any] = {
+            "success": False,
+            "slide_id": slide_id,
+            "file_type": original_file_type,
+            "image_paths": [],
+            "text_content": "",
+            "page_count": 0,
+            "temp_dir": None,
+            "error": None,
         }
-        
+
         temp_dir = tempfile.mkdtemp(prefix=f"slide_{slide_id}_")
-        logger.info(f"Working directory: {temp_dir}")
-        
+        result["temp_dir"] = temp_dir
+        logger.info(f"=== PIPELINE START  slide={slide_id}  type={original_file_type} ===")
+        logger.info(f"Temp dir: {temp_dir}")
+
         try:
-            # Step 0: Download file from Cloudinary
-            logger.info(f"Downloading from Cloudinary: {cloudinary_url}")
-            import requests
-            
-            response = requests.get(cloudinary_url, timeout=60)
-            if response.status_code != 200:
-                result['error'] = f"Failed to download: HTTP {response.status_code}"
-                logger.error(result['error'])
-                return result
-            
-            # Determine file extension
-            file_ext = original_file_type.lower()
-            if not file_ext.startswith('.'):
-                file_ext = f".{file_ext}"
-            
-            original_file_path = os.path.join(temp_dir, f"original{file_ext}")
-            with open(original_file_path, 'wb') as f:
-                f.write(response.content)
-            
-            logger.info(f"Downloaded {len(response.content)} bytes")
-            
-            # STEP 1: Convert to PPTX
-            logger.info("=== STEP 1: Converting to PPTX ===")
-            pptx_dir = os.path.join(temp_dir, 'step1_pptx')
-            success, pptx_path = SlideConversionPipeline.step1_to_pptx(original_file_path, pptx_dir)
-            
-            if not success:
-                result['error'] = 'Failed to convert to PPTX'
-                logger.error(result['error'])
-                return result
-            
-            # STEP 2: Convert PPTX to PDF
-            logger.info("=== STEP 2: Converting PPTX to PDF ===")
-            pdf_dir = os.path.join(temp_dir, 'step2_pdf')
-            success, pdf_path = SlideConversionPipeline.step2_to_pdf(pptx_path, pdf_dir)
-            
-            if not success:
-                result['error'] = 'Failed to convert to PDF'
-                logger.error(result['error'])
-                return result
-            
-            # Extract text from PDF (for RAG)
-            logger.info("Extracting text from PDF...")
-            text_content = SlideConversionPipeline.extract_text_from_pdf(pdf_path)
-            result['text_content'] = text_content
-            
-            # STEP 3: Convert PDF to images
-            logger.info("=== STEP 3: Converting PDF to Images ===")
-            images_dir = os.path.join(temp_dir, 'step3_images')
-            success, image_paths = SlideConversionPipeline.step3_pdf_to_images(pdf_path, images_dir)
-            
-            if not success:
-                result['error'] = 'Failed to convert PDF to images'
-                logger.error(result['error'])
-                return result
-            
-            result['image_paths'] = image_paths
-            result['page_count'] = len(image_paths)
-            result['success'] = True
-            
-            logger.info(f"✓ PIPELINE COMPLETE: {len(image_paths)} pages converted")
+            # ── 0. Download ──────────────────────────────────────────────────
+            logger.info(f"Downloading: {cloudinary_url}")
+            file_bytes = _download_from_cloudinary(cloudinary_url)
+            logger.info(f"Downloaded {len(file_bytes):,} bytes")
+
+            ft = original_file_type.lower().lstrip(".")
+            ext = f".{ft}"
+            original_path = os.path.join(temp_dir, f"original{ext}")
+            with open(original_path, "wb") as fh:
+                fh.write(file_bytes)
+
+            # ── 1. Get a PDF (or use the file directly if already PDF) ───────
+            if ft == "pdf":
+                logger.info("File is already PDF — skipping LibreOffice")
+                pdf_path = original_path
+            else:
+                logger.info(f"Converting {ft.upper()} → PDF via LibreOffice…")
+                pdf_dir = os.path.join(temp_dir, "pdf")
+                pdf_path = _convert_to_pdf_via_libreoffice(original_path, pdf_dir)
+
+            # ── 2. Extract text (for RAG) ────────────────────────────────────
+            text_content = _extract_text_from_pdf(pdf_path)
+            result["text_content"] = text_content
+
+            # ── 3. Render each PDF page → JPG ────────────────────────────────
+            logger.info("Rendering PDF pages → JPG…")
+            jpg_dir = os.path.join(temp_dir, "pages")
+            jpg_paths = _pdf_to_jpg_pages(pdf_path, jpg_dir, dpi=150)
+
+            if not jpg_paths:
+                raise RuntimeError("No pages were rendered from the PDF")
+
+            result["image_paths"] = jpg_paths
+            result["page_count"] = len(jpg_paths)
+            result["success"] = True
+            logger.info(f"=== PIPELINE COMPLETE: {len(jpg_paths)} pages ===")
             return result
-        
-        except Exception as e:
-            logger.error(f"Pipeline error: {e}")
-            import traceback
-            traceback.print_exc()
-            result['error'] = str(e)
-            return result
-        
-        finally:
-            # Cleanup temp directory
+
+        except Exception as exc:
+            logger.error(f"Pipeline error: {exc}", exc_info=True)
+            result["error"] = str(exc)
+            # Clean up on failure — temp_dir is useless without images
             shutil.rmtree(temp_dir, ignore_errors=True)
-            logger.info(f"Cleaned up temp directory: {temp_dir}")
+            result["temp_dir"] = None
+            return result

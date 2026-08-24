@@ -19,6 +19,8 @@ import {
   faBars,
   faXmark,
   faChartLine,
+  faSchool,
+  faPersonRunning,
 } from "@fortawesome/free-solid-svg-icons";
 import { cn } from "@/lib/utils";
 import { UploadProgressStrip } from "./upload-progress-strip";
@@ -32,24 +34,51 @@ type NavItem = {
   match?: RegExp;
 };
 
-const primary: NavItem[] = [
+const primaryStudy: NavItem[] = [
   {
-    label: "Dashboard",
+    label: "Home",
     href: "/dashboard",
     icon: faGaugeHigh,
     match: /^\/dashboard$/,
   },
   {
+    label: "Learn",
+    href: "/courses",
+    icon: faBookOpenReader,
+    match: /^\/courses/,
+  },
+  {
+    label: "Practice",
+    href: "/quiz",
+    icon: faListCheck,
+    match: /^\/(quiz|steeplechase)/,
+  },
+  {
+    label: "Review",
+    href: "/flashcards",
+    icon: faLayerGroup,
+    match: /^\/flashcards/,
+  },
+  {
+    label: "Compete",
+    href: "/brainstorming",
+    icon: faTrophy,
+    match: /^\/(brainstorming|battles)/,
+  },
+  {
+    label: "Community",
+    href: "/community",
+    icon: faComments,
+    match: /^\/community/,
+  },
+];
+
+const secondaryTools: NavItem[] = [
+  {
     label: "Analytics",
     href: "/analytics",
     icon: faChartLine,
     match: /^\/analytics/,
-  },
-  {
-    label: "Premium",
-    href: "/premium",
-    icon: faFire,
-    match: /^\/premium$/,
   },
   {
     label: "Study Plan",
@@ -58,70 +87,40 @@ const primary: NavItem[] = [
     match: /^\/study-plan/,
   },
   {
-    label: "My Courses",
-    href: "/courses",
-    icon: faBookOpenReader,
-    match: /^\/courses/,
-  },
-  {
-    label: "Materials",
-    href: "/materials",
-    icon: faLayerGroup,
-    match: /^\/materials/,
-  },
-  {
-    label: "Quizzes",
-    href: "/quiz",
-    icon: faListCheck,
-    match: /^\/quiz/,
-  },
-  {
-    label: "Flashcards",
-    href: "/flashcards",
-    icon: faLayerGroup,
-    match: /^\/flashcards/,
-  },
-  {
-    label: "Community",
-    href: "/community",
-    icon: faComments,
-    match: /^\/community/,
-  },
-  {
-    label: "My Class",
-    href: "/class",
-    icon: faUser,
-    match: /^\/class/,
-  },
-  {
     label: "Profile",
     href: "/profile",
     icon: faUser,
     match: /^\/profile$/,
   },
+  {
+    label: "Premium",
+    href: "/premium",
+    icon: faFire,
+    match: /^\/premium$/,
+  },
 ];
+
+// Class-head-only item — shown after a divider at the bottom of the nav
+const classManagementItem: NavItem = {
+  label: "Class Management",
+  href: "/class/curriculum",
+  icon: faSchool,
+  match: /^\/class\//,
+};
 
 function SidebarContent({ onNav }: { onNav?: () => void }) {
   const pathname = usePathname();
-  const isClassRep = useAppSelector((s) => s.user.isClassRep);
+  const isVerifiedClassHead = useAppSelector((s) => s.user.isVerifiedClassHead);
   const isUploader = useAppSelector((s) => s.user.role === "uploader");
-  const canBrainstorm = useAppSelector(
-    (s) => s.user.role === "class-rep" || s.user.role === "brainstormer",
-  );
-  const userProfile = useAppSelector((s) => s.user.profile);
+  const streak = useAppSelector((s) => s.user.streak) || 0;
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
     setHasHydrated(true);
   }, []);
 
-  const visibleNavItems = hasHydrated
-    ? primary.filter((item) => item.href !== "/brainstorming" || canBrainstorm)
-    : primary.filter((item) => item.href !== "/brainstorming");
   const badge =
-    hasHydrated && (isClassRep ? "Class Rep" : isUploader ? "Uploader" : null);
-  
-  const streak = userProfile?.streak || 0;
+    hasHydrated && (isVerifiedClassHead ? "Class Head" : isUploader ? "Uploader" : null);
 
   return (
     <div className="flex h-full flex-col">
@@ -144,7 +143,9 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             <FontAwesomeIcon icon={faStethoscope} className="size-4" />
           </span>
           <span className="flex flex-col leading-none">
-            <span className="font-serif text-lg font-semibold tracking-tight">Emby</span>
+            <span className="font-serif text-lg font-semibold tracking-tight">
+              Emby
+            </span>
             <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
               BMS Edition
             </span>
@@ -157,51 +158,55 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
           Study
         </p>
         <ul className="space-y-0.5">
-          {visibleNavItems.map((item) => {
+          {primaryStudy.map((item) => {
             const active = item.match
               ? item.match.test(pathname)
               : pathname === item.href;
             return (
               <li key={item.label}>
-                <Link
-                  href={item.href}
-                  onClick={onNav}
-                  className={cn(
-                    "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150",
-                    active
-                      ? "nav-active-bar bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground hover:translate-x-0.5",
-                  )}
-                >
-                  <FontAwesomeIcon
-                    icon={item.icon}
-                    className={cn(
-                      "size-4 transition-colors",
-                      active ? "text-primary" : "group-hover:text-foreground",
-                    )}
-                    aria-hidden="true"
-                  />
-                  <span>{item.label}</span>
-                  {active && (
-                    <motion.span
-                      layoutId="nav-pill"
-                      className="ml-auto h-1.5 w-1.5 rounded-full bg-primary"
-                      style={{
-                        boxShadow:
-                          "0 0 6px 2px color-mix(in oklab, var(--primary) 70%, transparent)",
-                      }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 400,
-                        damping: 30,
-                      }}
-                    />
-                  )}
-                </Link>
+                <NavLink item={item} active={active} onNav={onNav} />
               </li>
             );
           })}
         </ul>
+
+        <div className="mx-3 my-3 border-t border-sidebar-border" />
+
+        <p className="px-3 pb-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+          Personal & Tools
+        </p>
+        <ul className="space-y-0.5">
+          {secondaryTools.map((item) => {
+            const active = item.match
+              ? item.match.test(pathname)
+              : pathname === item.href;
+            return (
+              <li key={item.label}>
+                <NavLink item={item} active={active} onNav={onNav} />
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Class Management — class heads only, separated by a divider */}
+        {hasHydrated && isVerifiedClassHead && (
+          <>
+            <div className="mx-3 my-3 border-t border-sidebar-border" />
+            <ul className="space-y-0.5">
+              <li>
+                <NavLink
+                  item={classManagementItem}
+                  active={
+                    classManagementItem.match
+                      ? classManagementItem.match.test(pathname)
+                      : pathname === classManagementItem.href
+                  }
+                  onNav={onNav}
+                />
+              </li>
+            </ul>
+          </>
+        )}
       </nav>
 
       {/* Upload progress */}
@@ -222,7 +227,9 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
                 Streak
               </p>
-              <p className="font-serif text-lg leading-none">{streak} {streak === 1 ? 'day' : 'days'}</p>
+              <p className="font-serif text-lg leading-none">
+                {streak} {streak === 1 ? "day" : "days"}
+              </p>
             </div>
           </div>
           {badge && (
@@ -232,12 +239,61 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
           )}
         </div>
         <p className="mt-3 text-[12px] text-muted-foreground">
-          {streak === 0 
+          {streak === 0
             ? "Start studying today to begin your streak!"
             : "Keep studying daily to maintain your streak!"}
         </p>
       </div>
     </div>
+  );
+}
+
+// Extracted NavLink so it can be reused
+function NavLink({
+  item,
+  active,
+  onNav,
+}: {
+  item: NavItem;
+  active: boolean;
+  onNav?: () => void;
+}) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onNav}
+      className={cn(
+        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150",
+        active
+          ? "nav-active-bar bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+          : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground hover:translate-x-0.5",
+      )}
+    >
+      <FontAwesomeIcon
+        icon={item.icon}
+        className={cn(
+          "size-4 transition-colors",
+          active ? "text-primary" : "group-hover:text-foreground",
+        )}
+        aria-hidden="true"
+      />
+      <span>{item.label}</span>
+      {active && (
+        <motion.span
+          layoutId="nav-pill"
+          className="ml-auto h-1.5 w-1.5 rounded-full bg-primary"
+          style={{
+            boxShadow:
+              "0 0 6px 2px color-mix(in oklab, var(--primary) 70%, transparent)",
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 400,
+            damping: 30,
+          }}
+        />
+      )}
+    </Link>
   );
 }
 

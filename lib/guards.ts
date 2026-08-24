@@ -23,7 +23,7 @@ export const isEmailVerified = (): boolean => {
 
 export const isClassHeadVerified = (): boolean => {
   const profile = getStoredProfile();
-  if (profile?.role !== "class_head") return true;
+  if (profile?.class_role !== "class_head") return true;
   return profile?.class_head_verified ?? false;
 };
 
@@ -33,30 +33,30 @@ export const canAccessApp = (): boolean => {
 
 export const isPremium = (): boolean => {
   const profile = getStoredProfile();
-  return (
-    profile?.subscription_tier === "premium" ||
-    profile?.subscription_tier === "class_head"
-  );
+  if (!profile) return false;
+  // Verified class heads get premium for free
+  if (profile.class_role === "class_head" && profile.class_head_verified) return true;
+  // Paid premium subscription
+  return profile.subscription_tier === "premium";
 };
 
 export const isClassHead = (): boolean => {
   const profile = getStoredProfile();
-  return profile?.role === "class_head" && profile?.class_head_verified;
+  return (
+    profile?.class_role === "class_head" && profile?.class_head_verified === true
+  );
 };
 
-export const isBrainstormer = (): boolean => {
-  const profile = getStoredProfile();
-  return profile?.role === "brainstormer";
-};
+
 
 export const isMaterialUploader = (): boolean => {
   const profile = getStoredProfile();
-  return profile?.role === "material_uploader";
+  return profile?.class_role === "material_uploader";
 };
 
 export const isStudent = (): boolean => {
   const profile = getStoredProfile();
-  return profile?.role === "student";
+  return profile?.class_role === "student";
 };
 
 export const canCreatePosts = (): boolean => {
@@ -79,7 +79,7 @@ export const canUploadMaterials = (): boolean => {
   const profile = getStoredProfile();
   if (!profile) return false;
   // Material uploaders and class heads can upload materials
-  return ["material_uploader", "class_head"].includes(profile.role);
+  return ["material_uploader", "class_head"].includes(profile.class_role);
 };
 
 export const canManageClass = (): boolean => {

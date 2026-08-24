@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import type { SteeplechaseItem } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -11,12 +10,13 @@ import { ArrowLeft, Clock, Check, X, Flag, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { UpgradePrompt } from "@/components/upgrade-prompt";
+import { SteeplechaseQuestion } from "@/lib/api";
 
 type Session = {
   id: string;
   title: string;
   durationSec: number; // per station
-  items: SteeplechaseItem[];
+  items: SteeplechaseQuestion[];
 };
 
 export function SteeplechaseRunner({ session }: { session: Session }) {
@@ -88,7 +88,7 @@ export function SteeplechaseRunner({ session }: { session: Session }) {
     if (!finished) return 0;
     return session.items.reduce((acc, s, i) => {
       const ans = answers[i].trim().toLowerCase();
-      const correct = s.acceptedAnswers.some((a) => a.toLowerCase() === ans);
+      const correct = s.accepted_answers.some((a) => a.toLowerCase() === ans);
       return acc + (correct ? 1 : 0);
     }, 0);
   }, [finished, answers, session.items]);
@@ -204,7 +204,7 @@ export function SteeplechaseRunner({ session }: { session: Session }) {
           <div className="divide-y divide-border">
             {session.items.map((s, i) => {
               const ans = answers[i].trim();
-              const correct = s.acceptedAnswers.some(
+              const correct = s.accepted_answers.some(
                 (a) => a.toLowerCase() === ans.toLowerCase(),
               );
               return (
@@ -214,7 +214,7 @@ export function SteeplechaseRunner({ session }: { session: Session }) {
                 >
                   <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-border bg-muted">
                     <img
-                      src={`/placeholder.svg?height=520&width=720&query=${encodeURIComponent(s.imageQuery)}`}
+                      src={s.image_url}
                       alt={`Station ${i + 1} specimen`}
                       className="h-full w-full object-cover"
                     />
@@ -254,7 +254,7 @@ export function SteeplechaseRunner({ session }: { session: Session }) {
                           Accepted:{" "}
                         </span>
                         <span className="font-medium text-mastery">
-                          {s.acceptedAnswers.join(", ")}
+                          {s.accepted_answers.join(", ")}
                         </span>
                       </div>
                     </div>
@@ -346,7 +346,7 @@ export function SteeplechaseRunner({ session }: { session: Session }) {
           <Card className="overflow-hidden border-border p-0">
             <div className="relative h-full min-h-[320px] bg-muted">
               <img
-                src={`/placeholder.svg?height=520&width=720&query=${encodeURIComponent(current.imageQuery)}`}
+                src={current.image_url}
                 alt={`Specimen for station ${index + 1}`}
                 className="h-full w-full object-cover"
               />
@@ -365,7 +365,7 @@ export function SteeplechaseRunner({ session }: { session: Session }) {
           {/* Prompt + answer */}
           <Card className="flex flex-col border-border p-6">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-learning">
-              {current.topic}
+              Steeplechase Question
             </p>
             <h2 className="mt-2 font-serif text-xl font-semibold leading-snug text-balance md:text-2xl">
               {current.prompt}

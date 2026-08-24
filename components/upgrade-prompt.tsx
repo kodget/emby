@@ -84,12 +84,14 @@ interface UpgradePromptProps {
   feature?: keyof typeof lockedFeatures;
   title?: string;
   compact?: boolean;
+  description?: string;
 }
 
 export function UpgradePrompt({
   feature = "default",
   title,
   compact = false,
+  description,
 }: UpgradePromptProps) {
   const features = lockedFeatures[feature] ?? lockedFeatures.default;
 

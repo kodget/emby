@@ -33,3 +33,6 @@ django-celery-results>=2.5.1
 # torch has no Python 3.14 wheel yet — install these only on Python 3.12,
 # or skip them entirely (chat falls back to raw slide text automatically):
 #   pip install -r requirements-rag.txt
+
+channels
+daphne

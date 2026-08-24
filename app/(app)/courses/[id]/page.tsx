@@ -252,23 +252,34 @@ export default function CourseDetailPage() {
           
           {slides.map((slide) => (
             <li key={slide.id}>
-              <Link
-                href={`/read/${courseData.id}/${slide.id}`}
-                className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:bg-primary/5 hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/10"
-              >
-                <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
-                  <FileText className="size-5" aria-hidden="true" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{slide.title}</p>
-                  <p className="truncate text-sm text-muted-foreground">
-                    {slide.page_count} pages · {slide.uploaded_by_name || 'Unknown'} · {formatDate(slide.created_at)}
-                  </p>
+              <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card p-4 transition-all hover:border-primary/40">
+                <Link
+                  href={`/read/${courseData.id}/${slide.id}`}
+                  className="group flex flex-1 items-center gap-4 min-w-0"
+                >
+                  <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
+                    <FileText className="size-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium group-hover:text-primary transition-colors">{slide.title}</p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {slide.page_count} pages · {slide.uploaded_by_name || 'Unknown'} · {formatDate(slide.created_at)}
+                    </p>
+                  </div>
+                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/quiz?subject=${courseData.subjectId}&${courseData.isTopic ? 'topic' : 'block'}=${courseData.id}&slide=${slide.id}`}
+                    className="shrink-0 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-foreground transition-all flex items-center gap-1"
+                  >
+                    <ListChecks className="size-3" />
+                    Quiz me
+                  </Link>
+                  <span className="hidden sm:inline-block shrink-0 rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                    {slide.page_count} pages
+                  </span>
                 </div>
-                <span className="shrink-0 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                  {slide.page_count} pages
-                </span>
-              </Link>
+              </div>
             </li>
           ))}
         </ul>
@@ -282,10 +293,11 @@ export default function CourseDetailPage() {
           </h2>
           <ul className="mt-4 space-y-4">
             {materials.map((material) => {
+              const materialType = material.material_type as string;
               const Icon = 
-                material.material_type === 'video' ? Video :
-                material.material_type === 'link' ? LinkIcon :
-                material.material_type === 'past_question' ? FileQuestion :
+                materialType === 'video' ? Video :
+                materialType === 'link' ? LinkIcon :
+                materialType === 'past_question' ? FileQuestion :
                 FileText
               
               return (

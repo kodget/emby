@@ -105,7 +105,6 @@ export default function UserProfilePage() {
   const firstName = profile.full_name.split(" ")[0];
   const roleLabels: Record<string, string> = {
     student: "Student",
-    brainstormer: "Brainstormer",
     class_head: "Class Head",
     material_uploader: "Material Uploader",
   };
@@ -138,14 +137,14 @@ export default function UserProfilePage() {
                     <h1 className="text-3xl font-bold mb-2">{profile.full_name}</h1>
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <Badge variant="secondary">
-                        {roleLabels[profile.role] || profile.role}
+                        {roleLabels[profile.class_role] || profile.class_role}
                       </Badge>
                       {profile.is_premium && (
                         <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
                           Premium
                         </Badge>
                       )}
-                      {profile.role === "class_head" && profile.class_head_verified && (
+                      {profile.class_code && profile.class_role === "class_head" && profile.class_head_verified && (
                         <Badge className="bg-green-600 text-white">
                           Verified Class Head
                         </Badge>

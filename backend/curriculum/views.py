@@ -6,16 +6,19 @@ from django.db.models import Q, Sum
 from django.utils import timezone
 from datetime import date, timedelta
 from .models import (
-    Subject, Block, Topic, Section, Slide, Material, UserProgress, ScheduleItem,
+    Subject, Block, SubBlock, Topic, Slide, Material, UserProgress, ScheduleItem,
     UserStats, CommunityPost, PostComment, PostLike, UpcomingTest, DailyStudySession,
-    QuizQuestion, Quiz, QuizAnswer, SlideContent, SlideDeck, SlidePage
+    QuizQuestion, Quiz, QuizAnswer, SlideContent, SlideDeck, SlidePage, SteeplechaseQuestion,
+    FriendChallenge, BrainBattle, BattleParticipant, Flashcard, FlashcardProgress, FlashcardReview
 )
 from .serializers import (
-    SubjectSerializer, BlockSerializer, TopicSerializer, SectionSerializer, SlideSerializer, MaterialSerializer,
+    SubjectSerializer, BlockSerializer, SubBlockSerializer, TopicSerializer, SlideSerializer, MaterialSerializer,
     UserProgressSerializer, ScheduleItemSerializer, UserStatsSerializer,
     CommunityPostSerializer, PostCommentSerializer, UpcomingTestSerializer,
     QuizQuestionSerializer, QuizSerializer, QuizAnswerSerializer,
-    SlideDeckSerializer, SlideDeckListSerializer, SlidePageSerializer
+    SlideDeckSerializer, SlideDeckListSerializer, SlidePageSerializer, SteeplechaseQuestionSerializer,
+    FriendChallengeSerializer, BrainBattleSerializer, BattleParticipantSerializer,
+    FlashcardSerializer, FlashcardProgressSerializer, FlashcardReviewSerializer
 )
 
 
@@ -43,6 +46,20 @@ class BlockViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
+class SubBlockViewSet(viewsets.ReadOnlyModelViewSet):
+    """List sub-blocks, optionally filtered by block"""
+    queryset = SubBlock.objects.all()
+    serializer_class = SubBlockSerializer
+    permission_classes = [AllowAny]
+    
+    def get_queryset(self):
+        queryset = SubBlock.objects.all()
+        block_id = self.request.query_params.get('block', None)
+        if block_id:
+            queryset = queryset.filter(block_id=block_id)
+        return queryset
+
+
 class TopicViewSet(viewsets.ReadOnlyModelViewSet):
     """List topics, optionally filtered by block"""
     queryset = Topic.objects.all()
@@ -52,27 +69,11 @@ class TopicViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         queryset = Topic.objects.all()
         block_id = self.request.query_params.get('block', None)
+        sub_block_id = self.request.query_params.get('sub_block', None)
         if block_id:
             queryset = queryset.filter(block_id=block_id)
-        return queryset
-
-
-class SectionViewSet(viewsets.ReadOnlyModelViewSet):
-    """List sections, optionally filtered by topic or block"""
-    queryset = Section.objects.all()
-    serializer_class = SectionSerializer
-    permission_classes = [AllowAny]
-    
-    def get_queryset(self):
-        queryset = Section.objects.all()
-        topic_id = self.request.query_params.get('topic', None)
-        block_id = self.request.query_params.get('block', None)
-        
-        if topic_id:
-            queryset = queryset.filter(topic_id=topic_id)
-        elif block_id:
-            queryset = queryset.filter(block_id=block_id)
-        
+        if sub_block_id:
+            queryset = queryset.filter(sub_block_id=sub_block_id)
         return queryset
 
 
@@ -277,6 +278,42 @@ class UserProgressViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(progress)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def subject_progress(self, request):
+        """Return per-subject completion percentage based on slides accessed."""
+        progress_qs = self.get_queryset().select_related('slide__subject')
+        
+        subject_data: dict[str, dict] = {}
+        for p in progress_qs:
+            if not p.slide or not p.slide.subject:
+                continue
+            sid = str(p.slide.subject.id)
+            sname = p.slide.subject.name
+            if sid not in subject_data:
+                subject_data[sid] = {
+                    'subject_id': sid,
+                    'subject_name': sname,
+                    'total_pages': 0,
+                    'completed_pages': 0,
+                }
+            subject_data[sid]['total_pages'] += p.total_pages or 0
+            subject_data[sid]['completed_pages'] += p.current_page or 0
+
+        result = []
+        for item in subject_data.values():
+            pct = (
+                round((item['completed_pages'] / item['total_pages']) * 100)
+                if item['total_pages'] > 0
+                else 0
+            )
+            result.append({
+                'subject_id': item['subject_id'],
+                'subject_name': item['subject_name'],
+                'completion_percentage': min(pct, 100),
+            })
+
+        return Response(result)
 
 
 # -------------------------
@@ -623,7 +660,7 @@ def generate_quiz(request):
     if block_id:
         filters &= Q(block_id=block_id)
     if topic_id:
-        filters &= Q(topic_id=topic_id)
+        filters &= Q(sub_block_id=topic_id)
     
     # Get questions
     questions = list(QuizQuestion.objects.filter(filters).order_by('?')[:num_questions])
@@ -642,7 +679,7 @@ def generate_quiz(request):
         quiz_type=quiz_type,
         subject_id=subject_id,
         block_id=block_id,
-        topic_id=topic_id,
+        sub_block_id=topic_id,
         total_questions=len(questions)
     )
     quiz.questions.set(questions)
@@ -1221,20 +1258,20 @@ def ai_study_recommendations(request):
 
     recent_quizzes = Quiz.objects.filter(
         user=request.user, completed=True
-    ).select_related('topic', 'subject').order_by('-completed_at')[:10]
+    ).select_related('sub_block', 'subject').order_by('-completed_at')[:10]
 
     history = []
     for q in recent_quizzes:
         history.append({
-            'topic': q.topic.name if q.topic else (q.subject.name if q.subject else 'General'),
+            'topic': q.sub_block.name if q.sub_block else (q.subject.name if q.subject else 'General'),
             'score': q.score,
             'quiz_type': q.quiz_type,
         })
 
     # Topics with low average score (below 60%)
     weak_topics = list({
-        (q.topic.name if q.topic else '') for q in recent_quizzes
-        if q.score < 60 and q.topic
+        (q.sub_block.name if q.sub_block else '') for q in recent_quizzes
+        if q.score < 60 and q.sub_block
     })
 
     # Topics from slides not yet completed
@@ -1655,3 +1692,269 @@ def processing_overview(request):
         return Response({
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class SteeplechaseQuestionViewSet(viewsets.ModelViewSet):
+    queryset = SteeplechaseQuestion.objects.all()
+    serializer_class = SteeplechaseQuestionSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        # Return all or apply filtering if necessary
+        return super().get_queryset()
+
+class FriendChallengeViewSet(viewsets.ModelViewSet):
+    queryset = FriendChallenge.objects.all()
+    serializer_class = FriendChallengeSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return self.queryset.filter(Q(challenger=user) | Q(challenged=user))
+
+    def perform_create(self, serializer):
+        serializer.save(challenger=self.request.user)
+
+    @action(detail=True, methods=['patch'])
+    def respond(self, request, pk=None):
+        challenge = self.get_object()
+        status_update = request.data.get('status')
+        if status_update in ['accepted', 'declined']:
+            challenge.status = status_update
+            challenge.save()
+            return Response({'status': 'challenge updated'})
+        return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+
+class BrainBattleViewSet(viewsets.ModelViewSet):
+    queryset = BrainBattle.objects.all()
+    serializer_class = BrainBattleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        profile = getattr(self.request.user, 'profile', None)
+        class_group = profile.class_group if profile else None
+        if not class_group:
+            return self.queryset.none()
+        return self.queryset.filter(class_group=class_group)
+
+    def perform_create(self, serializer):
+        from rest_framework.exceptions import ValidationError
+        from .ai_service import generate_battle_questions
+        
+        profile = getattr(self.request.user, 'profile', None)
+        class_group = profile.class_group if profile else None
+        if not class_group:
+            raise ValidationError("You must belong to a class group to create a battle.")
+            
+        battle = serializer.save(host=self.request.user, class_group=class_group)
+        
+        # Determine topic string from hierarchy
+        hierarchy_parts = []
+        if battle.linked_subject: hierarchy_parts.append(battle.linked_subject.name)
+        if battle.linked_block: hierarchy_parts.append(battle.linked_block.name)
+        if battle.linked_sub_block: hierarchy_parts.append(battle.linked_sub_block.name)
+        if battle.linked_topic: hierarchy_parts.append(battle.linked_topic.name)
+        
+        topic_str = " > ".join(hierarchy_parts) or battle.topic or battle.title
+        
+        num_questions = int(self.request.data.get('num_questions', 10))
+        num_questions = min(40, max(1, num_questions)) # Limit to max 40
+        
+        # Pass difficulty
+        questions = generate_battle_questions(topic_str, num_questions=num_questions, difficulty=battle.difficulty)
+        battle.questions = questions
+        battle.save()
+
+    @action(detail=True, methods=['post'])
+    def join(self, request, pk=None):
+        battle = self.get_object()
+        BattleParticipant.objects.get_or_create(battle=battle, user=request.user)
+        return Response({'status': 'joined battle'})
+
+    @action(detail=True, methods=['post'])
+    def start(self, request, pk=None):
+        battle = self.get_object()
+        if request.user == battle.host:
+            battle.status = 'active'
+            battle.start_time = timezone.now()
+            battle.save()
+            return Response({'status': 'battle started'})
+        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+    @action(detail=True, methods=['post'])
+    def end(self, request, pk=None):
+        battle = self.get_object()
+        if request.user == battle.host:
+            battle.status = 'completed'
+            battle.save()
+            return Response({'status': 'battle ended'})
+        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+        
+    def destroy(self, request, *args, **kwargs):
+        battle = self.get_object()
+        if request.user == battle.host:
+            battle.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+
+# -------------------------
+# FLASHCARD VIEWS
+# -------------------------
+class FlashcardViewSet(viewsets.ModelViewSet):
+    """
+    CRUD endpoints for Flashcards.
+    """
+    serializer_class = FlashcardSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Flashcard.objects.filter(user=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def due(self, request):
+        """Get flashcards that are due for review."""
+        now = timezone.now()
+        # Find flashcards with no progress (never reviewed) OR due_date <= now
+        queryset = self.get_queryset().filter(
+            Q(progress_records__isnull=True) | Q(progress_records__due_date__lte=now)
+        ).distinct()
+        
+        # Apply filters like subject, block, sub_block, topic if they exist in query_params
+        for param in ['subject', 'block', 'sub_block', 'topic']:
+            val = request.query_params.get(param)
+            if val:
+                queryset = queryset.filter(**{f"{param}_id": val})
+                
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Returns flashcard statistics."""
+        now = timezone.now()
+        user = request.user
+        qs = Flashcard.objects.filter(user=user)
+        due_count = qs.filter(
+            Q(progress_records__isnull=True) | Q(progress_records__due_date__lte=now)
+        ).distinct().count()
+        total_cards = qs.count()
+        total_reviews = FlashcardReview.objects.filter(progress__user=user).count()
+        
+        # Calculate retention rate
+        reviews = FlashcardReview.objects.filter(progress__user=user)
+        successful_reviews = reviews.filter(rating__in=['good', 'easy']).count()
+        retention_rate = int((successful_reviews / total_reviews) * 100) if total_reviews > 0 else 0
+        
+        # Group by topic for decks
+        decks_dict = {}
+        cards = qs.select_related(
+            'topic', 
+            'topic__sub_block', 
+            'topic__sub_block__block', 
+            'topic__sub_block__block__subject',
+            'topic__block',
+            'topic__block__subject'
+        ).prefetch_related('progress_records')
+        
+        for fc in cards:
+            if not fc.topic:
+                continue
+                
+            topic = fc.topic
+            if topic.sub_block:
+                subject_name = topic.sub_block.block.subject.name if topic.sub_block.block and topic.sub_block.block.subject else "Unknown Subject"
+                block_name = topic.sub_block.block.name if topic.sub_block.block else "Unknown Block"
+                sub_block_name = topic.sub_block.name
+                deck_name = f"{subject_name} > {block_name} > {sub_block_name} > {topic.name}"
+            elif topic.block:
+                subject_name = topic.block.subject.name if topic.block.subject else "Unknown Subject"
+                block_name = topic.block.name
+                deck_name = f"{subject_name} > {block_name} > {topic.name}"
+            else:
+                deck_name = topic.name
+                
+            deck_id = topic.id
+            if deck_id not in decks_dict:
+                decks_dict[deck_id] = {
+                    "subject_id": deck_id,
+                    "subject_name": deck_name,
+                    "total_cards": 0,
+                    "due_today": 0
+                }
+                
+            decks_dict[deck_id]["total_cards"] += 1
+            
+            progress_list = fc.progress_records.all()
+            progress = progress_list[0] if progress_list else None
+            
+            is_due = False
+            if not progress or progress.due_date <= now:
+                is_due = True
+                
+            if is_due:
+                decks_dict[deck_id]["due_today"] += 1
+                
+        decks = list(decks_dict.values())
+        decks.sort(key=lambda x: x['total_cards'], reverse=True)
+        
+        return Response({
+            "due_today": due_count,
+            "total_cards": total_cards,
+            "retention_rate": retention_rate,
+            "total_reviews": total_reviews,
+            "decks": decks,
+        })
+
+    @action(detail=True, methods=['post'])
+    def review(self, request, pk=None):
+        """Submit a review rating for a flashcard."""
+        flashcard = self.get_object()
+        rating = request.data.get('rating')
+        if rating not in ['again', 'hard', 'good', 'easy']:
+            return Response({"error": "Invalid rating"}, status=400)
+
+        progress, created = FlashcardProgress.objects.get_or_create(
+            user=request.user, flashcard=flashcard
+        )
+
+        previous_interval = progress.interval
+
+        # Simple SM-2 implementation
+        if rating == 'again':
+            progress.repetitions = 0
+            progress.interval = 1
+        elif rating == 'hard':
+            progress.interval = max(1, int(progress.interval * 1.2))
+            progress.repetitions = max(1, progress.repetitions)
+        elif rating == 'good':
+            progress.interval = max(1, int(progress.interval * progress.ease_factor))
+            progress.repetitions += 1
+        elif rating == 'easy':
+            progress.ease_factor += 0.15
+            progress.interval = max(1, int(progress.interval * progress.ease_factor * 1.3))
+            progress.repetitions += 1
+
+        if rating == 'again':
+            progress.ease_factor = max(1.3, progress.ease_factor - 0.2)
+
+        progress.due_date = timezone.now() + timedelta(days=progress.interval)
+        progress.last_reviewed = timezone.now()
+        progress.save()
+
+        FlashcardReview.objects.create(
+            progress=progress,
+            rating=rating,
+            previous_interval=previous_interval,
+            next_interval=progress.interval
+        )
+
+        return Response({
+            "rating": rating,
+            "previous_interval": previous_interval,
+            "next_interval": progress.interval,
+            "due_date": progress.due_date
+        })

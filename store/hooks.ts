@@ -12,14 +12,10 @@ export function useCanUpload(): boolean {
   );
 }
 
-/** Returns true if the current user is the class rep (info dissemination role) */
-export function useIsClassRep(): boolean {
-  return useAppSelector((s) => s.user.isClassRep);
+/** Returns true if the current user is the verified class head */
+export function useIsVerifiedClassHead(): boolean {
+  return useAppSelector((s) => s.user.isVerifiedClassHead);
 }
 
-/** Returns true if the current user can host brainstorm sessions */
-export function useCanBrainstorm(): boolean {
-  return useAppSelector(
-    (s) => s.user.role === "brainstormer" || s.user.role === "class-rep",
-  );
-}
+export const useIsClassRep = () =>
+  useAppSelector((s) => s.user.role === "class-rep");

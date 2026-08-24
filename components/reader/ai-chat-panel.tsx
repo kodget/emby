@@ -28,7 +28,8 @@ export function AiChatPanel({
 }) {
   const [value, setValue] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
-  const { getChatHistory } = useSlideStore();
+  const { getChatHistory, slides } = useSlideStore();
+  const currentSlide = slides[slideIndex];
 
   // Load messages for THIS slide
   const messages = getChatHistory(slideIndex);
@@ -50,12 +51,8 @@ export function AiChatPanel({
 
   const quickActions = [
     {
-      label: "Summarise this slide",
+      label: "Summarise",
       prompt: "Summarise this slide in 5 bullet points.",
-    },
-    {
-      label: "Generate 3 MCQs",
-      prompt: "Generate 3 MCQs with answers from this slide.",
     },
     {
       label: "Explain simply",
@@ -66,6 +63,14 @@ export function AiChatPanel({
       label: "Clinical relevance",
       prompt: "What is the clinical relevance of this slide's content?",
     },
+    {
+      label: "Test me",
+      prompt: "Test my understanding of this slide by asking me a challenging question.",
+    },
+    {
+      label: "Mnemonic",
+      prompt: "Give me a mnemonic to remember the key facts on this slide.",
+    }
   ];
 
   // Show a welcome message if no history yet
@@ -83,6 +88,16 @@ export function AiChatPanel({
 
   return (
     <div className="flex h-full flex-col">
+      {/* Contextual Header */}
+      {currentSlide && (
+        <div className="bg-primary/5 border-b border-border px-4 py-2.5 flex items-center justify-between text-[11px] text-muted-foreground select-none shrink-0">
+          <span className="flex items-center gap-1.5 truncate">
+            <Sparkles className="size-3.5 text-primary animate-pulse" />
+            Discussing: <strong className="text-foreground truncate font-semibold">{currentSlide.title}</strong>
+          </span>
+        </div>
+      )}
+
       {/* ── Message list ────────────────────────────────────────────── */}
       <div
         ref={listRef}

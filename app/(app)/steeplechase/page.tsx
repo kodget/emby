@@ -1,13 +1,56 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { steeplechaseSets, quizzes } from "@/lib/data"
+import { quizzes } from "@/lib/data"
+import { curriculumApi, SteeplechaseQuestion } from "@/lib/api"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Trophy, Clock, Target, ListChecks } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function SteeplechaseIndex() {
-  const sessions = Object.values(steeplechaseSets)
+  const [sessions, setSessions] = useState<{ id: string; title: string; items: SteeplechaseQuestion[]; durationSec: number }[]>([])
+  const [loading, setLoading] = useState(true)
   const quizList = Object.values(quizzes)
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const questions = await curriculumApi.getSteeplechaseQuestions()
+        
+        // Group by source_file
+        const groups: Record<string, SteeplechaseQuestion[]> = {}
+        questions.forEach(q => {
+          const key = q.source_file || "Other"
+          if (!groups[key]) groups[key] = []
+          groups[key].push(q)
+        })
+
+        const fetchedSessions = Object.entries(groups).map(([source, items], index) => {
+          // Format title
+          let title = source.replace('.pdf', '')
+          if (title === "Other") title = "General Practice Set"
+          
+          return {
+            id: encodeURIComponent(source),
+            title,
+            items,
+            durationSec: 30 // standard 30s per station
+          }
+        })
+        
+        setSessions(fetchedSessions)
+      } catch (error) {
+        console.error("Failed to fetch steeplechase questions:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchQuestions()
+  }, [])
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
@@ -30,11 +73,22 @@ export default function SteeplechaseIndex() {
           <p className="text-sm text-muted-foreground">{sessions.length} available</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          {sessions.map((s) => (
+          {loading ? (
+             Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="flex flex-col overflow-hidden border-border/60 p-0">
+                  <Skeleton className="h-40 w-full" />
+                  <div className="p-6">
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2 mb-4" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </Card>
+             ))
+          ) : sessions.map((s) => (
             <Card key={s.id} className="flex flex-col overflow-hidden border-border/60 p-0">
               <div className="relative aspect-[16/8] bg-muted">
                 <img
-                  src={`/placeholder.svg?height=360&width=720&query=${encodeURIComponent(
+                  src={s.items[0]?.image_url || `/placeholder.svg?height=360&width=720&query=${encodeURIComponent(
                     "cadaveric dissection upper limb anatomy teaching lab, neutral tones",
                   )}`}
                   alt="Steeplechase specimen preview"

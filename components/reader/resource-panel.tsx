@@ -36,7 +36,7 @@ export function ResourcePanel({
 }: {
   slideId: string;
   slideIndex: number;
-  activeTab: "textbook" | "videos" | "quiz";
+  activeTab: "textbook" | "videos" | "quiz" | "flashcards";
   onTabChange?: (tab: string) => void;
   selection: string | null;
 }) {
@@ -152,7 +152,85 @@ export function ResourcePanel({
       />
     );
   }
+  if (activeTab === "flashcards") {
+    return <FlashcardsTab slideId={slideId} />;
+  }
   return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Flashcards Tab
+// ─────────────────────────────────────────────────────────────────────────────
+
+function FlashcardsTab({ slideId }: { slideId: string }) {
+  const [generating, setGenerating] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    try {
+      setGenerating(true);
+      setError(null);
+      setMessage(null);
+      await aiApi.generateFlashcards(slideId, 5);
+      setMessage("Flashcards are being generated in the background! They will appear in your review queue soon.");
+    } catch (err: any) {
+      console.error(err);
+      if (err.response?.status === 403) {
+        setError("Premium access required to generate AI flashcards.");
+      } else {
+        setError("Failed to generate flashcards. Please try again later.");
+      }
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div className="p-5">
+      <p className="text-[11px] font-medium uppercase tracking-widest text-primary">
+        AI Flashcards
+      </p>
+      <h3 className="mt-1 font-serif text-xl">
+        Spaced Repetition
+      </h3>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Instantly convert this slide's contents into flashcards for your daily review queue.
+      </p>
+
+      {message && (
+        <div className="mt-4 rounded-xl border border-green-500/30 bg-green-50 p-4 text-center">
+          <p className="text-sm text-green-800">{message}</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-center">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+
+      {!message && (
+        <button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+        >
+          {generating ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="size-4" />
+              Generate Flashcards
+            </>
+          )}
+        </button>
+      )}
+    </div>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 django.setup()
 
 from django.contrib.auth.models import User
-from accounts.models import Profile, School, UserRole
+from accounts.models import Profile, School, ClassRole
 from curriculum.models import SlideDeck, SlidePage
 from curriculum.serializers import SlideDeckSerializer, SlidePageSerializer
 from rest_framework.test import APIRequestFactory
@@ -29,7 +29,7 @@ def print_test(name, passed, details=""):
     if details:
         print(f"   → {details}")
 
-def create_test_user(username, role="student"):
+def create_test_user(username, class_role="student"):
     """Create or get a test user with given role"""
     school = School.objects.first() or School.objects.create(name="Test School")
     user, created = User.objects.get_or_create(
@@ -53,8 +53,8 @@ def create_test_user(username, role="student"):
     )
     
     # Update role if needed
-    if profile.role != role:
-        profile.role = role
+    if profile.class_role != role:
+        profile.class_role = role
         profile.save()
     
     return user
@@ -76,26 +76,26 @@ def test_role_based_access():
             pass
     
     # Test 1.1: Student cannot upload
-    student = create_test_user("student_user", role="student")
-    student.profile.role = "student"
+    student = create_test_user("student_user", class_role="student")
+    student.profile.class_role = "student"
     student.profile.save()
-    print(f"\nCreated student user: {student.username} with role: {student.profile.role}")
+    print(f"\nCreated student user: {student.username} with role: {student.profile.class_role}")
     
     # Test 1.2: Uploader can upload
-    uploader = create_test_user("uploader_user", role="material_uploader")
-    uploader.profile.role = "material_uploader"
+    uploader = create_test_user("uploader_user", class_role="material_uploader")
+    uploader.profile.class_role = "material_uploader"
     uploader.profile.save()
-    print(f"Created uploader user: {uploader.username} with role: {uploader.profile.role}")
+    print(f"Created uploader user: {uploader.username} with role: {uploader.profile.class_role}")
     
     # Test 1.3: Class head can upload
-    class_head = create_test_user("class_head_user", role="class_head")
-    class_head.profile.role = "class_head"
+    class_head = create_test_user("class_head_user", class_role="class_head")
+    class_head.profile.class_role = "class_head"
     class_head.profile.save()
-    print(f"Created class_head user: {class_head.username} with role: {class_head.profile.role}")
+    print(f"Created class_head user: {class_head.username} with role: {class_head.profile.class_role}")
     
-    print_test("Role 'student' exists and is set", student.profile.role == "student", f"Role: {student.profile.role}")
-    print_test("Role 'material_uploader' exists and is set", uploader.profile.role == "material_uploader", f"Role: {uploader.profile.role}")
-    print_test("Role 'class_head' exists and is set", class_head.profile.role == "class_head", f"Role: {class_head.profile.role}")
+    print_test("Role 'student' exists and is set", student.profile.class_role == "student", f"Role: {student.profile.class_role}")
+    print_test("Role 'material_uploader' exists and is set", uploader.profile.class_role == "material_uploader", f"Role: {uploader.profile.class_role}")
+    print_test("Role 'class_head' exists and is set", class_head.profile.class_role == "class_head", f"Role: {class_head.profile.class_role}")
 
 def test_user_profile_structure():
     """Test 2: User profile has required fields"""
@@ -103,7 +103,7 @@ def test_user_profile_structure():
     print("TEST 2: User Profile Structure")
     print("="*60)
     
-    user = create_test_user("profile_test", role="material_uploader")
+    user = create_test_user("profile_test", class_role="material_uploader")
     profile = user.profile
     
     required_fields = ['id', 'user', 'role', 'school', 'subscription_tier', 'created_at']
@@ -120,7 +120,7 @@ def test_slide_deck_model():
     print("TEST 3: SlideDeck Model Structure")
     print("="*60)
     
-    uploader = create_test_user("deck_test", role="material_uploader")
+    uploader = create_test_user("deck_test", class_role="material_uploader")
     
     # Create a test deck
     deck = SlideDeck.objects.create(
@@ -155,7 +155,7 @@ def test_slide_page_model():
     print("TEST 4: SlidePage Model Structure")
     print("="*60)
     
-    uploader = create_test_user("page_test", role="material_uploader")
+    uploader = create_test_user("page_test", class_role="material_uploader")
     
     # Create test deck and page
     deck = SlideDeck.objects.create(
@@ -196,7 +196,7 @@ def test_serializers():
     print("TEST 5: Serializer Field Mapping")
     print("="*60)
     
-    uploader = create_test_user("serializer_test", role="material_uploader")
+    uploader = create_test_user("serializer_test", class_role="material_uploader")
     
     deck = SlideDeck.objects.create(
         id="deck_serialize_test",
@@ -251,7 +251,7 @@ def test_type_consistency():
     print("TEST 6: Frontend-Backend Type Consistency")
     print("="*60)
     
-    uploader = create_test_user("type_test", role="material_uploader")
+    uploader = create_test_user("type_test", class_role="material_uploader")
     
     deck = SlideDeck.objects.create(
         id="deck_type_test",

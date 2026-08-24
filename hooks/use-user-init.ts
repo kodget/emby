@@ -1,21 +1,35 @@
-import { useEffect } from 'react';
-import { useAppDispatch } from '@/store/hooks';
-import { updateUserProfile } from '@/store/user-slice';
-import { getStoredProfile } from '@/lib/guards';
+import { useEffect } from "react";
+import { useAppDispatch } from "@/store/hooks";
+import { updateUserProfile } from "@/store/user-slice";
+import { getStoredProfile } from "@/lib/guards";
 
 /**
- * Hook to initialize user data from localStorage into Redux store
- * This should be called once at the app level
+ * Initializes Redux user state from the profile stored in sessionStorage.
+ * Called once at app level via AppInitializer.
+ *
+ * Role mapping (backend → frontend):
+ *   class_head         → "class-rep"   (isVerifiedClassHead=class_head_verified)
+ *   material_uploader  → "uploader"
+ *   student            → "student"
+ *
+ * Premium access rules:
+ *   - Verified class heads (class_head_verified=true)  → full premium
+ *   - Paid premium subscribers (subscription_tier=premium, not expired) → full premium
+ *   - Trial users                                       → full premium during trial
+ *   - All others                                        → free tier only
  */
 export function useUserInit() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
     const profile = getStoredProfile();
-    
-    if (profile) {
-      // Map backend profile to Redux user state
-      dispatch(updateUserProfile({
+    if (!profile) return;
+
+    const isVerifiedClassHead =
+      profile.class_role === "class_head" && profile.class_head_verified === true;
+
+    dispatch(
+      updateUserProfile({
         id: profile.id.toString(),
         name: profile.full_name,
         username: profile.username,
@@ -23,63 +37,69 @@ export function useUserInit() {
         photoUrl: profile.photo_url,
         school: profile.school_name,
         setName: profile.set_name,
-        role: mapBackendRoleToStoreRole(profile.role),
-        isClassRep: profile.role === 'class_head' && profile.class_head_verified,
+        role: mapRole(profile.class_role),
+        isVerifiedClassHead,
         isSignedIn: true,
         isOnboarded: profile.onboarding_completed,
         streak: profile.streak,
-        subscription: {
-          status: mapSubscriptionStatus(profile.subscription_tier, profile.subscription_expires_at),
-          tier: profile.subscription_tier === 'free' ? 'free' : 'premium',
-          expiresAt: profile.subscription_expires_at,
-        },
-      }));
-    }
+        subscription: mapSubscription(
+          profile.subscription_tier,
+          profile.subscription_expires_at,
+          isVerifiedClassHead,
+        ),
+      }),
+    );
   }, [dispatch]);
 }
 
-/**
- * Map backend role to store role format
- */
-function mapBackendRoleToStoreRole(backendRole: string): 'student' | 'uploader' | 'brainstormer' | 'class-rep' {
+function mapRole(
+  backendRole: string,
+): "student" | "uploader" | "class-rep" {
   switch (backendRole) {
-    case 'class_head':
-      return 'class-rep';
-    case 'material_uploader':
-      return 'uploader';
-    case 'brainstormer':
-      return 'brainstormer';
-    case 'student':
+    case "class_head":
+      return "class-rep";
+    case "material_uploader":
+      return "uploader";
     default:
-      return 'student';
+      return "student";
   }
 }
 
-/**
- * Determine subscription status based on tier and expiration
- */
-function mapSubscriptionStatus(
+function mapSubscription(
   tier: string,
-  expiresAt: string | null
-): 'free' | 'trial' | 'active' | 'past_due' {
-  if (tier === 'free') return 'free';
-  
-  if (expiresAt) {
-    const expirationDate = new Date(expiresAt);
-    const now = new Date();
-    
-    if (expirationDate < now) {
-      return 'past_due';
-    }
-    
-    // Check if it's within trial period (first 14 days)
-    const daysSinceStart = Math.floor((now.getTime() - (expirationDate.getTime() - 30 * 24 * 60 * 60 * 1000)) / (1000 * 60 * 60 * 24));
-    if (daysSinceStart <= 14) {
-      return 'trial';
-    }
-    
-    return 'active';
+  expiresAt: string | null,
+  isVerifiedClassHead: boolean,
+) {
+  // Verified class heads always get premium active status
+  if (isVerifiedClassHead) {
+    return {
+      status: "active" as const,
+      tier: "premium" as const,
+      expiresAt: null,
+    };
   }
-  
-  return 'free';
+
+  if (tier === "free" || !tier) {
+    return { status: "free" as const, tier: "free" as const, expiresAt: null };
+  }
+
+  // Paid premium — check expiry
+  if (expiresAt) {
+    const expiry = new Date(expiresAt);
+    const now = new Date();
+    if (expiry < now) {
+      return {
+        status: "past_due" as const,
+        tier: "premium" as const,
+        expiresAt,
+      };
+    }
+    return { status: "active" as const, tier: "premium" as const, expiresAt };
+  }
+
+  return {
+    status: "active" as const,
+    tier: "premium" as const,
+    expiresAt: null,
+  };
 }

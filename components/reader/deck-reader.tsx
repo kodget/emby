@@ -9,7 +9,6 @@ import {
   FileText,
   Loader2,
   X,
-  Zoom,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";

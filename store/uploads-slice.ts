@@ -39,11 +39,11 @@ export const uploadsSlice = createSlice({
   reducers: {
     openUploadModal(
       state,
-      action: PayloadAction<{ courseId: string; moduleId: string }>,
+      action: PayloadAction<{ courseId?: string; moduleId?: string } | undefined>,
     ) {
       state.isModalOpen = true;
-      state.targetCourseId = action.payload.courseId;
-      state.targetModuleId = action.payload.moduleId;
+      state.targetCourseId = action.payload?.courseId ?? null;
+      state.targetModuleId = action.payload?.moduleId ?? null;
     },
     closeUploadModal(state) {
       state.isModalOpen = false;

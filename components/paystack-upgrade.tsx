@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { loadScript } from "@paystack/inline-js";
 import { Button } from "@/components/ui/button";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";

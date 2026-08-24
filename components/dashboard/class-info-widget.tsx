@@ -49,11 +49,11 @@ export function ClassInfoWidget() {
           <h3 className="font-serif text-base font-semibold tracking-tight">My Class</h3>
         </div>
         <p className="mb-4 text-sm text-muted-foreground">
-          {profile?.role === "class_head"
+          {profile?.class_role === "class_head"
             ? "Your class will be created after verification"
             : "Join a class to connect with classmates"}
         </p>
-        {profile?.role !== "class_head" && (
+        {profile?.class_role !== "class_head" && (
           <button
             onClick={() => router.push("/onboarding")}
             className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_20px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] transition-colors hover:bg-primary/90"

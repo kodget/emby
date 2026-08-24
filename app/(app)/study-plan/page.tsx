@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
-import { Plus, Check, Pencil, Trash2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Check, Pencil, Trash2, Wand2 } from "lucide-react";
 import { TodayPlan } from "@/components/dashboard/today-plan";
 import { ScheduleModal } from "@/components/dashboard/schedule-modal";
+import { StudyPlannerWizard } from "@/components/dashboard/study-planner-wizard";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   openScheduleModal,
@@ -14,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function StudyPlanPage() {
+  const [wizardOpen, setWizardOpen] = useState(false);
   const dispatch = useAppDispatch();
   const items = useAppSelector((state) => state.schedule.items);
 
@@ -61,16 +63,35 @@ export default function StudyPlanPage() {
               completion and keep your day on schedule.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => dispatch(openScheduleModal(null))}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"
-          >
-            <Plus className="size-4" />
-            Add activity
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setWizardOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
+            >
+              <Wand2 className="size-4" />
+              Generate Plan
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatch(openScheduleModal(null))}
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+            >
+              <Plus className="size-4" />
+              Add activity
+            </button>
+          </div>
         </div>
       </section>
+      
+      <StudyPlannerWizard 
+        isOpen={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSuccess={() => {
+          // You could reload or re-fetch items from the server here
+          window.location.reload();
+        }}
+      />
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
         <div className="space-y-6">

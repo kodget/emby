@@ -206,7 +206,17 @@ function Block({ block }: { block: ReaderBlock }) {
       );
     case "slide":
       return (
-        <SlideBlock src={block.src} pageNumber={block.pageNumber} total={0} />
+        <figure className="my-6 overflow-hidden rounded-2xl border border-border bg-card">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={block.src || "/placeholder.svg"}
+            alt={`Slide page ${block.pageNumber}`}
+            className="w-full"
+          />
+          <figcaption className="border-t border-border px-4 py-3 text-sm text-muted-foreground">
+            Slide page {block.pageNumber}
+          </figcaption>
+        </figure>
       );
     case "callout": {
       const variants = {

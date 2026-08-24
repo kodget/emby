@@ -107,8 +107,8 @@ export function GoogleLoginButton({ onSuccess, className = "" }: GoogleLoginButt
 
     // Cleanup callback on unmount
     return () => {
-      if (window.handleGoogleCallback) {
-        delete window.handleGoogleCallback;
+      if ((window as any).handleGoogleCallback) {
+        delete (window as any).handleGoogleCallback;
       }
     };
   }, [onSuccess, toast]);

@@ -1,0 +1,884 @@
+<USER_REQUEST>
+Instructions: Expand the Current Medical Learning Web App
+
+You are working on an existing medical learning web application. Do not rebuild the application from scratch, remove existing functionality, or redesign working features unnecessarily. First inspect the existing codebase, architecture, database schema, authentication system, routes, components, and current data models.
+
+Your task is to extend the current application by implementing the following features in a cohesive way.
+
+The application is initially targeted at medical students int hier preclinicals
+
+The core product goal is to create an integrated learning system where students can:
+
+Learn → Practice → Identify weaknesses → Review → Compete → Track exam readiness
+
+All features should connect to this central learning loop.
+
+1. CORE PRODUCT ARCHITECTURE
+
+Organize the student experience around three major areas:
+
+LEARN
+
+Students should be able to:
+
+Read course materials and lecture slides.
+Ask an AI assistant questions specifically about the lecture/course content.
+Access recommended educational videos.
+Access recommended textbooks and additional learning resources.
+PRACTICE
+
+Students should be able to:
+
+Take MCQ quizzes.
+Answer theory questions.
+Practice anatomy Steeplechase questions.
+Practice histology slide identification.
+Review automatically generated flashcards.
+Review questions they previously answered incorrectly.
+Receive personalized recommendations based on weaknesses.
+COMPETE AND ENGAGE
+
+Students should be able to:
+
+Participate in class leaderboards.
+Join live brainstorming/challenge sessions.
+Challenge classmates.
+Discuss course-related topics in the community.
+2. IMPROVE THE READING EXPERIENCE
+
+The existing Reading section should support a complete lecture-learning experience.
+
+For every course:
+
+Course
+  └── Topic
+       └── Lecture
+
+Each lecture should support:
+
+Lecture title
+PDF/slides/content
+Topic association
+Recommended videos
+Recommended books/resources
+AI ASSISTANT
+
+Implement an AI assistant that is context-aware.
+
+The assistant should primarily answer questions based on:
+
+The currently selected lecture.
+Other uploaded course materials where appropriate.
+Trusted medical knowledge only when necessary.
+
+The AI should understand the current context automatically.
+
+For example:
+
+Student is reading "Brachial Plexus"
+
+The student should not need to repeatedly say:
+
+"Based on the brachial plexus slide..."
+
+The system should automatically know the currently active lecture.
+
+Include suggested actions such as:
+
+Explain this simply
+Summarize this topic
+Test my understanding
+Give me a mnemonic
+Create flashcards
+Ask me viva questions
+Explain this clinically
+
+The AI should not behave like a generic chatbot. It should feel like a tutor attached to the student's current study material.
+
+3. QUIZ SYSTEM
+
+Expand or improve the existing Quiz section.
+
+Students should be able to create or take quizzes with:
+
+Question Types
+Multiple-choice questions
+Theory questions
+
+Support:
+
+Up to 50 MCQs per quiz.
+Up to 10 theory questions per quiz.
+Quiz Settings
+
+Allow students to choose:
+
+Timed
+Untimed
+
+Difficulty:
+
+Easy
+Medium
+Hard
+Mixed
+
+Question source:
+
+Specific lecture
+Specific topic
+Entire course
+Weak areas
+Previously missed questions
+Mixed revision
+
+After completing a quiz, provide a detailed performance report.
+
+4. QUIZ PERFORMANCE ANALYSIS
+
+After every quiz, analyze:
+
+Total score
+Percentage score
+Correct answers
+Incorrect answers
+Unanswered questions
+Time spent
+Average time per question
+Performance by topic
+Performance by difficulty
+Weakest topics
+Strongest topics
+
+For every incorrect question, provide:
+
+Correct answer
+Explanation
+Relevant topic
+Option to review later
+Option to automatically create a flashcard
+
+Incorrect questions should feed into the student's revision system.
+
+5. FLASHCARD SYSTEM
+
+The Flashcard section should support three types of flashcards.
+
+A. Manually Created Flashcards
+
+Students can:
+
+Create cards.
+Edit cards.
+Delete cards.
+Organize cards by course/topic/deck.
+B. Automatically Generated Mistake Flashcards
+
+When a student repeatedly misses a concept or question, the system should be able to create a flashcard automatically.
+
+Example:
+
+Front: Which nerve passes posterior to the medial epicondyle?
+
+Back: Ulnar nerve.
+
+These cards should enter the student's review queue.
+
+C. AI-Generated Flashcards
+
+Students should be able to generate flashcards from:
+
+A lecture
+A topic
+Selected slide content
+
+Allow the student to review and edit generated cards before saving them.
+
+6. SPACED REVIEW SYSTEM
+
+Implement a review system that determines when a student should review material.
+
+The system should use performance data such as:
+
+Whether the answer was correct.
+Number of times answered correctly.
+Number of times answered incorrectly.
+Time since the last review.
+Difficulty of the card/question.
+
+Create a:
+
+Review Queue
+
+Example:
+
+18 flashcards due today.
+
+Students should be able to:
+
+Start review.
+See daily progress.
+Complete due reviews.
+
+Missed quiz questions and weak topics should influence what appears in the review queue.
+
+7. "WHAT SHOULD I STUDY NOW?" ENGINE
+
+Add a personalized recommendation system to the dashboard.
+
+Instead of only showing features, the app should guide students toward their next best action.
+
+Example:
+
+Today's Recommended Study
+
+🔴 Review 12 Anatomy flashcards
+
+🔴 Practice 10 questions from Brachial Plexus
+
+🟡 Review yesterday's Physiology mistakes
+
+🏆 Live challenge starts in 2 hours
+
+Start My Study Session
+
+Recommendations should be generated based on:
+
+Upcoming exams if available.
+Weak topics.
+Missed questions.
+Flashcards due.
+Incomplete lectures/topics.
+Recent performance.
+Study goals.
+
+This should eventually become one of the central experiences of the application.
+
+8. STUDY PLANNER
+
+Improve or implement the Study Planner.
+
+Students should be able to:
+
+Set exam dates.
+Select courses.
+Set study goals.
+Define available study time.
+Generate a personalized study plan.
+
+The study plan should dynamically adapt based on performance.
+
+For example:
+
+If a student performs poorly in Neuroanatomy, future study sessions should allocate more time to Neuroanatomy.
+
+The planner should integrate:
+
+Reading
+MCQs
+Theory questions
+Flashcards
+Steeplechase
+Histology
+9. STEEPLECHASE / ANATOMY PRACTICAL
+
+Implement a dedicated Anatomy Steeplechase system.
+
+Do not initially depend on training a custom AI model.
+
+Version 1 should be based on a structured database of properly licensed anatomy/cadaver images.
+
+Each image record should support:
+
+Image
+Course
+Topic
+Region
+Structure
+Correct answer
+Alternative accepted answers
+Difficulty
+Tags
+Explanation
+Related questions
+
+The system should support multiple practical question types.
+
+Identify
+
+Show an image with a marker/pin.
+
+Ask:
+
+Identify the indicated structure.
+
+Function
+
+Ask about the function of the identified structure.
+
+Relations
+
+Ask:
+
+What structure lies medial/lateral/anterior/posterior to this structure?
+
+Clinical
+
+Ask a clinical question related to the structure.
+
+Anatomy Pathway
+
+Ask about:
+
+Origin
+Course
+Relations
+Branches
+Termination
+Practical Exam Mode
+
+Create a simulated Steeplechase exam.
+
+Allow configuration of:
+
+Number of stations.
+Time per station.
+Difficulty.
+Topics/regions.
+
+Example:
+
+20 stations
+60 seconds per station
+
+After completion, provide:
+
+Score
+Correct/incorrect stations
+Weak regions
+Weak structure types
+Questions recommended for revision
+
+Important:
+
+The system should be built so that AI/computer vision can be added later, but the initial version must work entirely without a custom-trained model.
+
+10. HISTOLOGY SPOTTER
+
+Implement Histology as a similar image-based practical learning system.
+
+Students should be able to:
+
+View histology slides.
+Identify tissues/organs.
+Answer timed questions.
+Practice in quiz mode.
+Practice in exam mode.
+
+Question types should include:
+
+Identify the tissue.
+Identify the organ.
+Identify the labelled structure.
+Identify characteristic cells.
+Explain the feature that confirms the answer.
+
+Performance should feed into the general analytics and recommendation system.
+
+11. COMMUNITY
+
+Implement a structured class learning community.
+
+Do NOT build a generic social-media feed.
+
+Community discussions should be organized by:
+
+School
+  └── Class/Level
+       └── Course
+            └── Topic
+
+Students should be able to create:
+
+Questions
+Discussions
+Explanations
+Resources
+Corrections
+
+Each post should support:
+
+Text
+Images where appropriate
+Comments/replies
+Upvotes
+Report
+Save
+Topic/course tagging
+
+Allow useful answers to be marked as:
+
+Best Answer
+
+The community should eventually become a searchable knowledge base connected to the learning system.
+
+For example, searching:
+
+"Brachial plexus"
+
+Should eventually surface:
+
+Relevant lectures.
+Quiz questions.
+Flashcards.
+Community discussions.
+Resources.
+12. COMMUNITY MODERATION
+
+Implement moderation from the beginning.
+
+Support:
+
+Report post.
+Report comment.
+Delete own content.
+Admin moderation.
+Moderator roles.
+Spam/rate limiting.
+Block users if necessary.
+
+Create a role such as:
+
+Class Representative / Class Admin
+
+Class admins should be able to:
+
+Create announcements.
+Pin important posts.
+Highlight important resources.
+Organize challenges.
+Help manage discussions.
+
+Do not give these roles unrestricted access to the entire platform administration system.
+
+Use proper role-based permissions.
+
+13. LEADERBOARD
+
+Implement a leaderboard system.
+
+The leaderboard should support multiple metrics.
+
+Examples:
+
+Weekly Performance
+
+Rank students based on:
+
+XP earned.
+Questions completed.
+Accuracy.
+Challenges completed.
+Monthly Performance
+
+Reset or archive performance monthly.
+
+Course Leaderboards
+
+Examples:
+
+Anatomy
+Physiology
+Biochemistry
+
+Avoid ranking students purely based on total time spent.
+
+Include multiple achievement categories such as:
+
+Highest accuracy.
+Most improved.
+Longest streak.
+Most questions completed.
+Challenge champion.
+
+This prevents the same few students from always dominating.
+
+14. LIVE BRAINSTORMING / BRAIN BATTLE
+
+Build a real-time collaborative challenge system.
+
+This should not simply be a group chat.
+
+Call the experience something appropriate such as:
+
+Brain Battle
+
+or
+
+Live Challenge
+
+A session should have:
+
+Host.
+Topic.
+Number of questions.
+Difficulty.
+Time per question.
+Maximum participants.
+Scheduled or instant start.
+Live Flow
+Students join the session.
+The host starts the challenge.
+Everyone receives the same question.
+Students answer within a time limit.
+Results are displayed.
+The correct answer and explanation are revealed.
+Students get a short discussion period.
+The next question begins.
+
+Points can be awarded based on:
+
+Correctness.
+Speed.
+Streak.
+
+The system should support:
+
+Public Challenges
+
+Students within a class can join.
+
+Friend Challenges
+
+A student can challenge another student.
+
+Example:
+
+Challenge a friend to a 10-question Anatomy battle.
+
+Support asynchronous challenges where the opponent can complete the challenge later.
+
+15. PERFORMANCE ANALYTICS
+
+Create a unified Performance Analytics section.
+
+The analytics should aggregate data from:
+
+Reading activity.
+MCQs.
+Theory questions.
+Flashcards.
+Steeplechase.
+Histology.
+Challenges.
+
+Show:
+
+Overall Performance
+Questions answered.
+Accuracy.
+Study streak.
+Topics completed.
+Course Performance
+
+Example:
+
+Anatomy
+
+72% mastery
+
+Topic Performance
+
+🟢 Upper Limb — 88%
+
+🟡 Thorax — 71%
+
+🔴 Neuroanatomy — 43%
+
+Performance Over Time
+
+Show whether performance is:
+
+Improving.
+Stable.
+Declining.
+Weak Areas
+
+Automatically identify concepts requiring revision.
+
+16. EXAM READINESS SCORE
+
+Create an architecture for a future central metric called:
+
+Exam Readiness
+
+Score from:
+
+0–100
+
+The score should not initially claim to predict whether a student will pass.
+
+It should instead represent a learning readiness indicator based on:
+
+Topic coverage.
+Quiz performance.
+Difficulty-adjusted performance.
+Flashcard retention.
+Practical performance.
+Recent revision activity.
+Weak areas.
+Completion of planned study sessions.
+
+Example:
+
+Anatomy Readiness: 72/100
+
+Then show:
+
+To improve your readiness:
+Complete 20 Neuroanatomy questions.
+Review 15 due flashcards.
+Complete 1 Steeplechase session.
+Review 2 weak topics.
+
+Design the data architecture now so this score can be improved and refined later.
+
+17. NOTIFICATION SYSTEM
+
+Notifications should be actionable and personalized.
+
+Examples:
+
+🔴 You have 14 flashcards due for review.
+
+⚠️ You missed 6 questions about the Brachial Plexus. Review them now.
+
+🏆 You dropped from #7 to #10 on the Anatomy leaderboard.
+
+🧠 Brain Battle starts in 30 minutes.
+
+📚 You are behind schedule on your Physiology study plan.
+
+Support:
+
+In-app notifications.
+Browser/push notifications where supported.
+User notification preferences.
+
+Avoid sending unnecessary or spammy notifications.
+
+18. CONNECT ALL FEATURES
+
+This is extremely important.
+
+Do not build these as isolated features.
+
+The data should flow through the application.
+
+Example:
+
+Student reads a lecture
+        ↓
+Asks AI questions
+        ↓
+Takes quiz
+        ↓
+Misses questions
+        ↓
+Missed concepts become weak areas
+        ↓
+Weak concepts generate/recommend flashcards
+        ↓
+Flashcards enter spaced review
+        ↓
+Performance affects analytics
+        ↓
+Analytics affects study planner
+        ↓
+Study planner recommends next activity
+        ↓
+Exam Readiness changes
+
+Similarly:
+
+Steeplechase / Histology
+        ↓
+Performance data
+        ↓
+Weak structures/topics
+        ↓
+Recommended revision
+        ↓
+Flashcards / MCQs
+        ↓
+Analytics
+
+The goal is not to have many disconnected features.
+
+The goal is to create a single intelligent learning ecosystem.
+
+19. DASHBOARD
+
+Update the student dashboard to focus on action.
+
+The dashboard should answer:
+
+What should I study right now?
+
+Suggested structure:
+
+Greeting
+
+Good evening, [Name]
+
+Exam/Study Status
+
+Show upcoming exam information if available.
+
+Today's Recommended Session
+
+Example:
+
+Review 12 flashcards
+
+Practice 10 Neuroanatomy questions
+
+Complete 1 Histology session
+
+Start Study Session
+
+Progress
+Daily goal.
+Current streak.
+Questions completed.
+Weak Areas
+
+Show the student's most important areas requiring attention.
+
+Upcoming
+Live challenges.
+Scheduled quizzes.
+Study plan tasks.
+Competitive Progress
+Current rank.
+Recent movement.
+Weekly XP.
+
+The dashboard should not become cluttered.
+
+Prioritize the next best action.
+
+20. IMPLEMENTATION PRIORITY
+
+Do not attempt to destabilize the application by implementing everything at once.
+
+Implement in phases.
+
+PHASE 1 — Core Learning Loop
+
+Prioritize:
+
+Reading improvements.
+Context-aware AI assistant.
+Quiz improvements.
+Quiz analytics.
+Flashcards.
+Automatic missed-question flashcards.
+Spaced review.
+Personalized study recommendations.
+
+The primary loop should work perfectly:
+
+Learn → Practice → Miss → Review → Improve
+
+PHASE 2 — Personalized Learning
+
+Implement:
+
+Study planner.
+Unified analytics.
+Weak-area detection.
+Exam Readiness architecture.
+Intelligent notifications.
+PHASE 3 — Practical Medical Learning
+
+Implement:
+
+Steeplechase.
+Histology Spotter.
+Practical exam modes.
+Practical performance analytics.
+
+Ensure all anatomy/histology images are properly licensed or institutionally authorized before being added to the production application.
+
+PHASE 4 — Social and Competition
+
+Implement:
+
+Structured community.
+Moderation.
+Class representative roles.
+Leaderboards.
+Friend challenges.
+Live Brain Battles.
+21. IMPORTANT DEVELOPMENT RULES
+
+Before making changes:
+
+Inspect the existing project structure.
+Identify existing components that can be extended or reused.
+Inspect the current database schema.
+Preserve existing authentication and authorization.
+Do not replace working features unnecessarily.
+Avoid duplicate data models.
+Maintain TypeScript type safety.
+Reuse the existing design system and UI components.
+Ensure responsive behavior on desktop and mobile browsers.
+Add loading, empty, and error states for every major feature.
+Ensure database queries remain efficient as the number of students grows.
+Add appropriate indexes for frequently queried relationships and analytics data.
+Use proper authorization checks for class/community/course data.
+Do not expose sensitive student data.
+Keep AI-generated content clearly separated from verified/admin-created academic content where necessary.
+FINAL PRODUCT PRINCIPLE
+
+Every feature should ultimately contribute to answering one question for the student:
+
+"What do I need to do next to become more prepared for my exam?"
+
+The application should not feel like a collection of:
+
+PDFs
+Quizzes
+Flashcards
+AI tools
+Community posts
+
+It should feel like a personal medical-school learning and exam preparation system that continuously understands:
+
+What the student has studied.
+What they understand.
+What they are getting wrong.
+What they are forgetting.
+What they need to review.
+What they should study next.
+How prepared they are relative to their learning goals.
+
+Prioritize depth, integration, reliability, and student usefulness over adding more unrelated features.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-08-23T22:55:39+01:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\USER\Downloads\emby\components\reader\reader.tsx (LANGUAGE_TSX)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\USER\Downloads\emby\backend\curriculum\services\ai_question_generator.py (LANGUAGE_PYTHON)
+- c:\Users\USER\Downloads\emby\backend\.env (LANGUAGE_UNSPECIFIED)
+- c:\Users\USER\Downloads\emby\backend\curriculum\tasks.py (LANGUAGE_PYTHON)
+- c:\Users\USER\Downloads\emby\backend\curriculum\ai_views.py (LANGUAGE_PYTHON)
+- c:\Users\USER\Downloads\emby\components\reader\reader.tsx (LANGUAGE_TSX)
+Running terminal commands:
+- npm run dev (in c:\Users\USER\Downloads\emby, running for 31h40m18s)
+- python manage.py runserver (in c:\Users\USER\Downloads\emby\backend, running for 31h38m14s)
+</ADDITIONAL_METADATA>

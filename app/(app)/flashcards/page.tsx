@@ -1,14 +1,10 @@
-"use client";
+﻿import { FlashcardStudio } from "@/components/flashcards/flashcard-studio";
 
-import { flashcards } from "@/lib/data";
-import { FlashcardStudio } from "@/components/flashcards/flashcard-studio";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store/store";
+export const metadata = {
+  title: "Flashcards | Emby",
+  description: "Review your flashcards with spaced repetition. Cards are automatically generated from quiz mistakes.",
+};
 
 export default function FlashcardsPage() {
-  const userCards = useSelector(
-    (state: RootState) => state.flashcards.userCards,
-  );
-  const allCards = [...flashcards, ...userCards];
-  return <FlashcardStudio cards={allCards} />;
+  return <FlashcardStudio />;
 }

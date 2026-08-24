@@ -20,9 +20,12 @@ import { GoogleLoginButton } from "@/components/auth/google-login-button";
 import { authApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { isAuthenticated, getRedirectPath } from "@/lib/guards";
+import { useAppDispatch } from "@/store/hooks";
+import { updateUserProfile } from "@/store/user-slice";
 
 export default function SignInPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,6 +57,24 @@ export default function SignInPage() {
       sessionStorage.setItem("refreshToken", response.tokens.refresh);
       sessionStorage.setItem("user", JSON.stringify(response.user));
 
+      const isVerifiedClassHead = response.user.class_role === "class_head" && response.user.class_head_verified === true;
+      dispatch(
+        updateUserProfile({
+          id: response.user.id?.toString() || "",
+          name: response.user.full_name,
+          username: response.user.username,
+          email: response.user.email,
+          photoUrl: response.user.photo_url,
+          school: response.user.school_name,
+          setName: response.user.set_name,
+          backendRole: response.user.class_role,
+          isVerifiedClassHead,
+          isSignedIn: true,
+          isOnboarded: response.user.onboarding_completed,
+          streak: response.user.streak,
+        })
+      );
+
       toast({
         title: "Welcome back!",
         description: response.message,
@@ -63,7 +84,7 @@ export default function SignInPage() {
       if (!response.user.onboarding_completed) {
         router.push("/onboarding");
       } else if (
-        response.user.role === "class_head" &&
+        response.user.class_role === "class_head" &&
         !response.user.class_head_verified
       ) {
         router.push("/verification-pending");
@@ -97,6 +118,24 @@ export default function SignInPage() {
     sessionStorage.setItem("token", tokens.access);
     sessionStorage.setItem("refreshToken", tokens.refresh);
     sessionStorage.setItem("user", JSON.stringify(user));
+
+    const isVerifiedClassHead = user.class_role === "class_head" && user.class_head_verified === true;
+    dispatch(
+      updateUserProfile({
+        id: user.id?.toString() || "",
+        name: user.full_name,
+        username: user.username,
+        email: user.email,
+        photoUrl: user.photo_url,
+        school: user.school_name,
+        setName: user.set_name,
+        backendRole: user.class_role,
+        isVerifiedClassHead,
+        isSignedIn: true,
+        isOnboarded: user.onboarding_completed,
+        streak: user.streak,
+      })
+    );
 
     toast({
       title: isNewUser ? "Account created!" : "Welcome back!",
