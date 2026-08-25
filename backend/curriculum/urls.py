@@ -34,10 +34,12 @@ from .views import (
     FlashcardViewSet
 )
 from .upload_views import upload_file, delete_file
+from .quiz_views import QuizAttemptViewSet
 # New slide-aware AI views (replaces legacy textbook/video/mcq views)
 from .ai_views import chat_with_slide, generate_resources, textbook_suggestions, video_suggestions, generate_mcqs, chat_history, generate_flashcards
 
 router = DefaultRouter()
+router.register(r'quiz-attempts', QuizAttemptViewSet, basename='quiz-attempt')
 router.register(r'steeplechase', SteeplechaseQuestionViewSet, basename='steeplechase')
 router.register(r'subjects', SubjectViewSet, basename='subject')
 router.register(r'blocks', BlockViewSet, basename='block')

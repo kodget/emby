@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from accounts.permissions import IsClassHeadOrReadOnly
 from django.db.models import Q, Sum
 from django.utils import timezone
 from datetime import date, timedelta
@@ -25,18 +26,18 @@ from .serializers import (
 # -------------------------
 # CURRICULUM VIEWS
 # -------------------------
-class SubjectViewSet(viewsets.ReadOnlyModelViewSet):
+class SubjectViewSet(viewsets.ModelViewSet):
     """List all subjects"""
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsClassHeadOrReadOnly]
 
 
-class BlockViewSet(viewsets.ReadOnlyModelViewSet):
+class BlockViewSet(viewsets.ModelViewSet):
     """List blocks, optionally filtered by subject"""
     queryset = Block.objects.all()
     serializer_class = BlockSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsClassHeadOrReadOnly]
     
     def get_queryset(self):
         queryset = Block.objects.all()
@@ -46,11 +47,11 @@ class BlockViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class SubBlockViewSet(viewsets.ReadOnlyModelViewSet):
+class SubBlockViewSet(viewsets.ModelViewSet):
     """List sub-blocks, optionally filtered by block"""
     queryset = SubBlock.objects.all()
     serializer_class = SubBlockSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsClassHeadOrReadOnly]
     
     def get_queryset(self):
         queryset = SubBlock.objects.all()
@@ -60,11 +61,11 @@ class SubBlockViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class TopicViewSet(viewsets.ReadOnlyModelViewSet):
+class TopicViewSet(viewsets.ModelViewSet):
     """List topics, optionally filtered by block"""
     queryset = Topic.objects.all()
     serializer_class = TopicSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsClassHeadOrReadOnly]
     
     def get_queryset(self):
         queryset = Topic.objects.all()
@@ -88,7 +89,6 @@ class SlideViewSet(viewsets.ModelViewSet):
         subject_id = self.request.query_params.get('subject', None)
         block_id = self.request.query_params.get('block', None)
         topic_id = self.request.query_params.get('topic', None)
-        section_id = self.request.query_params.get('section', None)
         
         if subject_id:
             queryset = queryset.filter(subject_id=subject_id)
@@ -96,11 +96,10 @@ class SlideViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(block_id=block_id)
         if topic_id:
             queryset = queryset.filter(topic_id=topic_id)
-        if section_id:
-            queryset = queryset.filter(section_id=section_id)
+        return queryset
     
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
-    def upload_with_file(self, request):
+    def upload_and_process(self, request):
         """
         Upload a file and create a Slide object.
         
@@ -110,7 +109,7 @@ class SlideViewSet(viewsets.ModelViewSet):
         3. Triggers async processing via signal
         
         Expected request:
-        - MultipartForm with 'file', 'title', and optional 'subject_id', 'block_id', 'topic_id', 'section_id'
+        - MultipartForm with 'file', 'title', and optional 'subject_id', 'block_id', 'sub_block_id', 'topic_id'
         """
         import uuid
         import cloudinary.uploader
@@ -132,38 +131,56 @@ class SlideViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            # Upload to Cloudinary
-            print(f"Uploading file to Cloudinary: {file_obj.name}")
+            import uuid
+            import cloudinary.uploader
+            
+            print(f"Uploading file directly to Cloudinary: {file_obj.name}")
+            
             file_obj.seek(0)
             
-            result = cloudinary.uploader.upload(
+            # Upload to Cloudinary instead of saving locally
+            upload_result = cloudinary.uploader.upload(
                 file_obj,
-                folder='emby/slides',
-                resource_type='auto',
-                type='upload',
-                access_mode='public',
+                folder="emby/slides_original",
+                resource_type="auto",
                 timeout=60
             )
             
-            print(f"✓ File uploaded to Cloudinary: {result['secure_url']}")
+            file_url = upload_result.get("secure_url")
+            print(f"✓ File uploaded to Cloudinary: {file_url}")
             
             # Create Slide object
             slide_id = f"slide_{str(uuid.uuid4())[:8]}"
+            
+            def clean_id(val):
+                if not val or val in ('null', 'undefined', 'None', ''):
+                    return None
+                return val
+            
+            subject_id = clean_id(request.data.get('subject'))
+            block_id = clean_id(request.data.get('block'))
+            sub_block_id = clean_id(request.data.get('sub_block'))
+            topic_id = clean_id(request.data.get('topic'))
+            
+            # The frontend appends the sub_block ID to 'topic' if no topic was chosen.
+            # We clear it here so it doesn't try to link a Topic to a SubBlock ID (which causes an FK error).
+            if topic_id == sub_block_id:
+                topic_id = None
             
             slide = Slide.objects.create(
                 id=slide_id,
                 title=title,
                 file_type=file_type,
-                file_url=result['secure_url'],  # Store Cloudinary URL
+                file_url=file_url,  # Store Cloudinary URL
                 uploaded_by=request.user,
-                subject_id=request.data.get('subject_id'),
-                block_id=request.data.get('block_id'),
-                topic_id=request.data.get('topic_id'),
-                section_id=request.data.get('section_id'),
+                subject_id=subject_id,
+                block_id=block_id,
+                sub_block_id=sub_block_id,
+                topic_id=topic_id,
             )
             
             print(f"✓ Slide created: {slide.id}")
-            print(f"Signal will trigger async processing...")
+            # Skip triggering process_slide_task since rendering is done on-demand
             
             serializer = self.get_serializer(slide)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -173,8 +190,6 @@ class SlideViewSet(viewsets.ModelViewSet):
             import traceback
             traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        return queryset
     
     def perform_create(self, serializer):
         slide = serializer.save(uploaded_by=self.request.user)
@@ -193,7 +208,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
         subject_id = self.request.query_params.get('subject', None)
         block_id = self.request.query_params.get('block', None)
         topic_id = self.request.query_params.get('topic', None)
-        section_id = self.request.query_params.get('section', None)
+        sub_block_id = self.request.query_params.get('sub_block', None)
         material_type = self.request.query_params.get('type', None)
         
         if subject_id:
@@ -202,8 +217,8 @@ class MaterialViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(block_id=block_id)
         if topic_id:
             queryset = queryset.filter(topic_id=topic_id)
-        if section_id:
-            queryset = queryset.filter(section_id=section_id)
+        if sub_block_id:
+            queryset = queryset.filter(sub_block_id=sub_block_id)
         if material_type:
             queryset = queryset.filter(material_type=material_type)
         
@@ -1807,7 +1822,27 @@ class FlashcardViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Flashcard.objects.filter(user=self.request.user)
+        qs = Flashcard.objects.filter(user=self.request.user)
+        for param in ['subject', 'block', 'sub_block', 'topic']:
+            val = self.request.query_params.get(param)
+            if val:
+                qs = qs.filter(**{f"{param}_id": val})
+        
+        slide_id = self.request.query_params.get('slide_id')
+        if slide_id:
+            try:
+                from .models import Slide
+                slide = Slide.objects.get(id=slide_id)
+                if slide.topic_id:
+                    qs = qs.filter(topic_id=slide.topic_id)
+            except Exception:
+                pass
+
+        source = self.request.query_params.get('source')
+        if source:
+            qs = qs.filter(source=source)
+            
+        return qs
 
     @action(detail=False, methods=['get'])
     def due(self, request):

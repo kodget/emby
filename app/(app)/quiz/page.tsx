@@ -20,6 +20,7 @@ import {
   Flame,
   Loader2,
 } from "lucide-react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -141,6 +142,8 @@ function QuizConfigContent() {
   );
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [creatingPractice, setCreatingPractice] = useState(false);
+  const [creatingMissed, setCreatingMissed] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -257,6 +260,33 @@ function QuizConfigContent() {
   const selectedSlide = slides.find((sl) => sl.id === config.slide);
   const selectedExamType = examTypes.find((t) => t.type === config.exam_type);
 
+  const startMissedQuestions = async () => {
+    try {
+      setCreatingMissed(true);
+      const res = await quizApi.createQuizAttempt({
+        exam_type: "practice",
+        is_timed: false,
+        configuration: {
+          mcq_count: 10,
+          theory_count: 0,
+          difficulty: "medium",
+          question_source: "missed_questions"
+        }
+      });
+      toast({
+        title: "Quiz Created!",
+        description: "Redirecting to your exam...",
+      });
+      router.push(`/quiz/attempt/${res.id}`);
+    } catch (error: any) {
+      console.error("startMissedQuestions error:", error);
+      const msg = error.response?.data?.error || "Failed to create quiz. Please try again.";
+      toast({ title: "Could not start quiz", description: msg, variant: "destructive" });
+    } finally {
+      setCreatingMissed(false);
+    }
+  };
+
   const createQuiz = async () => {
     if (isOverLimit) {
       toast({
@@ -313,76 +343,31 @@ function QuizConfigContent() {
 
           {/* Quick Start Grid */}
           <div className="grid gap-6 md:grid-cols-2 mb-8">
-            {/* Quick Practice Card */}
-            <Card className="hover:shadow-md transition-all border border-border">
-              <CardHeader>
-                <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500 mb-2">
-                  <Zap className="w-5 h-5" />
-                </div>
-                <CardTitle className="text-xl">Quick Practice</CardTitle>
-                <CardDescription>
-                  Start a mixed practice test of 10 MCQs immediately.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Button 
-                  onClick={async () => {
-                    try {
-                      setCreating(true);
-                      const attempt = await quizApi.createQuizAttempt({
-                        exam_type: "practice",
-                        is_timed: false,
-                        configuration: { mcq_count: 10, theory_count: 0, difficulty: "medium" }
-                      });
-                      router.push(`/quiz/attempt/${attempt.id}`);
-                    } catch (err) {
-                      toast({ title: "Error", description: "Failed to generate quiz.", variant: "destructive" });
-                    } finally {
-                      setCreating(false);
-                    }
-                  }} 
-                  disabled={creating}
-                  className="w-full bg-violet-600 hover:bg-violet-500 hover:opacity-90 text-white font-semibold h-11 rounded-xl"
-                >
-                  {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start MCQ Quiz"}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Target Weak Area Card */}
+            {/* Practice Weak Areas Card */}
             <Card className="hover:shadow-md transition-all border border-border">
               <CardHeader>
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-2">
                   <Target className="w-5 h-5" />
                 </div>
-                <CardTitle className="text-xl">Target Weak Areas</CardTitle>
+                <CardTitle className="text-xl">Practice Weak Areas</CardTitle>
                 <CardDescription>
-                  10 MCQs focused on your weakest subjects to patch learning gaps.
+                  Practice 10 questions you've previously gotten wrong to patch learning gaps.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                <Button 
-                  onClick={async () => {
-                    try {
-                      setCreating(true);
-                      const subjects = await quizApi.getSubjects().catch(() => []);
-                      const attempt = await quizApi.createQuizAttempt({
-                        subject: subjects?.[0]?.id || undefined,
-                        exam_type: "practice",
-                        is_timed: false,
-                        configuration: { mcq_count: 10, theory_count: 0, difficulty: "medium" }
-                      });
-                      router.push(`/quiz/attempt/${attempt.id}`);
-                    } catch (err) {
-                      toast({ title: "Error", description: "Failed to generate quiz.", variant: "destructive" });
-                    } finally {
-                      setCreating(false);
-                    }
-                  }}
-                  disabled={creating}
+                <Button
+                  onClick={startMissedQuestions}
+                  disabled={creatingMissed}
                   className="w-full bg-emerald-600 hover:bg-emerald-500 hover:opacity-90 text-white font-semibold h-11 rounded-xl"
                 >
-                  {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Practice Weak Areas"}
+                  {creatingMissed ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Practice Weak Areas"
+                  )}
                 </Button>
               </CardContent>
             </Card>
@@ -399,11 +384,14 @@ function QuizConfigContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                <Link href="/steeplechase" className="w-full block">
-                  <Button className="w-full bg-amber-600 hover:bg-amber-500 hover:opacity-90 text-white font-semibold h-11 rounded-xl">
+                <div className="w-full block">
+                  <Button 
+                    onClick={() => router.push("/steeplechase")}
+                    className="w-full bg-amber-600 hover:bg-amber-500 hover:opacity-90 text-white font-semibold h-11 rounded-xl"
+                  >
                     Enter Steeplechase
                   </Button>
-                </Link>
+                </div>
               </CardContent>
             </Card>
 
@@ -419,11 +407,16 @@ function QuizConfigContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                <Link href="/steeplechase?type=histology" className="w-full block">
-                  <Button className="w-full bg-rose-600 hover:bg-rose-500 hover:opacity-90 text-white font-semibold h-11 rounded-xl">
+                <div className="w-full block">
+                  <Button 
+                    onClick={() => {
+                      toast({ title: "Coming soon", description: "Histology Spotter is currently under development.", variant: "default" });
+                    }}
+                    className="w-full bg-rose-600 hover:bg-rose-500 hover:opacity-90 text-white font-semibold h-11 rounded-xl"
+                  >
                     Enter Histology Spotter
                   </Button>
-                </Link>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -556,27 +549,86 @@ function QuizConfigContent() {
                       <div className="space-y-3">
                         <p className="text-sm font-medium">Subject</p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {loading
-                        ? Array.from({ length: 6 }).map((_, i) => (
-                            <div
-                              key={i}
-                              className="h-20 bg-muted animate-pulse rounded-lg"
-                            />
-                          ))
-                        : subjects.map((subject) => (
-                            <motion.div
-                              key={subject.id}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {loading
+                            ? Array.from({ length: 6 }).map((_, i) => (
+                              <div
+                                key={i}
+                                className="h-20 bg-muted animate-pulse rounded-lg"
+                              />
+                            ))
+                            : subjects.map((subject) => (
+                              <motion.div
+                                key={subject.id}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                              >
+                                <Card
+                                  className={`cursor-pointer transition-all duration-200 hover:shadow-md ${config.subject === subject.id ? "ring-2 ring-primary bg-primary/5" : "hover:border-primary/30"}`}
+                                  onClick={() =>
+                                    setConfig({
+                                      ...config,
+                                      subject: subject.id,
+                                      block: undefined,
+                                      topic: undefined,
+                                      slide: undefined,
+                                    })
+                                  }
+                                >
+                                  <CardContent className="p-4 text-center">
+                                    <div className="font-medium text-sm">
+                                      {subject.name}
+                                    </div>
+                                    {subject.description && (
+                                      <div className="text-xs text-muted-foreground mt-1">
+                                        {subject.description}
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              </motion.div>
+                            ))}
+                        </div>
+                      </div>
+
+                      {config.subject && blocks.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-3"
+                        >
+                          <p className="text-sm font-medium">
+                            Block{" "}
+                            <span className="text-muted-foreground">
+                              (Optional)
+                            </span>
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Card
+                              className={`cursor-pointer transition-all ${!config.block ? "ring-2 ring-emerald-500 bg-emerald-50" : "hover:border-primary/30"}`}
+                              onClick={() =>
+                                setConfig({
+                                  ...config,
+                                  block: undefined,
+                                  topic: undefined,
+                                  slide: undefined,
+                                })
+                              }
                             >
+                              <CardContent className="p-4 text-center">
+                                <div className="font-medium text-sm text-emerald-700">
+                                  All Blocks
+                                </div>
+                              </CardContent>
+                            </Card>
+                            {blocks.map((block) => (
                               <Card
-                                className={`cursor-pointer transition-all duration-200 hover:shadow-md ${config.subject === subject.id ? "ring-2 ring-primary bg-primary/5" : "hover:border-primary/30"}`}
+                                key={block.id}
+                                className={`cursor-pointer transition-all ${config.block === block.id ? "ring-2 ring-primary bg-primary/5" : "hover:border-primary/30"}`}
                                 onClick={() =>
                                   setConfig({
                                     ...config,
-                                    subject: subject.id,
-                                    block: undefined,
+                                    block: block.id,
                                     topic: undefined,
                                     slide: undefined,
                                   })
@@ -584,162 +636,103 @@ function QuizConfigContent() {
                               >
                                 <CardContent className="p-4 text-center">
                                   <div className="font-medium text-sm">
-                                    {subject.name}
+                                    {block.name}
                                   </div>
-                                  {subject.description && (
-                                    <div className="text-xs text-muted-foreground mt-1">
-                                      {subject.description}
-                                    </div>
-                                  )}
                                 </CardContent>
                               </Card>
-                            </motion.div>
-                          ))}
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {config.block && topics.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-3"
+                        >
+                          <p className="text-sm font-medium">
+                            Sub-block{" "}
+                            <span className="text-muted-foreground">
+                              (Optional)
+                            </span>
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Card
+                              className={`cursor-pointer transition-all ${!config.topic ? "ring-2 ring-emerald-500 bg-emerald-50" : "hover:border-primary/30"}`}
+                              onClick={() =>
+                                setConfig({ ...config, topic: undefined, slide: undefined })
+                              }
+                            >
+                              <CardContent className="p-4 text-center">
+                                <div className="font-medium text-sm text-emerald-700">
+                                  All Sub-blocks
+                                </div>
+                              </CardContent>
+                            </Card>
+                            {topics.map((topic) => (
+                              <Card
+                                key={topic.id}
+                                className={`cursor-pointer transition-all ${config.topic === topic.id ? "ring-2 ring-primary bg-primary/5" : "hover:border-primary/30"}`}
+                                onClick={() =>
+                                  setConfig({ ...config, topic: topic.id, slide: undefined })
+                                }
+                              >
+                                <CardContent className="p-4 text-center">
+                                  <div className="font-medium text-sm">
+                                    {topic.name}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {(config.block || config.topic) && slides.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-3"
+                        >
+                          <p className="text-sm font-medium">
+                            Topic (Slide){" "}
+                            <span className="text-muted-foreground">
+                              (Optional)
+                            </span>
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Card
+                              className={`cursor-pointer transition-all ${!config.slide ? "ring-2 ring-emerald-500 bg-emerald-50" : "hover:border-primary/30"}`}
+                              onClick={() =>
+                                setConfig({ ...config, slide: undefined })
+                              }
+                            >
+                              <CardContent className="p-4 text-center">
+                                <div className="font-medium text-sm text-emerald-700">
+                                  All Topics / Slides
+                                </div>
+                              </CardContent>
+                            </Card>
+                            {slides.map((slide) => (
+                              <Card
+                                key={slide.id}
+                                className={`cursor-pointer transition-all ${config.slide === slide.id ? "ring-2 ring-primary bg-primary/5" : "hover:border-primary/30"}`}
+                                onClick={() =>
+                                  setConfig({ ...config, slide: slide.id })
+                                }
+                              >
+                                <CardContent className="p-4 text-center">
+                                  <div className="font-medium text-sm">
+                                    {slide.title}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
-                  </div>
-
-                  {config.subject && blocks.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-3"
-                    >
-                      <p className="text-sm font-medium">
-                        Block{" "}
-                        <span className="text-muted-foreground">
-                          (Optional)
-                        </span>
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <Card
-                          className={`cursor-pointer transition-all ${!config.block ? "ring-2 ring-emerald-500 bg-emerald-50" : "hover:border-primary/30"}`}
-                          onClick={() =>
-                            setConfig({
-                              ...config,
-                              block: undefined,
-                              topic: undefined,
-                              slide: undefined,
-                            })
-                          }
-                        >
-                          <CardContent className="p-4 text-center">
-                            <div className="font-medium text-sm text-emerald-700">
-                              All Blocks
-                            </div>
-                          </CardContent>
-                        </Card>
-                        {blocks.map((block) => (
-                          <Card
-                            key={block.id}
-                            className={`cursor-pointer transition-all ${config.block === block.id ? "ring-2 ring-primary bg-primary/5" : "hover:border-primary/30"}`}
-                            onClick={() =>
-                              setConfig({
-                                ...config,
-                                block: block.id,
-                                topic: undefined,
-                                slide: undefined,
-                              })
-                            }
-                          >
-                            <CardContent className="p-4 text-center">
-                              <div className="font-medium text-sm">
-                                {block.name}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {config.block && topics.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-3"
-                    >
-                      <p className="text-sm font-medium">
-                        Sub-block{" "}
-                        <span className="text-muted-foreground">
-                          (Optional)
-                        </span>
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <Card
-                          className={`cursor-pointer transition-all ${!config.topic ? "ring-2 ring-emerald-500 bg-emerald-50" : "hover:border-primary/30"}`}
-                          onClick={() =>
-                            setConfig({ ...config, topic: undefined, slide: undefined })
-                          }
-                        >
-                          <CardContent className="p-4 text-center">
-                            <div className="font-medium text-sm text-emerald-700">
-                              All Sub-blocks
-                            </div>
-                          </CardContent>
-                        </Card>
-                        {topics.map((topic) => (
-                          <Card
-                            key={topic.id}
-                            className={`cursor-pointer transition-all ${config.topic === topic.id ? "ring-2 ring-primary bg-primary/5" : "hover:border-primary/30"}`}
-                            onClick={() =>
-                              setConfig({ ...config, topic: topic.id, slide: undefined })
-                            }
-                          >
-                            <CardContent className="p-4 text-center">
-                              <div className="font-medium text-sm">
-                                {topic.name}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {(config.block || config.topic) && slides.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-3"
-                    >
-                      <p className="text-sm font-medium">
-                        Topic (Slide){" "}
-                        <span className="text-muted-foreground">
-                          (Optional)
-                        </span>
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <Card
-                          className={`cursor-pointer transition-all ${!config.slide ? "ring-2 ring-emerald-500 bg-emerald-50" : "hover:border-primary/30"}`}
-                          onClick={() =>
-                            setConfig({ ...config, slide: undefined })
-                          }
-                        >
-                          <CardContent className="p-4 text-center">
-                            <div className="font-medium text-sm text-emerald-700">
-                              All Topics / Slides
-                            </div>
-                          </CardContent>
-                        </Card>
-                        {slides.map((slide) => (
-                          <Card
-                            key={slide.id}
-                            className={`cursor-pointer transition-all ${config.slide === slide.id ? "ring-2 ring-primary bg-primary/5" : "hover:border-primary/30"}`}
-                            onClick={() =>
-                              setConfig({ ...config, slide: slide.id })
-                            }
-                          >
-                            <CardContent className="p-4 text-center">
-                              <div className="font-medium text-sm">
-                                {slide.title}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                  </div>
                   )}
 
                   <div className="flex justify-end pt-4">

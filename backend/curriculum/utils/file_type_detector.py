@@ -31,19 +31,23 @@ class FileTypeDetector:
         Detect file type using specified method
         
         Args:
-            file_path: Path to the file
+            file_path: Path to the file, or just filename if method='extension'
             method: Detection method ('extension', 'magic_bytes', 'auto')
             
         Returns:
             File type (pdf, pptx, ppt, docx) or None if unsupported
         """
-        if not os.path.exists(file_path):
-            logger.error(f"File not found: {file_path}")
-            return None
-        
         if method == 'extension':
             return cls._detect_from_extension(file_path)
-        elif method == 'magic_bytes':
+            
+        if not os.path.exists(file_path):
+            logger.error(f"File not found: {file_path}")
+            # Fall back to extension if it's just a filename and we can't find it
+            if method == 'auto':
+                return cls._detect_from_extension(file_path)
+            return None
+            
+        if method == 'magic_bytes':
             return cls._detect_from_magic_bytes(file_path)
         elif method == 'auto':
             # Try magic bytes first (more reliable), fall back to extension

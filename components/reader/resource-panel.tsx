@@ -11,8 +11,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { BookOpenText, Loader2, Play, RefreshCw } from "lucide-react";
-import { aiApi } from "@/lib/api";
+import { BookOpenText, Loader2, Play, RefreshCw, ChevronRight, ChevronDown } from "lucide-react";
+import { aiApi, flashcardApi, type Flashcard } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   useSlideStore,
@@ -164,25 +164,80 @@ export function ResourcePanel({
 
 function FlashcardsTab({ slideId }: { slideId: string }) {
   const [generating, setGenerating] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper function to fetch flashcards
+  const fetchFlashcards = async () => {
+    try {
+      const res = await flashcardApi.list({ slide_id: slideId, source: "ai_generated" });
+      setFlashcards(res.results);
+      return res.results.length > 0;
+    } catch (err) {
+      console.error("Failed to fetch flashcards:", err);
+      return false;
+    }
+  };
+
+  // Initial fetch when slideId changes
+  useEffect(() => {
+    const loadFlashcards = async () => {
+      setLoading(true);
+      await fetchFlashcards();
+      setLoading(false);
+    };
+    
+    loadFlashcards();
+  }, [slideId]);
+
+  // Polling when generating
+  useEffect(() => {
+    if (!generating) return;
+
+    let pollAttempts = 0;
+    const maxPolls = 20; // 1 minute total
+
+    const pollForFlashcards = async () => {
+      pollAttempts++;
+      console.log(`Polling for flashcards: attempt ${pollAttempts}`);
+      
+      const found = await fetchFlashcards();
+      if (found) {
+        console.log("? Flashcards found! Stopping generation");
+        setGenerating(false);
+        return;
+      }
+      
+      if (pollAttempts >= maxPolls) {
+        console.log("? Max polling attempts reached");
+        setError("Flashcard generation timed out. Please try again.");
+        setGenerating(false);
+      }
+    };
+
+    const interval = setInterval(pollForFlashcards, 3000);
+    return () => clearInterval(interval);
+  }, [generating]);
 
   const handleGenerate = async () => {
     try {
       setGenerating(true);
       setError(null);
-      setMessage(null);
+      
+      console.log("?? Starting flashcard generation for slide:", slideId);
       await aiApi.generateFlashcards(slideId, 5);
-      setMessage("Flashcards are being generated in the background! They will appear in your review queue soon.");
+      console.log("?? Generation request sent successfully");
+      
     } catch (err: any) {
-      console.error(err);
+      console.error("? Generation request failed:", err);
+      setGenerating(false);
+      
       if (err.response?.status === 403) {
         setError("Premium access required to generate AI flashcards.");
       } else {
-        setError("Failed to generate flashcards. Please try again later.");
+        setError("Failed to start flashcard generation. Please try again.");
       }
-    } finally {
-      setGenerating(false);
     }
   };
 
@@ -198,19 +253,32 @@ function FlashcardsTab({ slideId }: { slideId: string }) {
         Instantly convert this slide's contents into flashcards for your daily review queue.
       </p>
 
-      {message && (
-        <div className="mt-4 rounded-xl border border-green-500/30 bg-green-50 p-4 text-center">
-          <p className="text-sm text-green-800">{message}</p>
-        </div>
-      )}
-
       {error && (
         <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-center">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
 
-      {!message && (
+      {loading ? (
+        <div className="mt-8 flex justify-center">
+          <Loader2 className="size-6 animate-spin text-primary" />
+        </div>
+      ) : flashcards.length > 0 ? (
+        <div className="mt-6 space-y-4">
+          {flashcards.map((card, i) => (
+            <div key={card.id} className="rounded-xl border border-border bg-card p-4">
+              <div className="text-xs font-semibold text-primary mb-2">Card {i + 1}</div>
+              <div className="font-medium text-foreground mb-3">{card.front}</div>
+              <div className="text-sm text-muted-foreground border-t border-border pt-3">
+                {card.back}
+              </div>
+            </div>
+          ))}
+          <p className="text-xs text-center text-muted-foreground mt-4">
+            These cards have been added to your daily review queue.
+          </p>
+        </div>
+      ) : (
         <button
           onClick={handleGenerate}
           disabled={generating}
@@ -232,7 +300,6 @@ function FlashcardsTab({ slideId }: { slideId: string }) {
     </div>
   );
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Textbook Tab
 // ─────────────────────────────────────────────────────────────────────────────

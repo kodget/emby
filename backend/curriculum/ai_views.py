@@ -95,6 +95,7 @@ def _get_or_generate_resources(slide, slide_image_base64=None, force_refresh=Fal
 
     # Only cache successful generations
     if resources and not resources.get('error'):
+        sc.refresh_from_db()
         data = sc.content_data if isinstance(sc.content_data, dict) else {}
         data['resources'] = resources
         sc.content_data = data

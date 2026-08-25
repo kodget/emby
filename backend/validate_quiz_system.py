@@ -61,10 +61,18 @@ class SystemValidator:
         except Exception as e:
             self.log_error("Database Models", f"Model validation failed: {e}")
             
+    def cleanup_test_data(self):
+        """Clean up any leftover test data from previous runs."""
+        print("🧹 Cleaning up leftover test data...")
+        User.objects.filter(username__in=['testuser', 'quizuser', 'freeuser']).delete()
+        Subject.objects.filter(name__in=['Test Subject', 'Anatomy']).delete()
+        QuizQuestion.objects.filter(id__startswith='test-q-').delete()
+            
         try:
             # Check if we can create test data
-            subject = Subject.objects.get_or_create(name='Test Subject')[0]
+            subject = Subject.objects.get_or_create(id='test-sub-1', name='Test Subject')[0]
             question = QuizQuestion.objects.create(
+                id='test-q-db-1',
                 subject=subject,
                 question_type='mcq',
                 difficulty='medium',
@@ -84,7 +92,7 @@ class SystemValidator:
         # Create test user
         try:
             user = User.objects.create_user(
-                username='testuser',
+                username='test@example.com',
                 email='test@example.com', 
                 password='testpass123'
             )
@@ -93,7 +101,7 @@ class SystemValidator:
             login_response = self.client.post('/auth/login/', {
                 'email': 'test@example.com',
                 'password': 'testpass123'
-            })
+            }, content_type='application/json')
             
             if login_response.status_code == 200:
                 token = login_response.json().get('tokens', {}).get('access')
@@ -141,17 +149,18 @@ class SystemValidator:
         try:
             # Setup test data
             user = User.objects.create_user(
-                username='quizuser',
+                username='quiz@example.com',
                 email='quiz@example.com',
                 password='testpass123'
             )
             
-            subject = Subject.objects.get_or_create(name='Anatomy')[0]
+            subject = Subject.objects.get_or_create(id='test-sub-anat', name='Anatomy')[0]
             
             # Create test questions
             questions = []
             for i in range(3):
                 q = QuizQuestion.objects.create(
+                    id=f'test-q-wf-{i}',
                     subject=subject,
                     question_type='mcq',
                     difficulty='medium',
@@ -166,7 +175,7 @@ class SystemValidator:
             login_response = self.client.post('/auth/login/', {
                 'email': 'quiz@example.com',
                 'password': 'testpass123'
-            })
+            }, content_type='application/json')
             
             token = login_response.json().get('tokens', {}).get('access')
             self.client.defaults['HTTP_AUTHORIZATION'] = f'Bearer {token}'
@@ -247,16 +256,17 @@ class SystemValidator:
         try:
             # Create free tier user (no premium profile)
             user = User.objects.create_user(
-                username='freeuser',
+                username='free@example.com',
                 email='free@example.com',
                 password='testpass123'
             )
             
-            subject = Subject.objects.get_or_create(name='Test Subject')[0]
+            subject = Subject.objects.get_or_create(id='test-sub-2', name='Test Subject')[0]
             
             # Create enough questions for testing
             for i in range(10):
                 QuizQuestion.objects.create(
+                    id=f'test-q-sub-{i}',
                     subject=subject,
                     question_type='mcq',
                     difficulty='medium',
@@ -269,7 +279,7 @@ class SystemValidator:
             login_response = self.client.post('/auth/login/', {
                 'email': 'free@example.com',
                 'password': 'testpass123'
-            })
+            }, content_type='application/json')
             
             token = login_response.json().get('tokens', {}).get('access')
             self.client.defaults['HTTP_AUTHORIZATION'] = f'Bearer {token}'
@@ -330,6 +340,14 @@ class SystemValidator:
         print("🚀 Starting comprehensive system validation...\n")
         
         start_time = time.time()
+        
+        # In Django 1.10+, ALLOWED_HOSTS is checked in test client if DEBUG is False
+        # We need to temporarily add 'testserver' to ALLOWED_HOSTS or disable the check
+        from django.conf import settings
+        if 'testserver' not in settings.ALLOWED_HOSTS:
+            settings.ALLOWED_HOSTS.append('testserver')
+        
+        self.cleanup_test_data()
         
         self.validate_database_setup()
         self.validate_api_endpoints() 

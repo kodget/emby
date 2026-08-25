@@ -26,6 +26,7 @@ import {
   loadCurriculum,
   type SubjectId,
   type BlockId,
+  type SubBlockId,
   type TopicId,
   type Subject,
 } from "@/lib/curriculum";
@@ -52,9 +53,9 @@ export function SlideUploadModal() {
     null,
   );
   const [selectedBlock, setSelectedBlock] = useState<BlockId | null>(null);
+  const [selectedSubBlock, setSelectedSubBlock] = useState<SubBlockId | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<TopicId | null>(null);
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
-  const [customSectionName, setCustomSectionName] = useState("");
+  const [customTopicName, setCustomTopicName] = useState("");
 
   // Load curriculum from API
   useEffect(() => {
@@ -108,8 +109,8 @@ export function SlideUploadModal() {
     dispatch(
       addUpload({
         id: uploadId,
-        courseId: selectedTopic || selectedBlock,
-        moduleId: selectedTopic || selectedBlock,
+        courseId: selectedSubBlock || selectedBlock,
+        moduleId: selectedSubBlock || selectedBlock,
         materialId: "",
         title: title.trim(),
         fileName: file.name,
@@ -131,9 +132,9 @@ export function SlideUploadModal() {
       // Send the raw file directly to Django — it processes, converts to JPGs,
       // uploads to Cloudinary, and returns the finished Slide record.
       // This avoids the frontend→Cloudinary→backend download 401 problem.
-      let sectionId = selectedSection;
+      let topicId = selectedTopic;
 
-      if (customSectionName.trim()) {
+      if (customTopicName.trim()) {
         const createSecResponse = await fetch(`${apiBase}/api/topics/`, {
           method: "POST",
           headers: {
@@ -141,15 +142,14 @@ export function SlideUploadModal() {
             Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
           body: JSON.stringify({
-            name: customSectionName.trim(),
-            sub_block: selectedTopic,
-            topic: selectedTopic,
+            name: customTopicName.trim(),
+            sub_block: selectedSubBlock,
             block: selectedBlock,
           }),
         });
         if (createSecResponse.ok) {
           const newSec = await createSecResponse.json();
-          sectionId = newSec.id;
+          topicId = newSec.id;
         } else {
           const errorData = await createSecResponse.json().catch(() => ({}));
           throw new Error(errorData.error || "Failed to create new topic");
@@ -161,10 +161,8 @@ export function SlideUploadModal() {
       formData.append("title", title.trim());
       formData.append("subject", selectedSubject);
       formData.append("block", selectedBlock);
-      if (selectedTopic) formData.append("sub_block", selectedTopic);
-      if (selectedTopic) formData.append("topic", selectedTopic);
-      if (sectionId) formData.append("topic", sectionId);
-      if (sectionId) formData.append("section", sectionId);
+      if (selectedSubBlock) formData.append("sub_block", selectedSubBlock);
+      if (topicId) formData.append("topic", topicId);
 
       dispatch(
         updateProgress({ id: uploadId, progress: 30, status: "uploading" }),
@@ -213,9 +211,9 @@ export function SlideUploadModal() {
     setErrorMsg("");
     setSelectedSubject(null);
     setSelectedBlock(null);
+    setSelectedSubBlock(null);
     setSelectedTopic(null);
-    setSelectedSection(null);
-    setCustomSectionName("");
+    setCustomTopicName("");
   }
 
   const subject = selectedSubject
@@ -225,13 +223,13 @@ export function SlideUploadModal() {
   const block = selectedBlock
     ? blocks.find((b) => b.id === selectedBlock)
     : null;
-  const topics = block?.topics || [];
-  const topic = selectedTopic
-    ? topics.find((t) => t.id === selectedTopic)
+  const subBlocks = block?.subBlocks || [];
+  const subBlock = selectedSubBlock
+    ? subBlocks.find((t) => t.id === selectedSubBlock)
     : null;
 
-  // Sections can come from either the topic or directly from the block
-  const sections = topic?.sections || block?.sections || [];
+  // Topics can come from either the sub-block or directly from the block
+  const topics = subBlock?.topics || block?.topics || [];
 
   return (
     <AnimatePresence>
@@ -268,12 +266,12 @@ export function SlideUploadModal() {
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
                     {subject.title}
                     {block && ` · ${block.title}`}
+                    {selectedSubBlock &&
+                      subBlocks.find((t) => t.id === selectedSubBlock) &&
+                      ` · ${subBlocks.find((t) => t.id === selectedSubBlock)?.title}`}
                     {selectedTopic &&
-                      topics.find((t) => t.id === selectedTopic) &&
-                      ` · ${topics.find((t) => t.id === selectedTopic)?.title}`}
-                    {selectedSection &&
-                      sections.find((s) => s.id === selectedSection) &&
-                      ` · ${sections.find((s) => s.id === selectedSection)?.title}`}
+                      topics.find((s) => s.id === selectedTopic) &&
+                      ` · ${topics.find((s) => s.id === selectedTopic)?.title}`}
                   </p>
                 )}
               </div>
@@ -343,6 +341,7 @@ export function SlideUploadModal() {
                         onClick={() => {
                           setSelectedSubject(subj.id);
                           setSelectedBlock(null);
+                          setSelectedSubBlock(null);
                           setSelectedTopic(null);
                         }}
                         className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
@@ -370,8 +369,8 @@ export function SlideUploadModal() {
                           type="button"
                           onClick={() => {
                             setSelectedBlock(blk.id);
+                            setSelectedSubBlock(null);
                             setSelectedTopic(null);
-                            setSelectedSection(null);
                           }}
                           className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
                             selectedBlock === blk.id
@@ -386,61 +385,61 @@ export function SlideUploadModal() {
                   </div>
                 )}
 
-                {/* Topic Selection (sub-blocks) */}
-                {selectedBlock && topics.length > 0 && (
+                {/* Sub-Block Selection */}
+                {selectedBlock && subBlocks.length > 0 && (
                   <div>
                     <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-                      Topic{" "}
+                      Sub-Block{" "}
                       <span className="text-[9px] text-muted-foreground/60">
                         (Optional)
                       </span>
                     </label>
                     <div className="mt-1.5 grid grid-cols-2 gap-2">
-                      {topics.map((topic) => (
+                      {subBlocks.map((subBlk) => (
                         <button
-                          key={topic.id}
+                          key={subBlk.id}
                           type="button"
                           onClick={() => {
-                            setSelectedTopic(topic.id);
-                            setSelectedSection(null);
+                            setSelectedSubBlock(subBlk.id);
+                            setSelectedTopic(null);
                           }}
                           className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
-                            selectedTopic === topic.id
+                            selectedSubBlock === subBlk.id
                               ? "border-primary bg-primary text-primary-foreground"
                               : "border-border bg-background hover:border-primary/50"
                           }`}
                         >
-                          {topic.title}
+                          {subBlk.title}
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Section Selection (subsections) */}
+                {/* Topic Selection */}
                 {selectedBlock && (
                   <div className="space-y-3">
-                    {sections.length > 0 && (
+                    {topics.length > 0 && (
                       <div>
                         <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
                           Select Existing Topic
                         </label>
                         <div className="mt-1.5 grid grid-cols-2 gap-2">
-                          {sections.map((section) => (
+                          {topics.map((topic) => (
                             <button
-                              key={section.id}
+                              key={topic.id}
                               type="button"
                               onClick={() => {
-                                setSelectedSection(section.id);
-                                setCustomSectionName("");
+                                setSelectedTopic(topic.id);
+                                setCustomTopicName("");
                               }}
                               className={`rounded-xl border px-3 py-2 text-sm truncate transition-colors ${
-                                selectedSection === section.id
+                                selectedTopic === topic.id
                                   ? "border-primary bg-primary text-primary-foreground"
                                   : "border-border bg-background hover:border-primary/50"
                               }`}
                             >
-                              {section.title}
+                              {topic.title}
                             </button>
                           ))}
                         </div>
@@ -448,15 +447,15 @@ export function SlideUploadModal() {
                     )}
                     <div>
                       <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-                        {sections.length > 0 ? "Or Enter New Topic Name" : "Topic Name (Optional)"}
+                        {topics.length > 0 ? "Or Enter New Topic Name" : "Topic Name (Optional)"}
                       </label>
                       <input
                         type="text"
                         placeholder="e.g. Upper Limb"
-                        value={customSectionName}
+                        value={customTopicName}
                         onChange={(e) => {
-                          setCustomSectionName(e.target.value);
-                          setSelectedSection(null);
+                          setCustomTopicName(e.target.value);
+                          setSelectedTopic(null);
                         }}
                         className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
                       />

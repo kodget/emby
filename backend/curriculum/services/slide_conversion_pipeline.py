@@ -150,6 +150,9 @@ def _download_from_cloudinary(cloudinary_url: str, timeout: int = 60) -> bytes:
 
     # ── Parse URL components ─────────────────────────────────────────────────
     # URL shape: https://res.cloudinary.com/<cloud>/<rtype>/upload/v<ver>/<public_id_with_ext>
+    if "cloudinary.com" not in cloudinary_url:
+        raise IOError(f"Cannot download from URL: {cloudinary_url}")
+
     m = re.search(
         r"cloudinary\.com/[^/]+/(image|raw|video|auto)/upload/(?:v\d+/)?(.+)",
         cloudinary_url,

@@ -1273,6 +1273,7 @@ export const quizApi = {
       mcq_count: number;
       theory_count: number;
       difficulty: "easy" | "medium" | "hard";
+      question_source?: string;
     };
   }): Promise<{ id: string; message: string }> => {
     // Transform the config to match backend expectations
@@ -1288,6 +1289,7 @@ export const quizApi = {
         mcq_count: config.configuration.mcq_count,
         theory_count: config.configuration.theory_count,
         difficulty: config.configuration.difficulty,
+        question_source: config.configuration.question_source || "hierarchy",
       },
     };
 
@@ -1520,6 +1522,26 @@ export const flashcardApi = {
     topic?: number;
     source?: string;
     search?: string;
+    slide_id?: string;
+  }): Promise<{ count: number; results: Flashcard[] }> => {
+    const response = await api.get("/api/flashcards/", { params });
+    // DRF router list may return array or paginated object
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return { count: data.length, results: data };
+    }
+    return data;
+  },
+
+  /** Alias for getAll - used by resource panel */
+  list: async (params?: {
+    subject?: string;
+    block?: string;
+    sub_block?: number;
+    topic?: number;
+    source?: string;
+    search?: string;
+    slide_id?: string;
   }): Promise<{ count: number; results: Flashcard[] }> => {
     const response = await api.get("/api/flashcards/", { params });
     // DRF router list may return array or paginated object
@@ -1536,6 +1558,7 @@ export const flashcardApi = {
     block?: string;
     sub_block?: number;
     topic?: number;
+    slide_id?: string;
   }): Promise<{ count: number; results: Flashcard[] }> => {
     const response = await api.get("/api/flashcards/due/", { params });
     const data = response.data;

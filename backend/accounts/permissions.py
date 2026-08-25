@@ -61,3 +61,12 @@ class IsPlatformAdmin(BasePermission):
         if not request.user.is_authenticated or not hasattr(request.user, "profile"):
             return False
         return is_platform_admin(request.user.profile)
+
+class IsClassHeadOrReadOnly(BasePermission):
+    def has_permission(self, request, view):
+        from rest_framework.permissions import SAFE_METHODS
+        if request.method in SAFE_METHODS:
+            return True
+        if not request.user.is_authenticated or not hasattr(request.user, "profile"):
+            return False
+        return can_manage_class(request.user.profile)

@@ -4,7 +4,7 @@ import api from "./api";
 // This is the single source of truth used by the upload modal,
 // quiz generator, steeplechase, and course pages.
 
-export type TopicId = string; // e.g. "anat-b1-gross"
+export type SubBlockId = string; // e.g. "anat-b1-gross"
 export type BlockId = string; // e.g. "anat-b1"
 export type SubjectId =
   | "anatomy"
@@ -12,26 +12,26 @@ export type SubjectId =
   | "medical-biochemistry"
   | string;
 
-export type SectionId = string; // e.g. "upper-limb"
-
-export type Section = {
-  id: SectionId;
-  title: string;
-};
+export type TopicId = string; // e.g. "upper-limb"
 
 export type Topic = {
   id: TopicId;
   title: string;
+};
+
+export type SubBlock = {
+  id: SubBlockId;
+  title: string;
   shortTitle: string;
-  sections: Section[];
+  topics: Topic[];
 };
 
 export type Block = {
   id: BlockId;
   title: string; // e.g. "Block 1"
   subjectId: SubjectId;
-  topics: Topic[];
-  sections: Section[]; // Sections that belong directly to block (no topic)
+  subBlocks: SubBlock[];
+  topics: Topic[]; // Topics that belong directly to block (no sub-block)
 };
 
 export type Subject = {
@@ -85,34 +85,34 @@ export async function loadCurriculum(): Promise<Subject[]> {
       };
 
       for (const block of blocks) {
-        const topicsResponse = await api.get(`/api/sub-blocks/?block=${block.id}`);
-        const topics = topicsResponse.data;
+        const subBlocksResponse = await api.get(`/api/sub-blocks/?block=${block.id}`);
+        const subBlocks = subBlocksResponse.data;
 
-        // Fetch sections (topics in new schema) that belong directly to the block (no topic)
-        let blockSections: any[] = [];
+        // Fetch topics that belong directly to the block (no sub-block)
+        let blockTopics: any[] = [];
         try {
-          const blockSectionsResponse = await api.get(`/api/topics/?block=${block.id}`);
-          blockSections = blockSectionsResponse.data;
+          const blockTopicsResponse = await api.get(`/api/topics/?block=${block.id}`);
+          blockTopics = blockTopicsResponse.data;
         } catch (e) {
-          console.warn(`Failed to fetch sections for block ${block.id}`, e);
+          console.warn(`Failed to fetch topics for block ${block.id}`, e);
         }
 
-        const blockTopics: Topic[] = [];
-        for (const topic of topics) {
-          // Fetch sections (topics in new schema) for this topic
-          let topicSections: any[] = [];
+        const blockSubBlocks: SubBlock[] = [];
+        for (const subBlock of subBlocks) {
+          // Fetch topics for this sub-block
+          let subBlockTopics: any[] = [];
           try {
-            const topicSectionsResponse = await api.get(`/api/topics/?sub_block=${topic.id}`);
-            topicSections = topicSectionsResponse.data;
+            const subBlockTopicsResponse = await api.get(`/api/topics/?sub_block=${subBlock.id}`);
+            subBlockTopics = subBlockTopicsResponse.data;
           } catch (e) {
-            console.warn(`Failed to fetch sections for topic ${topic.id}`, e);
+            console.warn(`Failed to fetch topics for sub-block ${subBlock.id}`, e);
           }
 
-          blockTopics.push({
-            id: topic.id,
-            title: topic.name,
-            shortTitle: topic.name,
-            sections: topicSections.map((s: any) => ({
+          blockSubBlocks.push({
+            id: subBlock.id,
+            title: subBlock.name,
+            shortTitle: subBlock.name,
+            topics: subBlockTopics.map((s: any) => ({
               id: s.id,
               title: s.name,
             })),
@@ -123,8 +123,8 @@ export async function loadCurriculum(): Promise<Subject[]> {
           id: block.id,
           title: block.name,
           subjectId: subject.id as SubjectId,
-          topics: blockTopics,
-          sections: blockSections.map((s: any) => ({
+          subBlocks: blockSubBlocks,
+          topics: blockTopics.map((s: any) => ({
             id: s.id,
             title: s.name,
           })),
@@ -156,21 +156,21 @@ export function getBlock(blockId: BlockId): Block | undefined {
   }
 }
 
-export function getTopic(
-  topicId: TopicId,
-): { subject: Subject; block: Block; topic: Topic } | undefined {
+export function getSubBlock(
+  subBlockId: SubBlockId,
+): { subject: Subject; block: Block; subBlock: SubBlock } | undefined {
   for (const s of curriculum) {
     for (const b of s.blocks) {
-      const t = b.topics.find((t) => t.id === topicId);
-      if (t) return { subject: s, block: b, topic: t };
+      const t = b.subBlocks.find((t) => t.id === subBlockId);
+      if (t) return { subject: s, block: b, subBlock: t };
     }
   }
 }
 
 export function breadcrumb(courseId: string): string {
-  const topic = getTopic(courseId);
-  if (topic) {
-    return `${topic.subject.title} · ${topic.block.title} · ${topic.topic.title}`;
+  const subBlockData = getSubBlock(courseId);
+  if (subBlockData) {
+    return `${subBlockData.subject.title} · ${subBlockData.block.title} · ${subBlockData.subBlock.title}`;
   }
 
   const block = getBlock(courseId);

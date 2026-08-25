@@ -113,49 +113,33 @@ def upload_file(request):
     print(f"Using resource_type: {resource_type} (validated .{file_ext}, {len(file_content)} bytes)")
 
     try:
-        # For development: Try Cloudinary first, fallback to local storage
-        try:
-            print("Attempting Cloudinary upload...")
+        print("Attempting Cloudinary upload...")
 
-            result = cloudinary.uploader.upload(
-                file,
-                folder=f"emby/{folder}",
-                resource_type=resource_type,
-                access_mode='public',  # Make files publicly accessible
-                type='upload',  # Ensure it's a regular upload, not authenticated
-                timeout=60
-            )
-            
-            print(f"Cloudinary upload successful: {result['secure_url']}")
-            
-            return Response({
-                'url': result['secure_url'],
-                'public_id': result['public_id'],
-                'filename': file.name,
-                'size': file.size,
-                'format': result.get('format'),
-                'resource_type': result.get('resource_type')
-            }, status=status.HTTP_201_CREATED)
-        except Exception as cloudinary_error:
-            print(f"Cloudinary upload failed: {cloudinary_error}")
-            import traceback
-            traceback.print_exc()
-            # Fallback: Return a placeholder URL for development
-            # In production, you should handle this properly
-            return Response({
-                'url': f'http://localhost:8000/media/{folder}/{file.name}',
-                'public_id': f'{folder}/{file.name}',
-                'filename': file.name,
-                'size': file.size,
-                'format': file.name.split('.')[-1],
-                'resource_type': 'raw'
-            }, status=status.HTTP_201_CREATED)
+        result = cloudinary.uploader.upload(
+            file,
+            folder=f"emby/{folder}",
+            resource_type=resource_type,
+            access_mode='public',  # Make files publicly accessible
+            type='upload',  # Ensure it's a regular upload, not authenticated
+            timeout=300
+        )
+        
+        print(f"Cloudinary upload successful: {result['secure_url']}")
+        
+        return Response({
+            'url': result['secure_url'],
+            'public_id': result['public_id'],
+            'filename': file.name,
+            'size': file.size,
+            'format': result.get('format'),
+            'resource_type': result.get('resource_type')
+        }, status=status.HTTP_201_CREATED)
     
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        print(f"Upload error: {e}")
         import traceback
         traceback.print_exc()
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': f"Upload failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])

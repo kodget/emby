@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
-def process_slide_task(self, slide_id: str):
+def process_slide_task(self, slide_id: str, local_file_path: str = None):
     """
     Async task to process a slide after upload
     
@@ -19,13 +19,13 @@ def process_slide_task(self, slide_id: str):
     
     Args:
         slide_id: ID of the slide to process
-        
-    Returns:
-        dict: Processing results
+        local_file_path: Optional local path to bypass Cloudinary download
     """
     from .models import Slide, SlideProcessingStatus, SlideContent
     from .services.slide_conversion_pipeline import SlideConversionPipeline
     import cloudinary.uploader
+    
+    logger.info(f"Received task to process slide: {slide_id}")
     
     try:
         # Get slide
@@ -35,10 +35,12 @@ def process_slide_task(self, slide_id: str):
             logger.error(f"Slide {slide_id} not found")
             return {'success': False, 'error': 'Slide not found'}
         
-        # Get Cloudinary URL
-        cloudinary_url = slide.file_url if slide.file_url else (slide.file.url if slide.file else None)
-        if not cloudinary_url:
-            logger.error(f"Slide {slide_id} has no file URL")
+        # Get URL to process
+        # Use local file if provided (to bypass Cloudinary 401s), else Cloudinary URL
+        process_url = local_file_path if local_file_path else (slide.file_url if slide.file_url else (slide.file.url if slide.file else None))
+        
+        if not process_url:
+            logger.error(f"Slide {slide_id} has no file URL or path to process")
             return {'success': False, 'error': 'No file URL found'}
         
         # Update status to processing
@@ -51,12 +53,12 @@ def process_slide_task(self, slide_id: str):
         logger.info(f"=== STARTING SLIDE PROCESSING ===")
         logger.info(f"Slide ID: {slide_id}")
         logger.info(f"Title: {slide.title}")
-        logger.info(f"File URL: {cloudinary_url}")
+        logger.info(f"Process URL: {process_url}")
         logger.info(f"File Type: {slide.file_type}")
         
         # Run the conversion pipeline
         result = SlideConversionPipeline.process_slide(
-            cloudinary_url=cloudinary_url,
+            cloudinary_url=process_url,
             slide_id=slide_id,
             original_file_type=slide.file_type or 'pdf'
         )
