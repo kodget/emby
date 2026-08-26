@@ -88,7 +88,9 @@ export function BattleArena({ battleId }: { battleId: string }) {
     }
 
     const token = sessionStorage.getItem("token");
-    const wsUrl = `ws://localhost:8000/ws/battle/${battleId}/?token=${token}`;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const wsBase = baseUrl.replace(/^http/, 'ws');
+    const wsUrl = `${wsBase}/ws/battle/${battleId}/?token=${token}`;
     const socket = new WebSocket(wsUrl);
 
     socket.onmessage = (event) => {

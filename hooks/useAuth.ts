@@ -27,8 +27,9 @@ export function useAuth() {
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
         const res = await axios.post<{ token: string; user: BackendUser }>(
-          "http://localhost:8000/auth/google-login/",
+          `${baseUrl}/auth/google-login/`,
           {
             token: tokenResponse.access_token,
           },

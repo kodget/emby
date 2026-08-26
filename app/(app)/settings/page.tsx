@@ -31,8 +31,9 @@ export default function SettingsPage() {
     }
     setLoading(true);
     try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
       const response = await fetch(
-        "http://localhost:8000/api/accounts/change-password/",
+        `${baseUrl}/api/accounts/change-password/`,
         {
           method: "POST",
           headers: {
@@ -80,8 +81,9 @@ export default function SettingsPage() {
       return;
     }
     try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
       const response = await fetch(
-        "http://localhost:8000/api/accounts/profile/",
+        `${baseUrl}/api/accounts/profile/`,
         {
           method: "DELETE",
           headers: {
