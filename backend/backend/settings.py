@@ -20,7 +20,12 @@ load_dotenv(BASE_DIR / ".env")
 
 
 def env_bool(name: str, default: bool = False) -> bool:
-    return os.getenv(name, str(default)).strip().lower() in ("1", "true", "yes", "on")
+    return os.getenv(name, str(default)).strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
 
 
 def env_list(name: str, default: str = "") -> list[str]:
@@ -31,19 +36,37 @@ def env_list(name: str, default: str = "") -> list[str]:
 # ---------------------------------------------------------------------------
 # Core
 # ---------------------------------------------------------------------------
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-change-me-in-production")
+
+SECRET_KEY = os.getenv(
+    "SECRET_KEY",
+    "django-insecure-change-me-in-production",
+)
+
 DEBUG = env_bool("DEBUG", False)
 
-ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver")
+# In Render production, set:
+# ALLOWED_HOSTS=your-backend.onrender.com
+ALLOWED_HOSTS = env_list(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1,testserver",
+)
+
 if DEBUG and not ALLOWED_HOSTS:
     ALLOWED_HOSTS = ["*"]
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+# Frontend URL.
+# Production:
+# FRONTEND_URL=https://emby-sigma.vercel.app
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:3000",
+)
 
 
 # ---------------------------------------------------------------------------
 # Applications
 # ---------------------------------------------------------------------------
+
 INSTALLED_APPS = [
     "daphne",
     "django.contrib.admin",
@@ -100,20 +123,26 @@ ASGI_APPLICATION = "backend.asgi.application"
 
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
     }
 }
 
+
 # ---------------------------------------------------------------------------
-# Database — Postgres from env, SQLite fallback so the app always boots
+# Database — Postgres from env, SQLite fallback
 # ---------------------------------------------------------------------------
+
 if env_bool("USE_SQLITE", False):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": os.getenv("SQLITE_NAME", str(BASE_DIR / "db.sqlite3")),
+            "NAME": os.getenv(
+                "SQLITE_NAME",
+                str(BASE_DIR / "db.sqlite3"),
+            ),
         }
     }
+
 elif os.getenv("DB_NAME"):
     DATABASES = {
         "default": {
@@ -126,6 +155,7 @@ elif os.getenv("DB_NAME"):
             "CONN_MAX_AGE": 60,
         }
     }
+
 else:
     DATABASES = {
         "default": {
@@ -138,12 +168,21 @@ else:
 # ---------------------------------------------------------------------------
 # Auth / passwords
 # ---------------------------------------------------------------------------
+
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-     "OPTIONS": {"min_length": 8}},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 8},
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"
+    },
 ]
 
 # PRD §11.4 — bcrypt for password hashing
@@ -156,8 +195,9 @@ PASSWORD_HASHERS = [
 
 
 # ---------------------------------------------------------------------------
-# Internationalisation — Nigeria default (PRD §11.6)
+# Internationalisation — Nigeria default
 # ---------------------------------------------------------------------------
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Africa/Lagos"
 USE_I18N = True
@@ -167,8 +207,10 @@ USE_TZ = True
 # ---------------------------------------------------------------------------
 # Static / media
 # ---------------------------------------------------------------------------
+
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -178,6 +220,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ---------------------------------------------------------------------------
 # Django REST Framework + JWT
 # ---------------------------------------------------------------------------
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -185,6 +228,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+
     # PRD §11.4 — rate limiting
     "DEFAULT_THROTTLE_CLASSES": (
         "rest_framework.throttling.AnonRateThrottle",
@@ -207,32 +251,62 @@ SIMPLE_JWT = {
 
 
 # ---------------------------------------------------------------------------
-# CORS
+# CORS / CSRF
 # ---------------------------------------------------------------------------
+
+# The Vercel frontend is allowed to make requests to Django.
+#
+# Production:
+# CORS_ALLOWED_ORIGINS=https://emby-sigma.vercel.app
+#
+# Local:
+# CORS_ALLOWED_ORIGINS=http://localhost:3000
 CORS_ALLOWED_ORIGINS = env_list(
     "CORS_ALLOWED_ORIGINS",
     f"{FRONTEND_URL},http://localhost:3000,http://127.0.0.1:3000",
 )
+
 CORS_ALLOW_CREDENTIALS = True
+
+# Required for CSRF-protected requests originating from the frontend.
+CSRF_TRUSTED_ORIGINS = env_list(
+    "CSRF_TRUSTED_ORIGINS",
+    f"{FRONTEND_URL},http://localhost:3000,http://127.0.0.1:3000",
+)
 
 
 # ---------------------------------------------------------------------------
 # Celery (async slide processing)
 # ---------------------------------------------------------------------------
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "django-db")
+
+CELERY_BROKER_URL = os.getenv(
+    "CELERY_BROKER_URL",
+    "redis://localhost:6379/0",
+)
+
+CELERY_RESULT_BACKEND = os.getenv(
+    "CELERY_RESULT_BACKEND",
+    "django-db",
+)
+
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+
 # When True, tasks run inline (useful for dev without a running worker/broker)
-CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", False)
+CELERY_TASK_ALWAYS_EAGER = env_bool(
+    "CELERY_TASK_ALWAYS_EAGER",
+    False,
+)
+
 CELERY_TASK_EAGER_PROPAGATES = True
 
 
 # ---------------------------------------------------------------------------
 # Cloudinary
 # ---------------------------------------------------------------------------
+
 import cloudinary  # noqa: E402
 
 cloudinary.config(
@@ -241,6 +315,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET", ""),
     secure=True,
 )
+
 CLOUDINARY_STORAGE = {
     "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME", ""),
     "API_KEY": os.getenv("CLOUDINARY_API_KEY", ""),
@@ -251,6 +326,7 @@ CLOUDINARY_STORAGE = {
 # ---------------------------------------------------------------------------
 # Email (Gmail SMTP)
 # ---------------------------------------------------------------------------
+
 if os.getenv("EMAIL_HOST_USER"):
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
@@ -262,48 +338,80 @@ else:
     # No SMTP configured — print emails to the console instead of crashing
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", os.getenv("EMAIL_HOST_USER", "no-reply@emby.app"))
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    os.getenv("EMAIL_HOST_USER", "no-reply@emby.app"),
+)
 
 
 # ---------------------------------------------------------------------------
 # Third-party integration keys
 # ---------------------------------------------------------------------------
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 
 PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
 PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "")
-PAYSTACK_CALLBACK_URL = os.getenv("PAYSTACK_CALLBACK_URL", f"{FRONTEND_URL}/payment/callback")
+
+PAYSTACK_CALLBACK_URL = os.getenv(
+    "PAYSTACK_CALLBACK_URL",
+    f"{FRONTEND_URL}/payment/callback",
+)
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "")
 
 
 # ---------------------------------------------------------------------------
-# Production hardening (auto-on when DEBUG is off)
+# Production hardening
 # ---------------------------------------------------------------------------
+
 if not DEBUG:
-    SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
+    SECURE_SSL_REDIRECT = env_bool(
+        "SECURE_SSL_REDIRECT",
+        True,
+    )
+
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000"))
+
+    SECURE_HSTS_SECONDS = int(
+        os.getenv("SECURE_HSTS_SECONDS", "31536000")
+    )
+
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+    SECURE_PROXY_SSL_HEADER = (
+        "HTTP_X_FORWARDED_PROTO",
+        "https",
+    )
+
     X_FRAME_OPTIONS = "DENY"
 
 
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "verbose": {"format": "[{asctime}] {levelname} {name}: {message}", "style": "{"},
+        "verbose": {
+            "format": "[{asctime}] {levelname} {name}: {message}",
+            "style": "{",
+        },
     },
     "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
     },
-    "root": {"handlers": ["console"], "level": os.getenv("LOG_LEVEL", "INFO")},
+    "root": {
+        "handlers": ["console"],
+        "level": os.getenv("LOG_LEVEL", "INFO"),
+    },
 }
