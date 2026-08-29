@@ -1,0 +1,14 @@
+import { chromium } from "playwright";
+const [URL_, OUT] = process.argv.slice(2);
+const P = {id:4,username:"demo",email:"demo@emby.app",first_name:"Ada",last_name:"Okoro",full_name:"Ada Okoro",name:"Ada Okoro",onboarding_completed:true,email_verified:true,class_role:"student",class_head_verified:false,subscription_tier:"free",platform_role:"user"};
+const b = await chromium.launch();
+const c = await b.newContext({viewport:{width:430,height:930},isMobile:true,hasTouch:true,deviceScaleFactor:2});
+await c.addInitScript(([t,p])=>{try{sessionStorage.setItem("token",t);sessionStorage.setItem("refreshToken",t);sessionStorage.setItem("user",p);}catch{}},[process.env.EMBY_TOKEN||"demo",JSON.stringify(P)]);
+const pg = await c.newPage();
+pg.on("console", m => { if (m.type()==="error") console.log("  console.error:", m.text().slice(0,200)); });
+pg.on("response", r => { const u=r.url(); if (u.includes("/api/")) console.log(`  ${r.status()} ${u.replace(/^https?:\/\/[^/]+/,"")}`); });
+await pg.goto(URL_, {waitUntil:"load"});
+await pg.waitForTimeout(3500);
+await pg.screenshot({path: OUT});
+console.log("\n--- visible text ---\n" + (await pg.textContent("body")).replace(/\s+/g," ").slice(0,600));
+await b.close();

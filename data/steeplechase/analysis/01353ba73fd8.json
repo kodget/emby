@@ -1,0 +1,56 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Dissected limb specimen",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.08,
+    "x1": 1.0,
+    "y1": 0.56
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(a) IDENTIFY THE 2 structures tied?\n(b) What is the nerve supply to the structure pinned? (Be specific)?",
+  "station_number": 39,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.58,
+    "y": 0.35,
+    "description": "Threads tied around two long anatomical structures"
+  },
+  "structure": null,
+  "main_question": "Identify the two structures tied.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specimen is extremely degraded, frayed, and poorly dissected, making it impossible to confidently identify the specific nerves, vessels, or muscles that are tied with threads.",
+  "quality_flags": [
+    "specimen_highly_degraded",
+    "ambiguous_marker"
+  ],
+  "_source": {
+    "id": "01353ba73fd8",
+    "file": "01353ba73fd8.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 51,
+    "model": "gemini-3.5-flash"
+  }
+}

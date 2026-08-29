@@ -17,6 +17,7 @@ import {
   Crown,
   CheckCircle,
   ArrowRight,
+  Sprout,
   Flame,
   Loader2,
 } from "lucide-react";
@@ -37,6 +38,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { quizApi } from "@/lib/api";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
+import { PracticeArena } from "@/components/quiz/practice-arena";
 
 interface Subject {
   id: string;
@@ -110,21 +112,21 @@ const difficultyLevels = [
     label: "Easy",
     description: "Foundation concepts",
     color: "text-emerald-600",
-    icon: "🌱",
+    icon: Sprout,
   },
   {
     value: "medium" as const,
     label: "Medium",
     description: "Applied knowledge",
     color: "text-amber-600",
-    icon: "🔥",
+    icon: Flame,
   },
   {
     value: "hard" as const,
     label: "Hard",
     description: "Advanced mastery",
     color: "text-rose-600",
-    icon: "⚡",
+    icon: Zap,
   },
 ];
 
@@ -330,110 +332,11 @@ function QuizConfigContent() {
 
   if (!showAdvanced) {
     return (
-      <div className="min-h-screen bg-linear-90-to-br from-background via-background to-accent/20 py-8 px-4">
-        <div className="container max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8 flex flex-col items-center">
-            <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-primary to-primary/60 flex items-center justify-center mb-4">
-              <Brain className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-4xl font-display font-bold">Practice Arena</h1>
-            <p className="text-muted-foreground mt-2">Choose your study method and start learning</p>
-          </div>
-
-          {/* Quick Start Grid */}
-          <div className="grid gap-6 md:grid-cols-2 mb-8">
-            {/* Practice Weak Areas Card */}
-            <Card className="hover:shadow-md transition-all border border-border">
-              <CardHeader>
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-2">
-                  <Target className="w-5 h-5" />
-                </div>
-                <CardTitle className="text-xl">Practice Weak Areas</CardTitle>
-                <CardDescription>
-                  Practice 10 questions you've previously gotten wrong to patch learning gaps.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Button
-                  onClick={startMissedQuestions}
-                  disabled={creatingMissed}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 hover:opacity-90 text-white font-semibold h-11 rounded-xl"
-                >
-                  {creatingMissed ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Practice Weak Areas"
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Anatomy Steeplechase */}
-            <Card className="hover:shadow-md transition-all border border-border">
-              <CardHeader>
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-2">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <CardTitle className="text-xl">Anatomy Steeplechase</CardTitle>
-                <CardDescription>
-                  Timed anatomy spotter exams with active tag pins.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="w-full block">
-                  <Button 
-                    onClick={() => router.push("/steeplechase")}
-                    className="w-full bg-amber-600 hover:bg-amber-500 hover:opacity-90 text-white font-semibold h-11 rounded-xl"
-                  >
-                    Enter Steeplechase
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Histology Spotter */}
-            <Card className="hover:shadow-md transition-all border border-border">
-              <CardHeader>
-                <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 mb-2">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <CardTitle className="text-xl">Histology Identification</CardTitle>
-                <CardDescription>
-                  Practice slide identification with high-res microscopic images.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="w-full block">
-                  <Button 
-                    onClick={() => {
-                      toast({ title: "Coming soon", description: "Histology Spotter is currently under development.", variant: "default" });
-                    }}
-                    className="w-full bg-rose-600 hover:bg-rose-500 hover:opacity-90 text-white font-semibold h-11 rounded-xl"
-                  >
-                    Enter Histology Spotter
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Advanced toggle */}
-          <div className="text-center pt-6 border-t border-border/60">
-            <Button
-              variant="outline"
-              onClick={() => setShowAdvanced(true)}
-              className="gap-2 rounded-xl h-11 px-6"
-            >
-              <Settings className="w-4 h-4" />
-              Advanced Custom Quiz Configurator
-            </Button>
-          </div>
-        </div>
-      </div>
+      <PracticeArena
+        onMissedQuestions={startMissedQuestions}
+        creatingMissed={creatingMissed}
+        onAdvanced={() => setShowAdvanced(true)}
+      />
     );
   }
 
@@ -907,7 +810,7 @@ function QuizConfigContent() {
                             }
                           >
                             <CardContent className="p-4 text-center">
-                              <div className="text-2xl mb-2">{level.icon}</div>
+                              <level.icon className={`mx-auto mb-2 size-6 ${level.color}`} aria-hidden="true" />
                               <div className={`font-semibold ${level.color}`}>
                                 {level.label}
                               </div>

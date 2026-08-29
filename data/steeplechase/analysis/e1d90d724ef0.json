@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.28,
+    "y0": 0.08,
+    "x1": 1.0,
+    "y1": 0.78
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.27,
+    "y": 0.36,
+    "description": "A thin pin or probe with a small white paper tag bearing an illegible handwritten mark is inserted into the specimen on the left side."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph is dark and low-resolution, and the handwritten tag is not legible. The specific structure indicated by the pin cannot be confidently identified from the visible tissue, so no main question or answer can be reliably constructed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The image is dark, low-resolution and appears to be a composite of multiple crops. The handwritten tag on the pin is illegible, and the marked anatomical structure cannot be confidently identified from the visible preserved tissue. A clearer, single, well-lit photograph with a legible question is required before this can be used as an exam station.",
+  "quality_flags": [
+    "very dark",
+    "low resolution",
+    "composite / multiple views",
+    "question paper illegible",
+    "marker target structure unclear",
+    "specimen partially out of frame"
+  ],
+  "_source": {
+    "id": "e1d90d724ef0",
+    "file": "e1d90d724ef0.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 103,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

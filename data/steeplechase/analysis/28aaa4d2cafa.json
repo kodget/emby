@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.5,
+    "y": 0.2,
+    "description": "White strings/threads visible in the upper portion of the specimen, but their exact target structure is unclear"
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a cadaveric prosection with strings/threads, but the specific structure being marked cannot be confidently identified due to poor image quality and lack of clear anatomical landmarks.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "Poor image quality (dark, blurry), no question paper visible, no station number, and the specific structure marked by the threads cannot be confidently identified. The anatomical region is also unclear.",
+  "quality_flags": [
+    "poor_image_quality",
+    "dark_image",
+    "no_question_paper",
+    "no_station_number",
+    "marker_target_unclear",
+    "anatomical_region_unclear"
+  ],
+  "_source": {
+    "id": "28aaa4d2cafa",
+    "file": "28aaa4d2cafa.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 102,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

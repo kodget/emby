@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Brain",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.48,
+    "x1": 0.25,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": "33\n(a) Identify the structure bearing the green pin (Be specific)\n(b) What structure is pointed blue (be specific)",
+  "station_number": 33,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pins or markers are visible on the specimen in the photograph, although the question paper references green and blue pins."
+  },
+  "structure": null,
+  "main_question": "Identify the structure bearing the green pin (Be specific)",
+  "main_answer": null,
+  "main_explanation": "The specific structure indicated by the green pin cannot be identified because the pin is not visible in the photograph.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The photograph does not show the pins (green and blue) referenced in the question paper, making it impossible to identify the specific structures being tested. The specimen is also partially out of frame.",
+  "quality_flags": [
+    "Specimen partially out of frame",
+    "Markers (pins) not visible",
+    "Question paper obscures part of the scene"
+  ],
+  "_source": {
+    "id": "65dd11e14c2a",
+    "file": "65dd11e14c2a.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 3,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

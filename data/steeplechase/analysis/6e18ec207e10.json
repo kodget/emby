@@ -1,0 +1,55 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.0,
+    "y1": 0.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Name the boundaries of the Anatomical Snuffbox.",
+  "station_number": 34,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "Name the boundaries of the Anatomical Snuffbox.",
+  "main_answer": "Anterior/lateral boundary: tendons of abductor pollicis longus and extensor pollicis brevis. Posterior/medial boundary: tendon of extensor pollicis longus. Floor: scaphoid and trapezium bones.",
+  "main_explanation": "The anatomical snuffbox is a triangular depression on the radial (lateral) aspect of the hand at the level of the carpal bones.",
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 1.0,
+  "needs_review": true,
+  "review_reason": "No anatomical specimen is visible in the photograph; only the question card is present.",
+  "quality_flags": [
+    "no_specimen"
+  ],
+  "_source": {
+    "id": "6e18ec207e10",
+    "file": "6e18ec207e10.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 43,
+    "model": "gemini-3.5-flash"
+  }
+}

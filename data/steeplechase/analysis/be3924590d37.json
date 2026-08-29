@@ -1,0 +1,53 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.78,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag, or painted mark is visible; only a metallic instrument (forceps/probe) is partly seen in the upper panels, which does not indicate a specific structure."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a narrow vertical strip of close-up crops of a preserved prosection with no legible question paper, no station number, and no unambiguous marker. The structure being tested cannot be identified from what is visible, so no main question can be reliably constructed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "No question paper, station number, or marker is visible, and the image is a heavily cropped vertical strip of close-ups that does not allow confident identification of the region or the structure of interest. A full-frame photograph with the question sheet and a clear marker is required.",
+  "quality_flags": [
+    "specimen mostly out of frame",
+    "no marker present",
+    "no question paper visible",
+    "no station number visible",
+    "image is a narrow cropped strip losing anatomical context",
+    "low resolution / blurry"
+  ],
+  "_source": {
+    "id": "be3924590d37",
+    "file": "be3924590d37.jpeg",
+    "width": 509,
+    "height": 679,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 23,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

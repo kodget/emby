@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.0,
+    "x1": 0.95,
+    "y1": 0.5
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.35,
+    "y": 0.27,
+    "description": "Blue-headed dressmaker pin inserted into a soft tissue structure within the prosection."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a preserved cadaveric prosection with a pin, but the region and the specific pinned structure cannot be confidently identified from the image. No question paper or station number is present to provide context.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "Cannot identify the anatomical region or the specific structure indicated by the pin. No question paper, station number, or clear landmarks are visible to orient the specimen. The image appears to be a cropped or partial view of a larger dissection.",
+  "quality_flags": [
+    "specimen orientation unclear",
+    "no question paper present",
+    "no station number",
+    "pinned structure ambiguous",
+    "possible cropped view"
+  ],
+  "_source": {
+    "id": "ee8f22aaa113",
+    "file": "ee8f22aaa113.jpeg",
+    "width": 1820,
+    "height": 952,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 18,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

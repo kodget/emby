@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Heart",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.15,
+    "x1": 0.38,
+    "y1": 0.65
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) Identify the area Pinnes b) What is its embryonic Origin?",
+  "station_number": 11,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.21,
+    "y": 0.37,
+    "description": "A blue-headed pin is inserted into the atrial septum of the heart."
+  },
+  "structure": "Limbus ovalis",
+  "main_question": "Identify the area pinned.",
+  "main_answer": "Limbus ovalis",
+  "main_explanation": "The pin indicates the limbus ovalis, which is the fibrous rim of the fossa ovalis in the interatrial septum.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What is the embryonic origin of the structure indicated by the pin?",
+    "options": [
+      "Septum primum",
+      "Septum secundum",
+      "Endocardial cushions",
+      "Aorticopulmonary septum"
+    ],
+    "correct_index": 1,
+    "explanation": "The limbus ovalis is formed by the edge of the septum secundum, which overlies the foramen ovale during fetal development."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple photos",
+    "Specimen is preserved and dark, making surface details less distinct"
+  ],
+  "_source": {
+    "id": "fb0d959c5a4c",
+    "file": "fb0d959c5a4c.jpeg",
+    "width": 2560,
+    "height": 1920,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 15,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,11 +1,12 @@
 """
-AI Service — Slide-Aware Chat with Google Gemini (google-genai SDK)
+AI Service — Slide-Aware Chat over an OpenAI-compatible open-weight model
 
 CRITICAL ARCHITECTURE:
 - The AI is STATELESS: send slide context (text + image) in EVERY request
 - Per-slide conversation history managed by the frontend store
 - Structured JSON for resources (YouTube, textbooks, MCQs)
 - API key lives ONLY on the backend — never exposed to the browser
+- Provider-agnostic: all traffic goes through curriculum.llm (Groq / Cerebras / ...)
 """
 
 import os
@@ -13,73 +14,81 @@ import json
 import logging
 from typing import Dict, List, Any, Optional
 
+from . import llm
+
 logger = logging.getLogger(__name__)
 
 
 def _get_api_key() -> str:
-    """Resolve the Gemini API key from Django settings, falling back to env."""
-    try:
-        from django.conf import settings
-        key = getattr(settings, "GEMINI_API_KEY", "") or ""
-    except Exception:
-        key = ""
-    return key or os.getenv("GEMINI_API_KEY", "")
-
-
-# Backwards-compatible module constant (read lazily where possible)
-GEMINI_API_KEY = _get_api_key()
-
-
-def _get_client():
-    """Lazy-initialize the Gemini client."""
-    api_key = _get_api_key()
-    if not api_key:
-        raise RuntimeError(
-            "GEMINI_API_KEY is not configured. Add it to your .env to enable AI features."
-        )
-    from google import genai
-    return genai.Client(api_key=api_key)
+    """Deprecated. Retained so old imports keep working; see curriculum.llm."""
+    return llm.api_key()
 
 
 def _strip_json_fences(text: str) -> str:
     """Remove markdown code fences the model sometimes wraps JSON in."""
-    text = (text or "").strip()
-    if text.startswith("```"):
-        lines = text.split("\n")
-        # Drop the opening fence (``` or ```json) and a trailing fence if present
-        lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        text = "\n".join(lines)
-    return text.strip()
+    return llm.strip_fences(text)
 
 
-def _generate(parts: list, model: str = "gemini-3.6-flash") -> str:
+def _generate(parts: list, model: Optional[str] = None) -> str:
     """
-    Core helper: call Gemini with a list of parts (text and/or images).
-    Returns the text response, or raises on failure.
-    """
-    client = _get_client()
-    from google.genai import types
+    Core helper: run a completion against the configured open-weight model.
 
-    content_parts = []
+    `parts` keeps the shape the Gemini implementation used — a list where each entry is
+    either a prompt string or an inline-image dict — so every existing call site works
+    unchanged. Images are dropped with a warning because the open-weight models Emby now
+    runs on are text-only; slide text is already included in every prompt by the callers,
+    so answers stay grounded in the slide content.
+
+    Returns the model's text, or raises LLMError / LLMNotConfigured.
+    """
+    texts: list[str] = []
+    images: list[dict] = []
+
     for part in parts:
         if isinstance(part, str):
-            content_parts.append(types.Part.from_text(text=part))
+            texts.append(part)
         elif isinstance(part, dict) and "data" in part:
-            # Inline image
-            content_parts.append(
-                types.Part.from_bytes(
-                    data=part["data"] if isinstance(part["data"], bytes) else bytes.fromhex(part["data"]) if all(c in "0123456789abcdefABCDEF" for c in part["data"][:10]) else __import__("base64").b64decode(part["data"]),
-                    mime_type=part.get("mime_type", "image/jpeg"),
-                )
-            )
+            images.append(part)
 
-    response = client.models.generate_content(
+    prompt = "\n\n".join(t for t in texts if t).strip()
+    if not prompt:
+        raise llm.LLMError("Refusing to call the model with an empty prompt.")
+
+    # A request carrying a slide image goes to the multimodal model so the tutor can
+    # actually see the diagram the student is asking about. If vision is unavailable, or
+    # the image request fails, fall back to the text-only path rather than erroring —
+    # every caller already includes the slide's extracted text.
+    if images and llm.supports_vision():
+        image = images[0]
+        try:
+            return llm.chat_with_image(
+                prompt,
+                _as_base64(image["data"]),
+                mime_type=image.get("mime_type", "image/jpeg"),
+                max_tokens=1500,
+            )
+        except (llm.LLMError, llm.LLMNotConfigured, ValueError) as exc:
+            logger.warning("Vision call failed, falling back to slide text: %s", exc)
+
+    return llm.chat(
+        [{"role": "user", "content": prompt}],
         model=model,
-        contents=content_parts,
+        temperature=0.4,
+        max_tokens=2048,
     )
-    return response.text or ""
+
+
+def _as_base64(data) -> str:
+    """Normalise an inline image to a base64 string.
+
+    Callers have historically passed raw bytes or an already-encoded string, so both are
+    accepted rather than requiring every call site to change.
+    """
+    import base64
+
+    if isinstance(data, bytes):
+        return base64.b64encode(data).decode()
+    return str(data)
 
 
 class SlideAwareAI:
@@ -162,7 +171,7 @@ TONE: Warm, encouraging, like a helpful senior colleague. If something is confus
             }
 
         except Exception as e:
-            logger.error(f"Gemini chat error: {e}")
+            logger.error(f"LLM chat error: {e}")
             return {
                 "response": "I'm having a little trouble right now. Please try again in a moment.",
                 "error": str(e),

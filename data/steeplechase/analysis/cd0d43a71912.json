@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.65,
+    "y1": 0.42
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.48,
+    "y": 0.42,
+    "description": "Teal/green-headed dressmaker pin inserted into folded mucosal tissue"
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a preserved cadaveric prosection with a pin marking a structure within folded mucosa, but the specific anatomical region and the exact structure indicated cannot be confidently identified from the image alone. No question paper or station number is visible to provide context.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "Cannot confidently identify the anatomical region or the specific structure marked by the pin. The image is a composite or poorly framed photograph with the specimen cut off at edges and a large empty bench area. No question paper or station number is visible to provide context. The folded mucosal appearance suggests head/neck (possibly oral cavity, pharynx, or larynx) but this is not certain enough to commit.",
+  "quality_flags": [
+    "specimen partially out of frame",
+    "no question paper visible",
+    "no station number visible",
+    "poor framing with large empty bench area",
+    "image appears to be a composite or stitched photo",
+    "marker structure ambiguous without context"
+  ],
+  "_source": {
+    "id": "cd0d43a71912",
+    "file": "cd0d43a71912.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 49,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

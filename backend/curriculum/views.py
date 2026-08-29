@@ -1,3 +1,4 @@
+import logging
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -21,6 +22,8 @@ from .serializers import (
     FriendChallengeSerializer, BrainBattleSerializer, BattleParticipantSerializer,
     FlashcardSerializer, FlashcardProgressSerializer, FlashcardReviewSerializer
 )
+
+logger = logging.getLogger(__name__)
 
 
 # -------------------------
@@ -225,9 +228,13 @@ class MaterialViewSet(viewsets.ModelViewSet):
         return queryset
     
     def perform_create(self, serializer):
-        # Check if user can upload (class_head or material_uploader)
-        profile = self.request.user.profile
-        if profile.role not in ['class_head', 'material_uploader']:
+        # Upload rights live in accounts.permissions, which understands verified class
+        # heads, material uploaders and the SLIDE_UPLOADER capability. This used to read
+        # `profile.role`, which does not exist, so it raised instead of authorising.
+        from accounts.permissions import can_upload_slides
+
+        profile = getattr(self.request.user, 'profile', None)
+        if profile is None or not can_upload_slides(profile):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Only class heads and material uploaders can upload materials")
         
@@ -367,12 +374,39 @@ class ScheduleItemViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
-        """Mark schedule item as complete"""
+        """Mark a planner item complete and record it as real study activity.
+
+        Completing a planned session is a learning event like any other, so it feeds the
+        same stream that drives study time, streaks, analytics and XP. Without this the
+        planner was a checklist that no other part of the app could see.
+        """
         item = self.get_object()
+        already_done = item.completed
+
         item.completed = True
         item.completed_at = timezone.now()
         item.save()
-        
+
+        if not already_done:
+            # Only the first completion counts; re-completing must not pay out twice.
+            try:
+                from learning import events
+                from learning.models import ActivityType
+
+                events.record(
+                    request.user,
+                    ActivityType.PLANNER_TASK_COMPLETED,
+                    block=item.block,
+                    sub_block=item.sub_block,
+                    duration_seconds=max(0, int(item.estimated_minutes or 0)) * 60,
+                    resource_type='schedule_item',
+                    resource_id=str(item.id),
+                    metadata={'activity_type': item.activity_type, 'title': item.title},
+                )
+            except Exception:
+                # A planner tick must never fail because analytics had a problem.
+                logger.exception('Could not record planner completion for item %s', item.id)
+
         serializer = self.get_serializer(item)
         return Response(serializer.data)
     
@@ -999,11 +1033,12 @@ class SlideDeckViewSet(viewsets.ModelViewSet):
         Only 'class_head' and 'material_uploader' roles can upload decks.
         """
         # ========== ROLE-BASED ACCESS CONTROL ==========
+        from accounts.permissions import can_upload_slides
         try:
             profile = request.user.profile
-            if profile.role not in ['class_head', 'material_uploader']:
+            if not can_upload_slides(profile):
                 return Response(
-                    {'error': f'Only class heads and material uploaders can upload documents. Your role: {profile.role}'},
+                    {'error': 'Only class heads and material uploaders can upload documents.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
         except AttributeError:
@@ -1206,9 +1241,10 @@ class SlideDeckViewSet(viewsets.ModelViewSet):
         # ========== PERMISSION CHECK ==========
         # User must be the uploader OR have class_head/material_uploader role
         is_uploader = deck.uploaded_by == request.user
+        from accounts.permissions import can_upload_slides
         try:
             profile = request.user.profile
-            can_delete = is_uploader or profile.role in ['class_head', 'material_uploader']
+            can_delete = is_uploader or can_upload_slides(profile)
         except AttributeError:
             can_delete = False
         
@@ -1248,8 +1284,10 @@ def generate_questions_from_slide_view(request, slide_id):
     Body: {num_mcq (default 5), num_theory (default 3)}
     Only class heads and material uploaders can trigger this.
     """
-    profile = request.user.profile
-    if profile.role not in ['class_head', 'material_uploader']:
+    from accounts.permissions import can_upload_slides
+
+    profile = getattr(request.user, 'profile', None)
+    if profile is None or not can_upload_slides(profile):
         return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
     try:
@@ -1303,10 +1341,21 @@ def ai_study_recommendations(request):
 # -------------------------
 
 def has_premium_access(user):
-    """Check if user has premium access (premium subscription OR class head)"""
-    if not hasattr(user, 'profile'):
+    """Whether this user may use premium features.
+
+    Delegates to accounts.permissions so entitlement is decided in exactly one place.
+    The previous implementation read `profile.role`, a field that does not exist — the
+    model has `platform_role` and `class_role`. In views.py that raised AttributeError
+    whenever is_premium was False; in ai_views.py it was swallowed by an except clause,
+    which silently denied premium AI to verified class heads. The clause was also
+    redundant: Profile.is_premium already covers admins and verified class heads.
+    """
+    from accounts.permissions import can_access_premium_features
+
+    profile = getattr(user, "profile", None)
+    if profile is None:
         return False
-    return user.profile.is_premium or user.profile.role == 'Class Head'
+    return can_access_premium_features(profile)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1744,11 +1793,17 @@ class BrainBattleViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        profile = getattr(self.request.user, 'profile', None)
+        # A battle is visible if it belongs to your class, you host it, or you have
+        # joined it by code. The class-only filter meant a code shared across classes
+        # produced a battle the participant could never see again.
+        user = self.request.user
+        profile = getattr(user, 'profile', None)
         class_group = profile.class_group if profile else None
-        if not class_group:
-            return self.queryset.none()
-        return self.queryset.filter(class_group=class_group)
+
+        visible = Q(host=user) | Q(participants__user=user)
+        if class_group:
+            visible |= Q(class_group=class_group)
+        return self.queryset.filter(visible).distinct()
 
     def perform_create(self, serializer):
         from rest_framework.exceptions import ValidationError
@@ -1770,11 +1825,45 @@ class BrainBattleViewSet(viewsets.ModelViewSet):
         
         topic_str = " > ".join(hierarchy_parts) or battle.topic or battle.title
         
-        num_questions = int(self.request.data.get('num_questions', 10))
-        num_questions = min(40, max(1, num_questions)) # Limit to max 40
-        
-        # Pass difficulty
-        questions = generate_battle_questions(topic_str, num_questions=num_questions, difficulty=battle.difficulty)
+        try:
+            num_questions = int(self.request.data.get('num_questions', 10))
+        except (TypeError, ValueError):
+            num_questions = 10
+        num_questions = min(40, max(1, num_questions))
+
+        # Generating a battle costs AI credits like any other AI action, and the host is
+        # the one who pays. A failure here must leave the battle in an honest state
+        # rather than a playable-looking one with no questions.
+        from learning import credits
+        from learning.models import AIAction
+
+        try:
+            with credits.spend(
+                self.request.user,
+                AIAction.BATTLE_QUESTIONS,
+                resource_type='brain_battle',
+                resource_id=str(battle.id),
+            ):
+                questions = generate_battle_questions(
+                    topic_str, num_questions=num_questions, difficulty=battle.difficulty
+                )
+        except credits.InsufficientCredits as exc:
+            battle.delete()
+            raise ValidationError(str(exc))
+        except Exception as exc:
+            battle.delete()
+            logger.exception('Battle question generation failed')
+            raise ValidationError(
+                'Could not generate questions for this battle. Please try again.'
+            ) from exc
+
+        if not questions:
+            battle.delete()
+            raise ValidationError(
+                'The question generator returned nothing for that topic. '
+                'Try a broader topic.'
+            )
+
         battle.questions = questions
         battle.save()
 

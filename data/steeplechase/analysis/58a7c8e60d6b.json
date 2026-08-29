@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Specimen",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.02,
+    "x1": 0.92,
+    "y1": 0.66
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.49,
+    "y": 0.49,
+    "description": "Blue-headed dressmaker pin placed on the posterior/superior surface of the pelvis, near the acetabular / sciatic notch region."
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": null,
+  "main_explanation": "The specimen is a preserved pelvis (os coxae) viewed from the posterior/superior aspect. A blue-headed pin marks a landmark in the region of the acetabulum / greater sciatic notch, but the exact structure cannot be confidently determined from the available views and lighting, so the answer is left null pending review.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.45,
+  "needs_review": true,
+  "review_reason": "The marked structure cannot be confidently identified. The image is a composite of multiple cropped views of the same pelvis with dark, low-contrast lighting, and the only paper present is a label reading 'Specimen' rather than a question. The pin appears to be near the acetabulum / sciatic notch region, but the precise landmark is ambiguous.",
+  "quality_flags": [
+    "Composite image of multiple cropped views of the same specimen",
+    "Dark, low-contrast lighting",
+    "No legible question on the paper (only the word 'Specimen')",
+    "Marker target structure ambiguous"
+  ],
+  "_source": {
+    "id": "58a7c8e60d6b",
+    "file": "58a7c8e60d6b.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 132,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

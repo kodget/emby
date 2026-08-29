@@ -1,0 +1,62 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Fibula",
+  "specimen_bbox": {
+    "x0": 0.13,
+    "y0": 0.18,
+    "x1": 0.72,
+    "y1": 0.72
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Specifically Identify the bone\nB) what clinical condition arises from the damage to the painted part",
+  "station_number": 11,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.18,
+    "y": 0.68,
+    "description": "Painted mark on the distal end of the fibula (lateral malleolus)."
+  },
+  "structure": "Lateral malleolus of fibula",
+  "main_question": "Identify the bone.",
+  "main_answer": "Fibula",
+  "main_explanation": "The specimen is a fibula, a slender long bone of the lower leg, characterized by its small head proximally and the lateral malleolus distally.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following clinical conditions is most commonly associated with damage to the structure indicated by the painted part?",
+    "options": [
+      "Patellar dislocation",
+      "Ankle fracture",
+      "Hip dislocation",
+      "Wrist sprain"
+    ],
+    "correct_index": 1,
+    "explanation": "The painted part indicates the lateral malleolus, which is the distal end of the fibula and forms the lateral aspect of the ankle joint. Fractures of the lateral malleolus are a common type of ankle fracture."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The fibula is a primary weight-bearing bone of the lower leg.",
+    "answer": false,
+    "explanation": "The fibula bears very little of the body's weight. Its primary roles are to provide attachment for muscles and to stabilize the ankle joint. The tibia is the main weight-bearing bone of the lower leg."
+  },
+  "confidence": 1.0,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "blurry",
+    "poor lighting",
+    "hand in frame"
+  ],
+  "_source": {
+    "id": "7bd28249e66f",
+    "file": "7bd28249e66f.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 15,
+    "model": "gemini-2.5-flash"
+  }
+}

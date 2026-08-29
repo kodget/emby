@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Larynx",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.05,
+    "x1": 0.5,
+    "y1": 0.5
+  },
+  "question_paper_present": true,
+  "transcribed_question": "THE AREA TAPPED IS RELATED TO WHAT STRUCTURE? B) IDENTIFY THE PINNED STRUCTURE (GREEN) C) EMBRYONIC ORIGIN OF THE ORGAN? a) Arch of aorta b) Pulmonary ligament c) laryngotracheal diverticulum",
+  "station_number": 24,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.12,
+    "y": 0.36,
+    "description": "Green-headed pin"
+  },
+  "structure": "Thyroid cartilage",
+  "main_question": "Identify the pinned structure (green).",
+  "main_answer": "Thyroid cartilage",
+  "main_explanation": "The pin is located on the large, shield-shaped cartilage that forms the anterior and lateral walls of the larynx, known as the thyroid cartilage.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What is the embryonic origin of the organ shown?",
+    "options": [
+      "Arch of aorta",
+      "Pulmonary ligament",
+      "Laryngotracheal diverticulum",
+      "Pharyngeal arches only"
+    ],
+    "correct_index": 2,
+    "explanation": "The larynx develops from the laryngotracheal diverticulum (laryngobronchial diverticulum) of the foregut, along with contributions from the pharyngeal arches for its cartilages."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "5e4cceaa98a2",
+    "file": "5e4cceaa98a2.jpeg",
+    "width": 1372,
+    "height": 2684,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 28,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

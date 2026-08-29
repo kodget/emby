@@ -1,350 +1,259 @@
 "use client";
 
+/**
+ * Desktop sidebar.
+ *
+ * Two things changed here beyond the visual pass:
+ *
+ *  1. It collapses to an icon rail and the choice persists across navigation and
+ *     refreshes, read synchronously on first paint so the rail never flashes wide.
+ *  2. Mobile no longer uses this at all — the bottom tab bar owns small screens — so the
+ *     old hamburger and slide-over sheet are gone and the two behaviours no longer fight.
+ */
+
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faGaugeHigh,
-  faBookOpen,
-  faBookOpenReader,
-  faListCheck,
-  faTrophy,
-  faLayerGroup,
-  faComments,
-  faFire,
-  faStethoscope,
-  faUser,
-  faLightbulb,
-  faBars,
-  faXmark,
-  faChartLine,
-  faSchool,
-  faPersonRunning,
-} from "@fortawesome/free-solid-svg-icons";
+import { useCallback, useEffect, useState } from "react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+
+import { Icon3D } from "@/components/brand/icon-3d";
+import { LOGO_MARK, type IconName } from "@/lib/brand";
 import { cn } from "@/lib/utils";
-import { UploadProgressStrip } from "./upload-progress-strip";
 import { useAppSelector } from "@/store/hooks";
-import { useEffect, useState } from "react";
+import { UploadProgressStrip } from "./upload-progress-strip";
+
+const STORAGE_KEY = "emby.sidebar.collapsed";
 
 type NavItem = {
   label: string;
   href: string;
-  icon: typeof faGaugeHigh;
+  icon: IconName;
   match?: RegExp;
 };
 
-const primaryStudy: NavItem[] = [
-  {
-    label: "Home",
-    href: "/dashboard",
-    icon: faGaugeHigh,
-    match: /^\/dashboard$/,
-  },
-  {
-    label: "Learn",
-    href: "/courses",
-    icon: faBookOpenReader,
-    match: /^\/courses/,
-  },
-  {
-    label: "Practice",
-    href: "/quiz",
-    icon: faListCheck,
-    match: /^\/(quiz|steeplechase)/,
-  },
-  {
-    label: "Review",
-    href: "/flashcards",
-    icon: faLayerGroup,
-    match: /^\/flashcards/,
-  },
-  {
-    label: "Compete",
-    href: "/brainstorming",
-    icon: faTrophy,
-    match: /^\/(brainstorming|battles)/,
-  },
-  {
-    label: "Community",
-    href: "/community",
-    icon: faComments,
-    match: /^\/community/,
-  },
+const STUDY: NavItem[] = [
+  { label: "Home", href: "/dashboard", icon: "dashboard", match: /^\/dashboard$/ },
+  { label: "Learn", href: "/courses", icon: "read", match: /^\/(courses|read)/ },
+  { label: "Practice", href: "/quiz", icon: "quiz", match: /^\/quiz/ },
+  { label: "Steeplechase", href: "/steeplechase", icon: "steeplechase", match: /^\/steeplechase/ },
+  { label: "Histology", href: "/histology", icon: "histology", match: /^\/histology/ },
+  { label: "Review", href: "/flashcards", icon: "flashcards", match: /^\/(flashcards|decks)/ },
+  { label: "Brain Battle", href: "/battles", icon: "battle", match: /^\/(battles|brainstorming)/ },
 ];
 
-const secondaryTools: NavItem[] = [
-  {
-    label: "Analytics",
-    href: "/analytics",
-    icon: faChartLine,
-    match: /^\/analytics/,
-  },
-  {
-    label: "Study Plan",
-    href: "/study-plan",
-    icon: faBookOpen,
-    match: /^\/study-plan/,
-  },
-  {
-    label: "Profile",
-    href: "/profile",
-    icon: faUser,
-    match: /^\/profile$/,
-  },
-  {
-    label: "Premium",
-    href: "/premium",
-    icon: faFire,
-    match: /^\/premium$/,
-  },
+const TOOLS: NavItem[] = [
+  { label: "Analytics", href: "/analytics", icon: "analytics", match: /^\/analytics/ },
+  { label: "Study Plan", href: "/study-plan", icon: "planner", match: /^\/study-plan/ },
+  { label: "Community", href: "/community", icon: "community", match: /^\/community/ },
+  { label: "Profile", href: "/profile", icon: "profile", match: /^\/profile$/ },
+  { label: "Premium", href: "/premium", icon: "premium", match: /^\/premium$/ },
 ];
 
-// Class-head-only item — shown after a divider at the bottom of the nav
-const classManagementItem: NavItem = {
+const CLASS_ITEM: NavItem = {
   label: "Class Management",
   href: "/class/curriculum",
-  icon: faSchool,
+  icon: "community",
   match: /^\/class\//,
 };
 
-function SidebarContent({ onNav }: { onNav?: () => void }) {
-  const pathname = usePathname();
-  const isVerifiedClassHead = useAppSelector((s) => s.user.isVerifiedClassHead);
-  const isUploader = useAppSelector((s) => s.user.role === "uploader");
-  const streak = useAppSelector((s) => s.user.streak) || 0;
-  const [hasHydrated, setHasHydrated] = useState(false);
+/** Read the stored preference before first paint to avoid a width flash. */
+function readCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
-  useEffect(() => {
-    setHasHydrated(true);
+export function AppSidebar() {
+  const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const isClassHead = useAppSelector((s) => s.user.isVerifiedClassHead);
+  const streak = useAppSelector((s) => s.user.streak) || 0;
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => setHydrated(true), []);
+
+  const toggle = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* private mode — the preference simply won't persist */
+      }
+      return next;
+    });
   }, []);
 
-  const badge =
-    hasHydrated && (isVerifiedClassHead ? "Class Head" : isUploader ? "Uploader" : null);
+  const items = hydrated && isClassHead ? [...TOOLS, CLASS_ITEM] : TOOLS;
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-5">
+    <aside
+      data-collapsed={collapsed}
+      className={cn(
+        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex",
+        "transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        collapsed ? "w-[74px]" : "w-64",
+      )}
+    >
+      {/* Brand + collapse control */}
+      <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-4">
         <Link
-          href="/"
-          className="group flex items-center gap-2.5"
+          href="/dashboard"
+          className="press flex min-w-0 items-center gap-2.5"
           aria-label="Emby home"
-          onClick={onNav}
         >
-          <span
-            className="relative flex size-9 items-center justify-center rounded-xl text-primary-foreground transition-transform duration-200 group-hover:scale-105"
-            style={{
-              background:
-                "linear-gradient(140deg, color-mix(in oklab, var(--primary) 100%, white 12%), color-mix(in oklab, var(--primary) 78%, black 8%))",
-              boxShadow:
-                "inset 0 1px 0 0 color-mix(in oklab, white 30%, transparent), 0 6px 18px -6px color-mix(in oklab, var(--primary) 70%, transparent)",
-            }}
-          >
-            <FontAwesomeIcon icon={faStethoscope} className="size-4" />
-          </span>
-          <span className="flex flex-col leading-none">
-            <span className="font-serif text-lg font-semibold tracking-tight">
-              Emby
+          <Image
+            src={LOGO_MARK}
+            alt=""
+            width={36}
+            height={36}
+            priority
+            className="size-9 shrink-0 select-none"
+            draggable={false}
+          />
+          {!collapsed && (
+            <span className="flex min-w-0 flex-col leading-none">
+              <span className="font-display text-lg font-semibold tracking-tight">Emby</span>
+              <span className="truncate text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                BMS Edition
+              </span>
             </span>
-            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              BMS Edition
-            </span>
-          </span>
+          )}
         </Link>
+
+        {!collapsed && (
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label="Collapse sidebar"
+            className="press ml-auto flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+          >
+            <PanelLeftClose className="size-4" />
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="px-3 pb-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-          Study
-        </p>
-        <ul className="space-y-0.5">
-          {primaryStudy.map((item) => {
-            const active = item.match
-              ? item.match.test(pathname)
-              : pathname === item.href;
-            return (
-              <li key={item.label}>
-                <NavLink item={item} active={active} onNav={onNav} />
-              </li>
-            );
-          })}
-        </ul>
+      {collapsed && (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label="Expand sidebar"
+          className="press mx-auto mt-3 flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+        >
+          <PanelLeftOpen className="size-4" />
+        </button>
+      )}
 
-        <div className="mx-3 my-3 border-t border-sidebar-border" />
-
-        <p className="px-3 pb-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-          Personal & Tools
-        </p>
-        <ul className="space-y-0.5">
-          {secondaryTools.map((item) => {
-            const active = item.match
-              ? item.match.test(pathname)
-              : pathname === item.href;
-            return (
-              <li key={item.label}>
-                <NavLink item={item} active={active} onNav={onNav} />
-              </li>
-            );
-          })}
-        </ul>
-
-        {/* Class Management — class heads only, separated by a divider */}
-        {hasHydrated && isVerifiedClassHead && (
-          <>
-            <div className="mx-3 my-3 border-t border-sidebar-border" />
-            <ul className="space-y-0.5">
-              <li>
-                <NavLink
-                  item={classManagementItem}
-                  active={
-                    classManagementItem.match
-                      ? classManagementItem.match.test(pathname)
-                      : pathname === classManagementItem.href
-                  }
-                  onNav={onNav}
-                />
-              </li>
-            </ul>
-          </>
-        )}
+      <nav className="scroll-pane flex-1 overflow-y-auto px-3 py-4">
+        <NavGroup title="Study" items={STUDY} pathname={pathname} collapsed={collapsed} />
+        <div className="mx-2 my-3 border-t border-sidebar-border" />
+        <NavGroup title="Tools" items={items} pathname={pathname} collapsed={collapsed} />
       </nav>
 
-      {/* Upload progress */}
       <UploadProgressStrip />
 
-      {/* Streak + role */}
-      <div className="glass m-3 rounded-2xl p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-full bg-review/15 text-review">
-              <FontAwesomeIcon
-                icon={faFire}
-                className="size-4"
-                aria-hidden="true"
-              />
-            </span>
+      {/* Streak — a compact badge when collapsed, a card when open */}
+      {collapsed ? (
+        <div className="flex flex-col items-center gap-1 pb-4" title={`${streak}-day streak`}>
+          <Icon3D name="streak" size="sm" />
+          <span className="tabular text-xs font-semibold">{streak}</span>
+        </div>
+      ) : (
+        <div className="card-3d m-3 rounded-2xl p-3.5">
+          <div className="flex items-center gap-2.5">
+            <Icon3D name="streak" size="md" />
             <div className="leading-tight">
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
                 Streak
               </p>
-              <p className="font-serif text-lg leading-none">
-                {streak} {streak === 1 ? "day" : "days"}
+              <p className="font-display text-xl leading-none tabular">
+                {streak} <span className="text-sm font-normal">{streak === 1 ? "day" : "days"}</span>
               </p>
             </div>
           </div>
-          {badge && (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-              {badge}
-            </span>
-          )}
+          <p className="mt-2.5 text-[12px] leading-snug text-muted-foreground">
+            {streak === 0
+              ? "Study today to start your streak."
+              : "Keep it going — study something today."}
+          </p>
         </div>
-        <p className="mt-3 text-[12px] text-muted-foreground">
-          {streak === 0
-            ? "Start studying today to begin your streak!"
-            : "Keep studying daily to maintain your streak!"}
-        </p>
-      </div>
-    </div>
+      )}
+    </aside>
   );
 }
 
-// Extracted NavLink so it can be reused
+function NavGroup({
+  title,
+  items,
+  pathname,
+  collapsed,
+}: {
+  title: string;
+  items: NavItem[];
+  pathname: string;
+  collapsed: boolean;
+}) {
+  return (
+    <>
+      {!collapsed && (
+        <p className="px-3 pb-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+          {title}
+        </p>
+      )}
+      <ul className="space-y-0.5">
+        {items.map((item) => {
+          const active = item.match ? item.match.test(pathname) : pathname === item.href;
+          return (
+            <li key={item.href}>
+              <NavLink item={item} active={active} collapsed={collapsed} />
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
 function NavLink({
   item,
   active,
-  onNav,
+  collapsed,
 }: {
   item: NavItem;
   active: boolean;
-  onNav?: () => void;
+  collapsed: boolean;
 }) {
   return (
     <Link
       href={item.href}
-      onClick={onNav}
+      aria-current={active ? "page" : undefined}
+      // The label is the accessible name when collapsed, and the native tooltip.
+      title={collapsed ? item.label : undefined}
+      aria-label={collapsed ? item.label : undefined}
       className={cn(
-        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150",
+        "press group relative flex items-center rounded-xl text-sm transition-colors",
+        collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2",
         active
-          ? "nav-active-bar bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-          : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground hover:translate-x-0.5",
+          ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+          : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
       )}
     >
-      <FontAwesomeIcon
-        icon={item.icon}
-        className={cn(
-          "size-4 transition-colors",
-          active ? "text-primary" : "group-hover:text-foreground",
-        )}
-        aria-hidden="true"
-      />
-      <span>{item.label}</span>
       {active && (
         <motion.span
-          layoutId="nav-pill"
-          className="ml-auto h-1.5 w-1.5 rounded-full bg-primary"
-          style={{
-            boxShadow:
-              "0 0 6px 2px color-mix(in oklab, var(--primary) 70%, transparent)",
-          }}
-          transition={{
-            type: "spring",
-            stiffness: 400,
-            damping: 30,
-          }}
+          layoutId="sidebar-active"
+          className="absolute inset-0 -z-10 rounded-xl bg-primary/10 ring-1 ring-inset ring-primary/15"
+          transition={{ type: "spring", stiffness: 400, damping: 32 }}
         />
       )}
+      <span className={cn("shrink-0 transition-opacity", !active && "opacity-70 saturate-[0.6] group-hover:opacity-100 group-hover:saturate-100")}>
+        <Icon3D name={item.icon} size="sm" />
+      </span>
+      {!collapsed && <span className="truncate">{item.label}</span>}
     </Link>
-  );
-}
-
-export function AppSidebar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  return (
-    <>
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex flex-col">
-        <SidebarContent />
-      </aside>
-
-      {/* Mobile hamburger */}
-      <button
-        type="button"
-        className="fixed top-4 left-4 z-40 flex size-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm md:hidden"
-        aria-label="Open menu"
-        onClick={() => setMobileOpen(true)}
-      >
-        <FontAwesomeIcon icon={faBars} className="size-4" />
-      </button>
-
-      {/* Mobile sheet */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <motion.div
-            className="absolute inset-0 bg-black/50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            onClick={() => setMobileOpen(false)}
-          />
-          <motion.div
-            className="absolute left-0 top-0 h-full w-full max-w-[85vw] border-r border-sidebar-border bg-sidebar text-sidebar-foreground sm:max-w-xs"
-            initial={{ x: -320 }}
-            animate={{ x: 0 }}
-            exit={{ x: -320 }}
-            transition={{ type: "spring", stiffness: 320, damping: 28 }}
-          >
-            <button
-              type="button"
-              className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full border border-border text-muted-foreground"
-              aria-label="Close menu"
-              onClick={() => setMobileOpen(false)}
-            >
-              <FontAwesomeIcon icon={faXmark} className="size-4" />
-            </button>
-            <SidebarContent onNav={() => setMobileOpen(false)} />
-          </motion.div>
-        </div>
-      )}
-    </>
   );
 }

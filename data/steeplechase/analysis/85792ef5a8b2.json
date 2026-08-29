@@ -1,0 +1,60 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "dissected distal forearm and hand",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.13,
+    "x1": 1.0,
+    "y1": 0.65
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.47,
+    "y": 0.44,
+    "description": "blue pin in the distal forearm"
+  },
+  "structure": "median nerve",
+  "main_question": "Identify the pinned structure.",
+  "main_answer": "Median nerve",
+  "main_explanation": "The pinned structure is the median nerve, located along the midline of the distal forearm before it enters the carpal tunnel deep to the flexor retinaculum.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following muscles is innervated by the pinned structure in the hand?",
+    "options": [
+      "Adductor pollicis",
+      "Abductor pollicis brevis",
+      "First palmar interosseous",
+      "Abductor digiti minimi"
+    ],
+    "correct_index": 1,
+    "explanation": "The median nerve innervates the thenar muscles (abductor pollicis brevis, opponens pollicis, and the superficial head of flexor pollicis brevis) via its recurrent branch, as well as the lateral two lumbricals. The other listed muscles are innervated by the ulnar nerve."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "Compression of this structure in the carpal tunnel leads to sensory loss over the medial one and a half fingers.",
+    "answer": false,
+    "explanation": "Compression of the median nerve in the carpal tunnel leads to sensory loss over the lateral three and a half digits. The medial one and a half digits are supplied by the ulnar nerve."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "hands_obscuring_specimen"
+  ],
+  "_source": {
+    "id": "85792ef5a8b2",
+    "file": "85792ef5a8b2.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 52,
+    "model": "gemini-3.5-flash"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.55,
+    "x1": 0.4,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(A) Identify the pinned structure\n(B) what is its innervation",
+  "station_number": 44,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker visible in the frame, although the question refers to a 'pinned structure'."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The anatomical specimen is not visible in the photograph. Only a small fragment of a brown object is visible in the bottom left corner, which is insufficient to identify the structure.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": true,
+  "review_reason": "The anatomical specimen is not visible in the image. The photo only captures the question paper and a small, unidentifiable fragment of a bone or model in the corner. It is impossible to determine the structure or region.",
+  "quality_flags": [
+    "Specimen not visible",
+    "Specimen mostly out of frame",
+    "Marker not visible"
+  ],
+  "_source": {
+    "id": "b7288429299f",
+    "file": "b7288429299f.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 13,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

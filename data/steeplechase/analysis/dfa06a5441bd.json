@@ -1,0 +1,54 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, tag, thread, or paint mark is visible indicating a specific structure."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a composite of four dark, low-resolution photographs showing gloved hands manipulating cadaveric tissue. No specific structure is marked, no question paper is present, and the anatomical region cannot be confidently identified from the visible tissue.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The image is a four-panel composite of very dark, low-resolution photographs. No question paper, station number, or structural marker (pin, arrow, tag, thread) is visible. The anatomical region and the specific structure being tested cannot be confidently identified. The tissue appears to be a cadaveric prosection but the exact location (abdomen, pelvis, etc.) is unclear.",
+  "quality_flags": [
+    "very_dark",
+    "low_resolution",
+    "composite_of_multiple_photos",
+    "no_question_paper",
+    "no_marker",
+    "specimen_mostly_obscured_by_hands",
+    "anatomical_region_unclear"
+  ],
+  "_source": {
+    "id": "dfa06a5441bd",
+    "file": "dfa06a5441bd.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 97,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Vertebra",
+  "specimen_bbox": {
+    "x0": 0.28,
+    "y0": 0.33,
+    "x1": 0.48,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a. IDENTIFY THE AREA PAINTED RED\nb. IDENTIFY THE VERTEBRAE (BE SPECIFIC)",
+  "station_number": 6,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.35,
+    "y": 0.4,
+    "description": "Red paint on the superior articular process"
+  },
+  "structure": "Superior articular process",
+  "main_question": "Identify the area painted red.",
+  "main_answer": "Superior articular process",
+  "main_explanation": "The red paint is located on the superior articular process of the vertebra. This structure forms the superior articular facet, which articulates with the inferior articular facet of the vertebra above.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Identify the specific vertebra shown in the specimen.",
+    "options": [
+      "Typical cervical vertebra (C3-C6)",
+      "C7 vertebra",
+      "T1 vertebra",
+      "L1 vertebra"
+    ],
+    "correct_index": 0,
+    "explanation": "The vertebra has a bifid spinous process and a transverse foramen, which are characteristic features of a typical cervical vertebra (C3-C6)."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The structure painted red articulates with the inferior articular process of the vertebra above.",
+    "answer": true,
+    "explanation": "The superior articular process of a vertebra articulates with the inferior articular process of the vertebra immediately superior to it to form the zygapophyseal joint."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is small relative to the frame"
+  ],
+  "_source": {
+    "id": "6a1044fe6ea3",
+    "file": "6a1044fe6ea3.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 71,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

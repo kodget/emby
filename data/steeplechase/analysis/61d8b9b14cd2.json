@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Isolated curved bone",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.6,
+    "y1": 0.45
+  },
+  "question_paper_present": true,
+  "transcribed_question": "List the content of the area painted green. What structure attached to the area painted blue",
+  "station_number": 31,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.45,
+    "y": 0.1,
+    "description": "Green paint on the surface of the bone"
+  },
+  "structure": null,
+  "main_question": "List the content of the area painted green.",
+  "main_answer": null,
+  "main_explanation": "The specific bone is not identifiable from the image (could be a rib, clavicle, or scapula), so the specific anatomical contents of the painted area cannot be determined.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specimen is an isolated curved bone that is not identifiable (e.g., rib vs. clavicle vs. scapula). The painted areas are not clearly visible in the provided crop, making it impossible to answer the specific questions about the 'green' and 'blue' areas.",
+  "quality_flags": [
+    "Specimen identity unclear",
+    "Painted areas not clearly visible in the main view"
+  ],
+  "_source": {
+    "id": "61d8b9b14cd2",
+    "file": "61d8b9b14cd2.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 77,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

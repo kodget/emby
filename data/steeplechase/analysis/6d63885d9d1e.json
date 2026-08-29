@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What is the weight of the structure? B) What is the embryological significance of A?",
+  "station_number": 35,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only the question paper and station number. The anatomical specimen that the questions refer to is not visible in the image, making it impossible to identify the structure or answer the questions.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image contains only the question paper and station number (35). The actual anatomical specimen is missing from the frame, so the station cannot be used for study or examination.",
+  "quality_flags": [
+    "specimen_missing",
+    "only_question_paper_visible"
+  ],
+  "_source": {
+    "id": "6d63885d9d1e",
+    "file": "6d63885d9d1e.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 68,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

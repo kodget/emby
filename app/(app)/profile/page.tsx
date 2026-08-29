@@ -20,6 +20,8 @@ import {
   Shield,
   Users,
 } from "lucide-react";
+import { Icon3D } from "@/components/brand/icon-3d";
+import { StatTile } from "@/components/ui/surface";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -400,36 +402,29 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-orange-600 mb-2">
-                  {profile.streak}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Day Streak 🔥
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-blue-600 mb-2">
-                  {stats?.points || 0}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Total Points
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <div className="text-4xl font-bold text-green-600 mb-2">
-                  #{stats?.rank || "N/A"}
-                </div>
-                <div className="text-sm text-muted-foreground">Class Rank</div>
-              </CardContent>
-            </Card>
+          {/* Stats. These were three stacked full-width cards on a phone, each a 4xl
+              number on its own screen — three screens of scrolling for three integers.
+              A dense row keeps them all above the fold. */}
+          <div className="grid grid-cols-3 gap-2.5">
+            <StatTile
+              label="Streak"
+              value={profile.streak ?? 0}
+              tone="review"
+              icon={<Icon3D name="streak" size="sm" />}
+            />
+            <StatTile
+              label="Points"
+              value={stats?.points ?? 0}
+              tone="primary"
+              icon={<Icon3D name="xp" size="sm" />}
+            />
+            <StatTile
+              label="Rank"
+              value={stats?.rank ? `#${stats.rank}` : "—"}
+              hint={stats?.rank ? undefined : "Not ranked yet"}
+              tone="mastery"
+              icon={<Icon3D name="target" size="sm" />}
+            />
           </div>
 
           {/* Class Info */}

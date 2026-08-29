@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.05,
+    "x1": 0.95,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No clear pin, arrow, thread, tag, or paint mark identifying a specific structure. A small white object is visible but does not clearly indicate a target structure."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a preserved pelvic prosection but lacks a legible question paper and a clear marker indicating which specific structure the student is asked to identify. Without these, the intended question cannot be determined.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No legible question paper or station number is visible. No clear marker (pin, arrow, thread, tag, or paint) indicates a specific structure to be identified. The white object in the image is ambiguous and does not clearly mark a target structure. The intended question cannot be determined from the image alone.",
+  "quality_flags": [
+    "no_legible_question_paper",
+    "no_clear_marker",
+    "ambiguous_white_object",
+    "specimen_partially_out_of_frame"
+  ],
+  "_source": {
+    "id": "2aad873baaa6",
+    "file": "2aad873baaa6.jpeg",
+    "width": 2127,
+    "height": 1599,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 10,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

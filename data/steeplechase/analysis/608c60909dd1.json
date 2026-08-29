@@ -1,0 +1,59 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Bone specimen",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.18,
+    "x1": 0.35,
+    "y1": 0.6
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) Identify the area painted blue\nb) What does it articulate with?\nc) What type of joint is formed by the area painted Red?",
+  "station_number": 38,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.28,
+    "y": 0.25,
+    "description": "Red paint on the distal end of the bone"
+  },
+  "structure": "Distal end of a bone (likely a metacarpal or metatarsal)",
+  "main_question": "Identify the structure indicated by the red paint.",
+  "main_answer": "Distal end of a metacarpal or metatarsal bone",
+  "main_explanation": "The specimen is a long bone with a distinct head at the distal end, characteristic of metacarpals or metatarsals. The red paint highlights this distal articular surface.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What type of joint is formed by the area painted red?",
+    "options": [
+      "Hinge joint",
+      "Saddle joint",
+      "Condyloid joint",
+      "Ball and socket joint"
+    ],
+    "correct_index": 2,
+    "explanation": "The distal end of a metacarpal or metatarsal bone forms a condyloid (ellipsoid) joint with the proximal phalanx."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.6,
+  "needs_review": true,
+  "review_reason": "The specific bone (metacarpal vs metatarsal) and the 'blue' area mentioned in the question are not clearly visible or identifiable in the photograph. The red paint is visible, but the bone identity is an inference based on shape.",
+  "quality_flags": [
+    "Specimen is partially obscured by the hand holding it",
+    "Question paper obscures part of the specimen",
+    "Referenced 'blue' area is not clearly visible"
+  ],
+  "_source": {
+    "id": "608c60909dd1",
+    "file": "608c60909dd1.jpeg",
+    "width": 768,
+    "height": 513,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 35,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

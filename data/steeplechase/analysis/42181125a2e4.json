@@ -1,0 +1,59 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull base prosection",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.75,
+    "y1": 0.48
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": 22,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.1,
+    "y": 0.3,
+    "description": "White thread indicating a structure on the skull base, likely the foramen ovale or a cranial nerve."
+  },
+  "structure": "Foramen ovale",
+  "main_question": "Identify the structure indicated by the thread.",
+  "main_answer": "Foramen ovale",
+  "main_explanation": "The thread is placed on the skull base in the region of the foramen ovale, which transmits the mandibular nerve (V3), accessory meningeal artery, and lesser petrosal nerve.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures passes through the foramen indicated by the thread?",
+    "options": [
+      "Ophthalmic nerve (V1)",
+      "Mandibular nerve (V3)",
+      "Facial nerve (CN VII)",
+      "Vagus nerve (CN X)"
+    ],
+    "correct_index": 1,
+    "explanation": "The mandibular nerve (V3), the largest branch of the trigeminal nerve, passes through the foramen ovale."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.6,
+  "needs_review": true,
+  "review_reason": "The image is a composite of multiple views, and the specific structure indicated by the thread is not clearly identifiable without a higher resolution or a clearer single view. The thread could be indicating the foramen ovale, foramen spinosum, or a nerve exiting the skull.",
+  "quality_flags": [
+    "Composite image",
+    "Marker ambiguous",
+    "Specimen partially out of frame in some views"
+  ],
+  "_source": {
+    "id": "42181125a2e4",
+    "file": "42181125a2e4.jpeg",
+    "width": 1949,
+    "height": 1462,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 24,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

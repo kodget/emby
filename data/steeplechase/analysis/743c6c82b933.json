@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Human brain",
+  "specimen_bbox": {
+    "x0": 0.18,
+    "y0": 0.1,
+    "x1": 0.78,
+    "y1": 0.55
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.31,
+    "y": 0.41,
+    "description": "Blue-headed pin inserted into the lateral surface of the temporal lobe."
+  },
+  "structure": "Temporal lobe",
+  "main_question": "Identify the lobe of the cerebrum indicated by the pin.",
+  "main_answer": "Temporal lobe",
+  "main_explanation": "The pin is located on the inferior lateral aspect of the cerebral hemisphere, below the lateral sulcus (Sylvian fissure), which is the anatomical position of the temporal lobe.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located within the lobe indicated by the pin?",
+    "options": [
+      "Primary visual cortex",
+      "Hippocampus",
+      "Primary motor cortex",
+      "Broca's area"
+    ],
+    "correct_index": 1,
+    "explanation": "The hippocampus is a key structure located deep within the temporal lobe, essential for memory formation. The primary visual cortex is in the occipital lobe, the primary motor cortex is in the frontal lobe, and Broca's area is typically in the inferior frontal gyrus of the frontal lobe."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "743c6c82b933",
+    "file": "743c6c82b933.jpeg",
+    "width": 1949,
+    "height": 1462,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 15,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

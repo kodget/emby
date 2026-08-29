@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "17\n(A) Identify the muscle bearing the green pin\n(B) Identify the muscle bearing the blue pin",
+  "station_number": 17,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only the question paper and the surrounding bench/floor. The anatomical specimen that the question refers to is not visible in the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image does not contain the anatomical specimen. It only shows the question paper taped to a bench, making it impossible to identify the structures or create a valid exam station.",
+  "quality_flags": [
+    "specimen_not_visible",
+    "question_paper_only"
+  ],
+  "_source": {
+    "id": "ba8ae51a948d",
+    "file": "ba8ae51a948d.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 6,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

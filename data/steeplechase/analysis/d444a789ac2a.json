@@ -1,0 +1,51 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.3,
+    "y": 0.4,
+    "description": "White thread is visible, but its specific target structure is unclear due to image quality and lack of context."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a low-resolution, close-up photograph of a cadaveric specimen with a thread marker. However, there is no question paper, station number, or sufficient anatomical landmarks to identify the specific structure or region. It appears to be a raw photo rather than a prepared exam station.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.1,
+  "needs_review": true,
+  "review_reason": "Image is too low quality and lacks context (no question paper, no clear landmarks) to identify the anatomy. It looks like a raw photo from a dissection session rather than a steeplechase station.",
+  "quality_flags": [
+    "very_low_resolution",
+    "no_question_paper",
+    "unclear_anatomical_landmarks",
+    "likely_raw_photo_not_exam_station"
+  ],
+  "_source": {
+    "id": "d444a789ac2a",
+    "file": "d444a789ac2a.jpeg",
+    "width": 1632,
+    "height": 1224,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 8,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

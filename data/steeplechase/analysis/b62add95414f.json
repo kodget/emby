@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "MODEL",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Sagittal section of the head and neck",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.0,
+    "x1": 0.9,
+    "y1": 0.65
+  },
+  "question_paper_present": true,
+  "transcribed_question": "What is the structure",
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.25,
+    "y": 0.55,
+    "description": "A paper tag attached to a pin pointing to a structure in the lower part of the model, likely the larynx or pharynx."
+  },
+  "structure": "Larynx",
+  "main_question": "Identify the structure indicated by the tag.",
+  "main_answer": "Larynx",
+  "main_explanation": "The tag points to the region of the larynx (voice box) in the anterior neck, situated below the pharynx and above the trachea.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located immediately superior to the larynx?",
+    "options": [
+      "Trachea",
+      "Pharynx",
+      "Esophagus",
+      "Thyroid gland"
+    ],
+    "correct_index": 1,
+    "explanation": "The pharynx is the muscular tube that lies superior to the larynx and posterior to the nasal and oral cavities."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.85,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Lighting is uneven"
+  ],
+  "_source": {
+    "id": "b62add95414f",
+    "file": "b62add95414f.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 21,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

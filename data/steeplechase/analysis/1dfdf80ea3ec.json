@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.25,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.45
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "probe",
+    "x": 0.4,
+    "y": 0.33,
+    "description": "A thin metal probe with a small white paper tag is inserted into the dissected tissue, but the exact structure it indicates cannot be determined from the image."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph is a low-resolution, multi-panel stitched image of a cadaveric prosection. A probe with a paper tag is present, but the orientation, landmarks, and the specific structure being indicated are not identifiable with confidence. No legible question paper is visible. Therefore the structure and the main question cannot be reliably stated.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "Image is blurry, low-resolution and appears to be a stitched multi-panel photo. The probe/tag marker is present but the specific anatomical structure it indicates cannot be confidently identified, and no legible question paper is visible. Region and structure are uncertain.",
+  "quality_flags": [
+    "low_resolution",
+    "blurry",
+    "stitched_multi_panel",
+    "marker_structure_unclear",
+    "no_legible_question_paper",
+    "poor_lighting"
+  ],
+  "_source": {
+    "id": "1dfdf80ea3ec",
+    "file": "1dfdf80ea3ec.jpeg",
+    "width": 523,
+    "height": 698,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 10,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker or question paper is visible in the image."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a composite of four close-up photographs of a cadaveric specimen. While pins are visible in the individual frames, the composite image lacks the necessary context (question paper, station number) to be a valid exam station.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "The image is a collage of four separate photos rather than a single station view. It lacks a question paper and station number, which are required to define the exam question.",
+  "quality_flags": [
+    "composite_image",
+    "no_question_paper",
+    "no_station_number"
+  ],
+  "_source": {
+    "id": "4a79849b81b0",
+    "file": "4a79849b81b0.jpeg",
+    "width": 1114,
+    "height": 1624,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 24,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

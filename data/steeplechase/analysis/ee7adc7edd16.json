@@ -1,0 +1,58 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Os coxae (Hip bone)",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.65
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.45,
+    "y": 0.35,
+    "description": "Red paint mark on the posterior surface of the acetabulum"
+  },
+  "structure": "Fovea capitis femoris",
+  "main_question": "Identify the structure indicated by the red paint mark.",
+  "main_answer": "Fovea capitis femoris",
+  "main_explanation": "The red mark is located in the central depression of the acetabulum, which is the fovea capitis femoris. This is the attachment site for the ligament of the head of the femur (ligamentum teres).",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures attaches to the fovea capitis femoris?",
+    "options": [
+      "Ligament of the head of the femur",
+      "Iliofemoral ligament",
+      "Pubofemoral ligament",
+      "Ischiofemoral ligament"
+    ],
+    "correct_index": 0,
+    "explanation": "The ligament of the head of the femur (ligamentum teres) connects the fovea capitis femoris to the acetabular notch."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "No question paper visible",
+    "Image appears to be a composite or collage of multiple views"
+  ],
+  "_source": {
+    "id": "ee7adc7edd16",
+    "file": "ee7adc7edd16.jpeg",
+    "width": 1632,
+    "height": 1224,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 12,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Rib",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.6,
+    "y1": 0.4
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) This is an atypical rib (T/F)\nb) What attaches to the area pointed to?\nc) What runs in the area pointed to?",
+  "station_number": 36,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific pin or arrow is visible on the specimen in the main view, though the question refers to a specific area."
+  },
+  "structure": "Rib",
+  "main_question": "Is this an atypical rib? (True/False)",
+  "main_answer": "True",
+  "main_explanation": "The specimen is a rib with a distinct neck and head, and lacks a sharp angle, which are characteristics of atypical ribs (ribs 1-4 and 11-12).",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which structure runs in the costal groove of a typical rib?",
+    "options": [
+      "Intercostal vein",
+      "Intercostal artery",
+      "Intercostal nerve",
+      "Lateral cutaneous branch"
+    ],
+    "correct_index": 2,
+    "explanation": "The intercostal nerve runs in the costal groove, protected by the vein and artery above it (VAN)."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The specimen shown is an atypical rib.",
+    "answer": true,
+    "explanation": "The rib shown lacks a sharp angle and has a distinct head and neck, identifying it as an atypical rib."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "a495772ab6ea",
+    "file": "a495772ab6ea.jpeg",
+    "width": 1372,
+    "height": 2312,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 42,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

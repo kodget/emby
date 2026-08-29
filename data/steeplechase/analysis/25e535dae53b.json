@@ -1,0 +1,60 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Equine testis",
+  "specimen_bbox": {
+    "x0": 0.25,
+    "y0": 0.05,
+    "x1": 0.55,
+    "y1": 0.35
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A. The structure pinned blue is boy in which animal. horse\nB. The length of the structure pinned green",
+  "station_number": 41,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.4,
+    "y": 0.25,
+    "description": "A blue-headed pin and a green-headed pin are inserted into the surface of the specimen."
+  },
+  "structure": "Testis",
+  "main_question": "Identify the structure indicated by the blue pin and the animal species it is from.",
+  "main_answer": "Testis from a horse",
+  "main_explanation": "The specimen is an isolated testis. The question paper explicitly identifies the animal as a 'horse'. The blue pin marks the organ itself.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What is the primary function of the structure indicated by the pin?",
+    "options": [
+      "Production of testosterone and spermatozoa",
+      "Secretion of insulin and glucagon",
+      "Filtration of blood to form urine",
+      "Production of bile"
+    ],
+    "correct_index": 0,
+    "explanation": "The testis is the male gonad, responsible for spermatogenesis and the production of androgens, primarily testosterone."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The specimen shown is from a female animal.",
+    "answer": false,
+    "explanation": "The specimen is a testis, which is a male reproductive organ. The question paper also identifies the animal as a horse, and the morphology is consistent with a testis."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is held by a hand, which is excluded from the bounding box but partially obscures the view."
+  ],
+  "_source": {
+    "id": "25e535dae53b",
+    "file": "25e535dae53b.jpeg",
+    "width": 1748,
+    "height": 1836,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 47,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

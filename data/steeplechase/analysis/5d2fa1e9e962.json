@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Distal femur",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.55,
+    "x1": 0.65,
+    "y1": 0.85
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) IDENTIFY THE AREAS PAINTED PINK\nB) WHAT ATTACHES TO IT\nC) [illegible] that attaches to the area\nD) green\nE) painted",
+  "station_number": 52,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.25,
+    "y": 0.72,
+    "description": "Pink paint on the anterior surface of the distal femoral shaft"
+  },
+  "structure": "Quadriceps femoris muscle (specifically the Vastus intermedius or Vastus lateralis attachment site)",
+  "main_question": "Identify the area painted pink on the distal femur.",
+  "main_answer": "Quadriceps femoris muscle attachment site (Vastus intermedius/lateralis)",
+  "main_explanation": "The pink paint indicates the origin of the quadriceps femoris muscle on the anterior and lateral surfaces of the femoral shaft. The vastus intermedius lies deep to the rectus femoris and originates from the anterior surface of the femoral shaft.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which nerve supplies the muscle attaching to the painted area?",
+    "options": [
+      "Obturator nerve",
+      "Femoral nerve",
+      "Sciatic nerve",
+      "Common peroneal nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The quadriceps femoris muscle is innervated by the femoral nerve (L2, L3, L4)."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The muscle attaching to the painted area inserts onto the patella and tibial tuberosity.",
+    "answer": true,
+    "explanation": "The quadriceps femoris muscle inserts via the patellar ligament onto the tibial tuberosity."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Handwriting on the question paper is partially illegible"
+  ],
+  "_source": {
+    "id": "5d2fa1e9e962",
+    "file": "5d2fa1e9e962.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 70,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

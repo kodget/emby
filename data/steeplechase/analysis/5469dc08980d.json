@@ -1,0 +1,53 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.65
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.33,
+    "y": 0.45,
+    "description": "Green-headed dressmaker pin inserted into the specimen; a blue tag/marker is also visible nearby. The exact structure indicated is unclear."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "No legible question paper is present and the marked structure cannot be confidently identified from the photograph. The specimen appears to be a preserved stomach or upper GI region, but the pin target is ambiguous.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is visible. The specimen is partially out of frame, the orientation is unclear, and the structure indicated by the green pin cannot be confidently identified. The image appears to be a composite of multiple views of the same specimen on a concrete floor rather than a properly set exam station.",
+  "quality_flags": [
+    "no question paper visible",
+    "no station number visible",
+    "specimen partially out of frame",
+    "marker target ambiguous",
+    "poor lighting and orientation",
+    "composite/multiple views of same specimen"
+  ],
+  "_source": {
+    "id": "5469dc08980d",
+    "file": "5469dc08980d.jpeg",
+    "width": 2560,
+    "height": 1920,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 38,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

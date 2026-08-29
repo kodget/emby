@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull (lateral view)",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.45,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify the structure. Name 2 structures that pass through its posterior",
+  "station_number": 45,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific pin, arrow, or tag is visible on the specimen to indicate a single structure."
+  },
+  "structure": "Skull",
+  "main_question": "Identify the structure. Name 2 structures that pass through its posterior",
+  "main_answer": "Skull; structures passing through posterior openings (e.g., jugular foramen, hypoglossal canal) include the glossopharyngeal nerve (CN IX), vagus nerve (CN X), accessory nerve (CN XI), and internal jugular vein.",
+  "main_explanation": "The specimen is a lateral view of a human skull. The question asks to identify the general structure and name contents of a posterior foramen, likely the jugular foramen given the context of 'posterior' and common exam questions.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures passes through the hypoglossal canal?",
+    "options": [
+      "Glossopharyngeal nerve",
+      "Hypoglossal nerve",
+      "Facial nerve",
+      "Vagus nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The hypoglossal nerve (CN XII) passes through the hypoglossal canal to innervate the tongue muscles."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.85,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a collage of multiple views",
+    "Question text is partially cut off"
+  ],
+  "_source": {
+    "id": "2df8cad823ef",
+    "file": "2df8cad823ef.jpeg",
+    "width": 444,
+    "height": 592,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 12,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

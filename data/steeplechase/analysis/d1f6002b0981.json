@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Cerebellum",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.22,
+    "x1": 0.75,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a. Identify",
+  "station_number": 32,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.42,
+    "y": 0.38,
+    "description": "A pin with a white and green head is inserted into the surface of the specimen."
+  },
+  "structure": "Cerebellum",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Cerebellum",
+  "main_explanation": "The specimen shows the characteristic folia (leaf-like folds) and the general shape of the cerebellum, a part of the hindbrain.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.65,
+  "needs_review": true,
+  "review_reason": "The image is a composite of three different views (or a poorly stitched panorama) which makes precise localization of the pin difficult. The question paper is partially obscured and the handwriting is cut off, making the specific question unclear.",
+  "quality_flags": [
+    "composite_image",
+    "poor_lighting",
+    "question_paper_obscured"
+  ],
+  "_source": {
+    "id": "d1f6002b0981",
+    "file": "d1f6002b0981.jpeg",
+    "width": 417,
+    "height": 556,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 24,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

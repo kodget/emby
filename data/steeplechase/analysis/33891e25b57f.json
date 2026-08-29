@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Specifically identify the structure pinned green. B) Distribution of veins around the shoulder. Pin a blue in axilla?",
+  "station_number": 39,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only the question paper (station 39) and does not contain the anatomical specimen or the pins referenced in the text.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image contains only the question sheet; the anatomical specimen is missing from the frame, making it impossible to create a valid exam station.",
+  "quality_flags": [
+    "specimen_missing",
+    "only_question_paper_visible"
+  ],
+  "_source": {
+    "id": "33891e25b57f",
+    "file": "33891e25b57f.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 105,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

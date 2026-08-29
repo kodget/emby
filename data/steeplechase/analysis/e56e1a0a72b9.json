@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull",
+  "specimen_bbox": {
+    "x0": 0.5,
+    "y0": 0.02,
+    "x1": 1.0,
+    "y1": 0.5
+  },
+  "question_paper_present": true,
+  "transcribed_question": "16\na) Identify the structure labelled\nb) What is its embryological origin?",
+  "station_number": 16,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific pin, arrow, or tag is visible on the specimen in the photograph."
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated on the specimen.",
+  "main_answer": null,
+  "main_explanation": "The specific structure to be identified is not marked with a pin or arrow, and the handwritten question is partially illegible, making it impossible to determine the target structure with certainty.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specific anatomical structure being tested is not marked with a pin or arrow. The handwritten question is difficult to read and does not clearly specify which part of the skull to identify.",
+  "quality_flags": [
+    "Marker ambiguous",
+    "Specimen mostly out of frame",
+    "Very dark"
+  ],
+  "_source": {
+    "id": "e56e1a0a72b9",
+    "file": "e56e1a0a72b9.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 46,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

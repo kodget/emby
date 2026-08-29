@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(a) what is the anomaly 'A' above? (b) what is the embryonic basis?",
+  "station_number": 7,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker present on a specimen; the image contains only a handwritten diagram on paper."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a question paper with a hand-drawn diagram of the abdominal wall and intestine, but no anatomical specimen (cadaver, bone, or model) is visible to test.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "No anatomical specimen is visible in the photograph; only the question paper is shown. This is not a valid steeplechase station image as it lacks the object of examination.",
+  "quality_flags": [
+    "No specimen visible",
+    "Only question paper shown"
+  ],
+  "_source": {
+    "id": "1af0f18bf67c",
+    "file": "1af0f18bf67c.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 145,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

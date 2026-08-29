@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.6
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.28,
+    "y": 0.35,
+    "description": "A green-headed pin is inserted into a structure near the ear canal, and a blue pin is on the cheek."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a collage of four separate photographs showing a lateral view of a cadaveric head. While pins are present, there is no question paper, station number, or clear context to determine the specific anatomical structure being tested. The green pin appears to be in the external auditory meatus or nearby, but without a question, the specific target is ambiguous.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": true,
+  "review_reason": "The image is a composite of four photos rather than a single station view. There is no question paper or station number visible. The specific structure indicated by the pins cannot be definitively identified without the accompanying question.",
+  "quality_flags": [
+    "composite_image",
+    "no_question_paper",
+    "no_station_number"
+  ],
+  "_source": {
+    "id": "7df789f6ab1b",
+    "file": "7df789f6ab1b.jpeg",
+    "width": 1114,
+    "height": 873,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 12,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

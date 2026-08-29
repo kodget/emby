@@ -1,0 +1,62 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "Humerus",
+  "specimen_bbox": {
+    "x0": 0.13,
+    "y0": 0.08,
+    "x1": 0.37,
+    "y1": 0.87
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) WHAT PASSES THROUGH THE AREA PAINTED PINK\nB) WHAT PASSES THROUGH THE AREA PAINTED GREEN",
+  "station_number": 10,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.29,
+    "y": 0.8,
+    "description": "Faint pink paint on the medial epicondyle of the humerus."
+  },
+  "structure": "Ulnar nerve",
+  "main_question": "What passes through the area painted pink?",
+  "main_answer": "Ulnar nerve",
+  "main_explanation": "The ulnar nerve passes posterior to the medial epicondyle of the humerus, within the ulnar groove.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following statements about the ulnar nerve is true?",
+    "options": [
+      "It innervates all intrinsic muscles of the hand.",
+      "It passes anterior to the medial epicondyle.",
+      "It contributes to the innervation of the flexor carpi ulnaris and medial half of flexor digitorum profundus.",
+      "Damage to this nerve typically results in wrist drop."
+    ],
+    "correct_index": 2,
+    "explanation": "The ulnar nerve innervates the flexor carpi ulnaris and the medial half of the flexor digitorum profundus in the forearm, and most intrinsic hand muscles (except the thenar muscles and lateral two lumbricals). It passes posterior to the medial epicondyle. Wrist drop is associated with radial nerve damage."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The ulnar nerve is responsible for the sensation of the lateral 3.5 digits on the palmar aspect of the hand.",
+    "answer": false,
+    "explanation": "The ulnar nerve supplies sensation to the medial 1.5 digits (little finger and medial half of the ring finger) on both palmar and dorsal aspects of the hand. The median nerve supplies the lateral 3.5 digits on the palmar aspect."
+  },
+  "confidence": 0.7,
+  "needs_review": true,
+  "review_reason": "The painted marks (pink and green) are very faint and difficult to discern clearly. The question asks about two separate areas (pink and green), but the schema only allows for one 'structure' and 'marker' entry. I have focused on the 'painted pink' area (medial epicondyle) and the ulnar nerve for the main question/answer. The 'painted green' area (lateral epicondyle/capitulum) and what 'passes through' it is less clear and not addressed in the main answer.",
+  "quality_flags": [
+    "marker_ambiguous",
+    "multiple_markers_not_supported_by_schema",
+    "poor_lighting"
+  ],
+  "_source": {
+    "id": "01e223ba74f4",
+    "file": "01e223ba74f4.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 12,
+    "model": "gemini-2.5-flash"
+  }
+}

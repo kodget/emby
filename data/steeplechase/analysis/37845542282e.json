@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Rib",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.05,
+    "x1": 0.65,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) WHAT STRUCTURES ARE RELATED TO THE AREA PAINTED \"PINK\"\nB) WHAT STRUCTURE ATTACHES TO THE AREA PAINTED \"BLUE\"",
+  "station_number": 20,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.15,
+    "y": 0.3,
+    "description": "Pink paint on the superior border of the rib shaft and a blue dot on the inferior border of the rib neck."
+  },
+  "structure": "Rib",
+  "main_question": "What structures are related to the area painted pink?",
+  "main_answer": "Posterior intercostal nerve and vessels",
+  "main_explanation": "The area painted pink is located on the superior border of the rib shaft. The posterior intercostal nerve and vessels run in the costal groove on the inferior border of the rib above, which corresponds to the superior border of the rib shown here.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What structure attaches to the area painted blue?",
+    "options": [
+      "Costotransverse ligament",
+      "Costocartilaginous ligament",
+      "Intercostal ligament",
+      "Costovertebral ligament"
+    ],
+    "correct_index": 0,
+    "explanation": "The area painted blue is on the inferior border of the rib neck. The costotransverse ligament attaches to the tubercle of the rib and the transverse process of the corresponding vertebra, stabilizing the costotransverse joint."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "37845542282e",
+    "file": "37845542282e.jpeg",
+    "width": 1792,
+    "height": 1716,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 24,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

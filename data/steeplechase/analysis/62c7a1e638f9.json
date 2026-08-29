@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Omentum",
+  "specimen_bbox": {
+    "x0": 0.45,
+    "y0": 0.02,
+    "x1": 0.98,
+    "y1": 0.38
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A. Nerve supply to the area painted blue\nB. If omentum is an anatomical sphincter True or False\nC. What is the arterial supply to the area painted yellow",
+  "station_number": 37,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.75,
+    "y": 0.05,
+    "description": "Yellow paint marking an area on the specimen"
+  },
+  "structure": "Greater Omentum",
+  "main_question": "What is the arterial supply to the area painted yellow?",
+  "main_answer": "Gastroepiploic Artery",
+  "main_explanation": "The greater omentum is supplied by the right and left gastroepiploic (gastroomental) arteries, which run along its free border.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following statements regarding the greater omentum is correct?",
+    "options": [
+      "It is an anatomical sphincter",
+      "It is supplied by the splenic artery",
+      "It is supplied by the gastroepiploic arteries",
+      "It is innervated by the phrenic nerve"
+    ],
+    "correct_index": 2,
+    "explanation": "The greater omentum is not a sphincter. It is supplied by the gastroepiploic arteries and is innervated by the vagus nerve and sympathetic fibers, not the phrenic nerve."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The greater omentum is an anatomical sphincter.",
+    "answer": false,
+    "explanation": "The omentum is a fold of peritoneum and does not function as a sphincter."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "62c7a1e638f9",
+    "file": "62c7a1e638f9.jpeg",
+    "width": 2212,
+    "height": 872,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 43,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

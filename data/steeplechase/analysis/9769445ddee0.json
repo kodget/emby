@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Kidney",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.02,
+    "x1": 0.55,
+    "y1": 0.45
+  },
+  "question_paper_present": true,
+  "transcribed_question": "1) Identify this organ (Be specific)\n2) What Fascia causes swelling of the Ureter?",
+  "station_number": 22,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker (pin, arrow, or tag) is visible on the specimen."
+  },
+  "structure": "Kidney",
+  "main_question": "Identify this organ (Be specific)",
+  "main_answer": "Left Kidney",
+  "main_explanation": "The specimen is a kidney. The handwritten answer key provided on the station paper identifies it specifically as the left kidney.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which fascia is indicated by the second question on the station paper as the cause of swelling of the ureter?",
+    "options": [
+      "Gerota's fascia",
+      "Transversalis fascia",
+      "Parietal peritoneum",
+      "Fascia of the psoas"
+    ],
+    "correct_index": 0,
+    "explanation": "The handwritten question asks 'What Fascia causes swelling of the Ureter?'. The provided answer key identifies this as 'perinephric fat', which is contained within Gerota's fascia (the renal fascia). Pathological processes in the perinephric space (like a hematoma or abscess) are contained by Gerota's fascia and can compress the ureter."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "9769445ddee0",
+    "file": "9769445ddee0.jpeg",
+    "width": 1532,
+    "height": 2344,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 26,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -77,7 +77,7 @@ export function CreateBattle() {
         topic: title // fallback for AI if hierarchy is empty
       };
       
-      const response = await api.post('/api/brain-battles/', payload);
+      const response = await api.post('/api/battles/', payload);
       router.push(`/battles/${response.data.id}`);
     } catch (error) {
       console.error("Failed to create battle", error);

@@ -43,6 +43,14 @@ class ProfileSerializer(serializers.ModelSerializer):
     class_code = serializers.CharField(source='class_group.code', read_only=True)
     is_premium = serializers.BooleanField(read_only=True)
     can_access_app = serializers.BooleanField(read_only=True)
+    # Profile.streak is a dead column that nothing ever writes — the live streak is
+    # maintained on UserStats by learning.events. Serving the model field made the
+    # sidebar show a permanent zero while the dashboard showed the real figure.
+    streak = serializers.SerializerMethodField()
+
+    def get_streak(self, obj) -> int:
+        stats = getattr(obj.user, "stats", None)
+        return getattr(stats, "current_streak", 0) or 0
 
     class Meta:
         model = Profile

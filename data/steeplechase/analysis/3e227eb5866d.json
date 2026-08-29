@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.85,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.47,
+    "y": 0.3,
+    "description": "Blue-headed dressmaker pin inserted into the central preserved tissue; a thin thread is also visible in the lower part of the specimen."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a blurry photograph of a preserved cadaveric prosection with a pin and thread, but no question paper or station label is visible, and the specific structure indicated by the pin cannot be confidently identified from the image alone. The lobulated tissue could represent several pelvic or abdominal structures, but the orientation and context are insufficient for a definitive identification.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is visible in the frame. The image is blurry and the orientation of the prosection is unclear, so the structure indicated by the pin cannot be confidently identified. A clearer, better-oriented photograph with the accompanying question sheet would be required to build a valid station.",
+  "quality_flags": [
+    "blurry_image",
+    "no_question_paper_visible",
+    "no_station_number_visible",
+    "specimen_orientation_unclear",
+    "marker_structure_ambiguous"
+  ],
+  "_source": {
+    "id": "3e227eb5866d",
+    "file": "3e227eb5866d.jpeg",
+    "width": 684,
+    "height": 836,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 43,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -19,6 +19,8 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from .pricing import DEFAULT_PLAN, all_plans, get_plan
+
 logger = logging.getLogger(__name__)
 
 PAYSTACK_SECRET = settings.PAYSTACK_SECRET_KEY
@@ -46,31 +48,47 @@ def _activate_premium(transaction):
         profile.save(update_fields=["subscription_tier", "subscription_expires_at"])
 
 
+@require_http_methods(["GET"])
+def plans(request):
+    """Expose the catalogue so the frontend never hardcodes a price."""
+    return JsonResponse({"plans": all_plans(), "default": DEFAULT_PLAN.code})
+
+
 @require_http_methods(["POST"])
 @csrf_exempt
 def checkout(request):
-    """Initialize a Paystack transaction and record it."""
+    """Initialize a Paystack transaction for a named plan.
+
+    The client sends a plan *code*, never an amount: the price is resolved on the server
+    so the charged figure always matches the published one. The billing email comes from
+    the authenticated account for the same reason.
+    """
     from accounts.models import PaymentTransaction
 
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+
     data = request.POST or json.loads(request.body or "{}")
-    email = data.get("email")
-    try:
-        amount_naira = int(data.get("amount", 0))
-    except (TypeError, ValueError):
-        return JsonResponse({"error": "Invalid amount"}, status=400)
+    plan = get_plan(data.get("plan"))
+    if plan is None:
+        return JsonResponse({"error": "Unknown plan"}, status=400)
 
-    if not email or amount_naira <= 0:
-        return JsonResponse({"error": "email and a positive amount are required"}, status=400)
+    email = request.user.email
+    if not email:
+        return JsonResponse({"error": "Your account has no email address"}, status=400)
 
-    months = int(data.get("months", 1))
     resp = requests.post(
         f"{PAYSTACK_BASE}/transaction/initialize",
         headers={"Authorization": f"Bearer {PAYSTACK_SECRET}", "Content-Type": "application/json"},
         json={
             "email": email,
-            "amount": amount_naira * 100,  # kobo
+            "amount": plan.amount_kobo,
             "callback_url": settings.PAYSTACK_CALLBACK_URL,
-            "metadata": {"user_id": data.get("user_id"), "months": months},
+            "metadata": {
+                "user_id": request.user.id,
+                "plan": plan.code,
+                "months": plan.months,
+            },
         },
         timeout=20,
     )
@@ -79,14 +97,13 @@ def checkout(request):
         return JsonResponse({"error": result.get("message", "Paystack init failed")}, status=400)
 
     pdata = result["data"]
-    if request.user.is_authenticated:
-        PaymentTransaction.objects.create(
-            user=request.user,
-            reference=pdata["reference"],
-            amount=amount_naira,
-            subscription_months=months,
-            status="pending",
-        )
+    PaymentTransaction.objects.create(
+        user=request.user,
+        reference=pdata["reference"],
+        amount=plan.amount_naira,
+        subscription_months=plan.months,
+        status="pending",
+    )
 
     return JsonResponse({
         "status": "success",
@@ -94,6 +111,7 @@ def checkout(request):
             "authorization_url": pdata["authorization_url"],
             "reference": pdata["reference"],
             "access_code": pdata["access_code"],
+            "plan": plan.as_dict(),
         },
     })
 
@@ -116,13 +134,45 @@ def verify(request):
     if not result.get("status"):
         return JsonResponse({"success": False, "error": result.get("message")}, status=400)
 
-    if result["data"]["status"] == "success":
-        transaction = PaymentTransaction.objects.filter(reference=reference).first()
-        if transaction:
-            _activate_premium(transaction)
-        return JsonResponse({"success": True, "message": "Premium activated"})
+    paystack_data = result["data"]
+    if paystack_data.get("status") != "success":
+        return JsonResponse({"success": False}, status=400)
 
-    return JsonResponse({"success": False}, status=400)
+    transaction = PaymentTransaction.objects.filter(reference=reference).first()
+    if transaction is None:
+        # A reference we never issued: never grant access off an unknown transaction.
+        logger.warning("Verify called for unknown reference %s", reference)
+        return JsonResponse({"success": False, "error": "Unknown transaction"}, status=404)
+
+    if not _amount_matches(transaction, paystack_data):
+        return JsonResponse(
+            {"success": False, "error": "Paid amount does not match the plan"}, status=400
+        )
+
+    _activate_premium(transaction)
+    return JsonResponse({"success": True, "message": "Premium activated"})
+
+
+def _amount_matches(transaction, paystack_data) -> bool:
+    """Confirm Paystack actually collected what the plan costs.
+
+    Verification previously trusted only the `status` field, so a transaction created
+    for one amount could be settled for another. Comparing against the amount we
+    recorded at checkout closes that gap.
+    """
+    try:
+        paid_kobo = int(paystack_data.get("amount", 0))
+    except (TypeError, ValueError):
+        return False
+
+    expected_kobo = int(transaction.amount) * 100
+    if paid_kobo < expected_kobo:
+        logger.warning(
+            "Amount mismatch on %s: paid %s kobo, expected %s kobo",
+            transaction.reference, paid_kobo, expected_kobo,
+        )
+        return False
+    return True
 
 
 @csrf_exempt
@@ -145,10 +195,13 @@ def webhook(request):
         return HttpResponse(status=400)
 
     if event.get("event") == "charge.success":
-        reference = event.get("data", {}).get("reference")
+        payload_data = event.get("data", {})
+        reference = payload_data.get("reference")
         transaction = PaymentTransaction.objects.filter(reference=reference).first()
-        if transaction:
+        if transaction and _amount_matches(transaction, payload_data):
             _activate_premium(transaction)
-            logger.info(f"Premium activated via webhook for {reference}")
+            logger.info("Premium activated via webhook for %s", reference)
+        elif transaction:
+            logger.warning("Webhook amount mismatch for %s; not activating", reference)
 
     return HttpResponse(status=200)

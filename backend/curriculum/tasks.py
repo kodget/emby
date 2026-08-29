@@ -614,3 +614,45 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
         'generated_count': saved_count
     }
 
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=120)
+def generate_question_bank_task(self, slide_id: str, force: bool = False):
+    """Fill a slide's question bank with 50 MCQs and 10 theory questions.
+
+    Runs in the background after upload so the uploader never waits on it. The work is
+    idempotent and resumable: learning.generation claims a locked job row, counts what
+    already exists, and only generates the shortfall.
+    """
+    from .models import Slide
+    from learning.generation import generate_for_slide
+
+    slide = Slide.objects.select_related("subject", "block", "sub_block", "topic").filter(
+        id=slide_id
+    ).first()
+    if slide is None:
+        logger.error("generate_question_bank_task: slide %s not found", slide_id)
+        return {"success": False, "error": "slide not found"}
+
+    try:
+        return generate_for_slide(slide, force=force)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Question bank generation failed for %s", slide_id)
+        raise self.retry(exc=exc)
+
+
+@shared_task
+def send_due_notifications_task():
+    """Periodic sweep that creates the notifications students are due.
+
+    Idempotent by design: dedupe keys and the per-student daily budget mean running this
+    every 30 minutes produces at most a handful of rows a day per student.
+    """
+    from learning import notifications
+
+    result = notifications.run_for_all()
+    logger.info(
+        "Notification sweep: %s created for %s students",
+        result["notifications_created"], result["users_notified"],
+    )
+    return result

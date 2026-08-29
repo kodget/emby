@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Pelvis",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.0,
+    "x1": 0.7,
+    "y1": 0.45
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Which muscle arises from the area painted red. B) Where does it insert?",
+  "station_number": 4,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.55,
+    "y": 0.25,
+    "description": "Red paint on the inner surface of the ilium"
+  },
+  "structure": "Iliacus muscle origin",
+  "main_question": "Which muscle arises from the area painted red?",
+  "main_answer": "Iliacus",
+  "main_explanation": "The red paint highlights the iliac fossa, which is the origin of the iliacus muscle.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Where does the muscle indicated by the red paint insert?",
+    "options": [
+      "Greater trochanter of the femur",
+      "Lesser trochanter of the femur",
+      "Iliac crest",
+      "Pubic tubercle"
+    ],
+    "correct_index": 1,
+    "explanation": "The iliacus muscle inserts onto the lesser trochanter of the femur."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The muscle arising from the painted area is a hip flexor.",
+    "answer": true,
+    "explanation": "The iliacus muscle, along with the psoas major, forms the iliopsoas, which is a primary flexor of the hip."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Lighting is somewhat uneven"
+  ],
+  "_source": {
+    "id": "9d198587406b",
+    "file": "9d198587406b.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 80,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

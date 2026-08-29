@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Thoracic prosection",
+  "specimen_bbox": {
+    "x0": 0.2,
+    "y0": 0.0,
+    "x1": 0.55,
+    "y1": 0.5
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) Identify the structure marked green\nb) What structure is related to the area marked yellow\na) Right inferior pulmonary vein\nb) Oesophagus",
+  "station_number": 31,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.43,
+    "y": 0.21,
+    "description": "Green-headed pin"
+  },
+  "structure": "Right inferior pulmonary vein",
+  "main_question": "Identify the structure marked green.",
+  "main_answer": "Right inferior pulmonary vein",
+  "main_explanation": "The green pin indicates a vessel entering the hilum of the lung, identified as the right inferior pulmonary vein based on the provided answer key.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located posterior to the right inferior pulmonary vein at the lung hilum?",
+    "options": [
+      "Right main bronchus",
+      "Right superior pulmonary vein",
+      "Right phrenic nerve",
+      "Right superior vena cava"
+    ],
+    "correct_index": 0,
+    "explanation": "At the right lung hilum, the main bronchus is the most posterior structure, with the pulmonary artery superior and the pulmonary veins inferior and anterior."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is partially out of frame at the top",
+    "Image is a composite of multiple views"
+  ],
+  "_source": {
+    "id": "2bc15456b6bb",
+    "file": "2bc15456b6bb.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 36,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

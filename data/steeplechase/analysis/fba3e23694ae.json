@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Isolated bone",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.1,
+    "x1": 0.95,
+    "y1": 0.35
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.82,
+    "y": 0.15,
+    "description": "Red paint mark on the distal end of the bone"
+  },
+  "structure": null,
+  "main_question": "Identify the bone and the specific anatomical feature indicated by the red mark.",
+  "main_answer": null,
+  "main_explanation": "The image shows an isolated bone held in a hand. While the morphology suggests a metatarsal or metacarpal, the specific bone (e.g., 1st vs 5th) and the exact feature marked (e.g., head, base, or a specific tubercle) cannot be definitively identified without a question paper or clearer landmarks.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specific bone identity is ambiguous (could be a metatarsal or metacarpal) and the exact anatomical feature marked with red paint is not clearly distinguishable from the general head of the bone. No question paper is visible to provide context.",
+  "quality_flags": [
+    "Specimen identity ambiguous",
+    "No question paper visible",
+    "Marker location ambiguous"
+  ],
+  "_source": {
+    "id": "fba3e23694ae",
+    "file": "fba3e23694ae.jpeg",
+    "width": 768,
+    "height": 439,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 32,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

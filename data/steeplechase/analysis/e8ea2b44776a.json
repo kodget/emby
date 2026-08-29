@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Coronal section of brain",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.08,
+    "x1": 0.95,
+    "y1": 0.52
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.85,
+    "y": 0.35,
+    "description": "Green-headed pin inserted into the lateral aspect of the cerebral hemisphere, likely indicating the lateral ventricle or adjacent white matter."
+  },
+  "structure": "Lateral ventricle",
+  "main_question": "Identify the structure indicated by the green pin.",
+  "main_answer": "Lateral ventricle",
+  "main_explanation": "The pin is inserted into the cavity of the lateral ventricle, which is the largest of the four ventricles in the brain.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located medial to the structure indicated by the green pin?",
+    "options": [
+      "Cerebral cortex",
+      "Corpus callosum",
+      "Thalamus",
+      "Cerebellum"
+    ],
+    "correct_index": 1,
+    "explanation": "The corpus callosum is the large white matter tract that connects the two cerebral hemispheres and forms the roof of the lateral ventricles."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "e8ea2b44776a",
+    "file": "e8ea2b44776a.jpeg",
+    "width": 1949,
+    "height": 1440,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 13,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

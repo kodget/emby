@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.75,
+    "y1": 0.35
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "probe",
+    "x": 0.55,
+    "y": 0.55,
+    "description": "A probe with red and white handle is inserted into the tissue, but the specific structure it indicates is unclear"
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a cadaveric dissection of what appears to be the neck region, but there is no question paper, no station number, and the probe does not clearly indicate a specific identifiable structure. The image quality and lack of context make it impossible to create a valid exam station.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No question paper or station number visible. The probe is present but the specific structure it indicates cannot be confidently identified. The image appears to be a composite of multiple views without clear exam station context. Cannot determine what the student is being asked to identify.",
+  "quality_flags": [
+    "no_question_paper",
+    "no_station_number",
+    "unclear_marker_target",
+    "poor_image_quality",
+    "composite_image_without_context"
+  ],
+  "_source": {
+    "id": "36ab249d1485",
+    "file": "36ab249d1485.jpeg",
+    "width": 407,
+    "height": 543,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 26,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

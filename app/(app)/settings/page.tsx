@@ -105,7 +105,7 @@ export default function SettingsPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 py-12 px-4">
+      <div className="min-h-screen px-4 py-6 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold text-gray-900 mb-8">Settings</h1>
 
@@ -116,7 +116,7 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab("account")}
                 className={`flex-1 px-6 py-4 font-semibold transition-colors ${
                   activeTab === "account"
-                    ? "bg-purple-50 text-purple-600 border-b-2 border-purple-600"
+                    ? "bg-primary/8 text-primary border-b-2 border-primary"
                     : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
@@ -127,7 +127,7 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab("password")}
                 className={`flex-1 px-6 py-4 font-semibold transition-colors ${
                   activeTab === "password"
-                    ? "bg-purple-50 text-purple-600 border-b-2 border-purple-600"
+                    ? "bg-primary/8 text-primary border-b-2 border-primary"
                     : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
@@ -138,7 +138,7 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab("notifications")}
                 className={`flex-1 px-6 py-4 font-semibold transition-colors ${
                   activeTab === "notifications"
-                    ? "bg-purple-50 text-purple-600 border-b-2 border-purple-600"
+                    ? "bg-primary/8 text-primary border-b-2 border-primary"
                     : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
@@ -163,7 +163,7 @@ export default function SettingsPage() {
                   <div className="space-y-4">
                     <button
                       onClick={() => router.push("/profile")}
-                      className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors text-left"
+                      className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium press transition-colors text-left"
                     >
                       Edit Profile
                     </button>
@@ -177,7 +177,7 @@ export default function SettingsPage() {
                     </button>
 
                     <div className="pt-6 border-t">
-                      <h3 className="text-lg font-semibold text-red-600 mb-2">
+                      <h3 className="text-lg font-medium text-destructive mb-2">
                         Danger Zone
                       </h3>
                       <p className="text-gray-600 mb-4 text-sm">
@@ -186,7 +186,7 @@ export default function SettingsPage() {
                       </p>
                       <button
                         onClick={handleDeleteAccount}
-                        className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center gap-2"
+                        className="px-6 py-3 bg-destructive text-white rounded-xl font-medium press transition-colors flex items-center gap-2"
                       >
                         <Trash2 className="w-5 h-5" />
                         Delete Account
@@ -220,7 +220,7 @@ export default function SettingsPage() {
                             current_password: e.target.value,
                           })
                         }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-border bg-card rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
                         required
                       />
                     </div>
@@ -238,7 +238,7 @@ export default function SettingsPage() {
                             new_password: e.target.value,
                           })
                         }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-border bg-card rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
                         required
                         minLength={8}
                       />
@@ -260,7 +260,7 @@ export default function SettingsPage() {
                             confirm_password: e.target.value,
                           })
                         }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-border bg-card rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
                         required
                       />
                     </div>
@@ -268,7 +268,7 @@ export default function SettingsPage() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium press transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {loading ? "Updating..." : "Update Password"}
                     </button>
@@ -335,14 +335,14 @@ export default function SettingsPage() {
                             }
                             className="sr-only peer"
                           />
-                          <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                          <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                         </label>
                       </div>
                     ))}
 
                     <button
                       onClick={() => alert("Notification preferences saved")}
-                      className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors mt-6"
+                      className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium press transition-colors mt-6"
                     >
                       Save Preferences
                     </button>

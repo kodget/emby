@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.2,
+    "y0": 0.05,
+    "x1": 0.8,
+    "y1": 0.6
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No clear anatomical marker (pin, arrow, tag) is visible. There is a dark linear feature on the bone, but it is ambiguous."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specific structure to be identified is not clearly marked, and the image quality is too low to determine the intended target with confidence.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The image is low quality and lacks a clear marker or question paper. It is difficult to determine which specific anatomical structure on the skull fragment is the subject of the station.",
+  "quality_flags": [
+    "low_resolution",
+    "blurry",
+    "no_marker",
+    "no_question_paper"
+  ],
+  "_source": {
+    "id": "3255a786bc0a",
+    "file": "3255a786bc0a.jpeg",
+    "width": 549,
+    "height": 412,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 23,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

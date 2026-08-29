@@ -434,36 +434,160 @@ class DailyStudySession(models.Model):
 # -------------------------
 # STEEPLECHASE SYSTEM
 # -------------------------
-class SteeplechaseQuestion(models.Model):
-    """Image-based identification questions (Steeplechase)"""
+class AnatomicalRegion(models.TextChoices):
+    """The eight regions an OSPE station can belong to."""
+    UPPER_LIMB = "UPPER_LIMB", "Upper Limb"
+    LOWER_LIMB = "LOWER_LIMB", "Lower Limb"
+    THORAX = "THORAX", "Thorax"
+    ABDOMEN = "ABDOMEN", "Abdomen"
+    PELVIS = "PELVIS", "Pelvis"
+    PERINEUM = "PERINEUM", "Perineum"
+    HEAD_NECK = "HEAD_NECK", "Head and Neck"
+    NEUROANATOMY = "NEUROANATOMY", "Neuroanatomy"
+    UNKNOWN = "UNKNOWN", "Unclassified"
+
+
+class HistologyTopic(models.TextChoices):
+    """Tissue classes for histology spots."""
+    EPITHELIUM = "EPITHELIUM", "Epithelium"
+    CONNECTIVE_TISSUE = "CONNECTIVE_TISSUE", "Connective tissue"
+    MUSCLE = "MUSCLE", "Muscle"
+    NERVOUS_TISSUE = "NERVOUS_TISSUE", "Nervous tissue"
+    BLOOD = "BLOOD", "Blood"
+    CARTILAGE_BONE = "CARTILAGE_BONE", "Cartilage and bone"
+    LYMPHOID = "LYMPHOID", "Lymphoid"
+    CARDIOVASCULAR = "CARDIOVASCULAR", "Cardiovascular"
+    RESPIRATORY = "RESPIRATORY", "Respiratory"
+    GASTROINTESTINAL = "GASTROINTESTINAL", "Gastrointestinal"
+    LIVER_PANCREAS = "LIVER_PANCREAS", "Liver and pancreas"
+    URINARY = "URINARY", "Urinary"
+    MALE_REPRODUCTIVE = "MALE_REPRODUCTIVE", "Male reproductive"
+    FEMALE_REPRODUCTIVE = "FEMALE_REPRODUCTIVE", "Female reproductive"
+    ENDOCRINE = "ENDOCRINE", "Endocrine"
+    SKIN = "SKIN", "Skin"
+    SPECIAL_SENSES = "SPECIAL_SENSES", "Special senses"
+    UNKNOWN = "UNKNOWN", "Unclassified"
+
+
+class SpotStation(models.Model):
+    """One image-based exam station.
+
+    This is the renamed and considerably richer successor to SteeplechaseQuestion. It
+    backs both practice modes: a gross-anatomy station is a Steeplechase spot, a
+    microscope field is a Histology spot, and they differ only by `kind`. Sharing one
+    table means the session, timer, scoring, entitlement and analytics code is written
+    once rather than duplicated per mode.
+
+    Rows are produced by scripts/steeplechase/ and imported with
+    `manage.py import_stations`. Anything the vision pass could not read confidently
+    arrives with needs_review=True and is withheld from practice until a human clears it.
+    """
+
+    class Kind(models.TextChoices):
+        GROSS_ANATOMY = "GROSS_ANATOMY", "Gross anatomy"
+        HISTOLOGY = "HISTOLOGY", "Histology"
+        RADIOGRAPH = "RADIOGRAPH", "Radiograph"
+        MODEL = "MODEL", "Teaching model"
+
     id = models.CharField(max_length=50, primary_key=True)
-    
-    # Curriculum links
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='steeplechase_questions', null=True, blank=True)
-    block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='steeplechase_questions', null=True, blank=True)
-    
-    # Question content
+
+    kind = models.CharField(
+        max_length=20, choices=Kind.choices, default=Kind.GROSS_ANATOMY, db_index=True
+    )
+    region = models.CharField(
+        max_length=20,
+        choices=AnatomicalRegion.choices,
+        default=AnatomicalRegion.UNKNOWN,
+        db_index=True,
+    )
+    histology_topic = models.CharField(
+        max_length=24,
+        choices=HistologyTopic.choices,
+        default=HistologyTopic.UNKNOWN,
+        db_index=True,
+    )
+
+    # Curriculum links (optional — stations are usable without them)
+    subject = models.ForeignKey(
+        Subject, on_delete=models.SET_NULL, related_name='spot_stations', null=True, blank=True
+    )
+    block = models.ForeignKey(
+        Block, on_delete=models.SET_NULL, related_name='spot_stations', null=True, blank=True
+    )
+
+    # ---- Imagery -------------------------------------------------------
     image = CloudinaryField('image', resource_type='image', null=True, blank=True)
-    image_url = models.URLField(blank=True)  # Local relative URL for now
-    
-    prompt = models.TextField()
-    accepted_answers = models.JSONField(default=list)
+    image_url = models.URLField(blank=True)          # served path for the cropped station
+    original_image_url = models.URLField(blank=True)  # uncropped source, for review
+    specimen_label = models.CharField(max_length=200, blank=True)
+
+    # Crop actually applied, as fractions of the original image (x0, y0, x1, y1).
+    crop_box = models.JSONField(default=dict, blank=True)
+
+    # ---- The marked structure -----------------------------------------
+    # {"present": bool, "type": "pin|arrow|thread|tag|paint|probe|none",
+    #  "x": 0..1, "y": 0..1, "description": str}  — coordinates are relative to the
+    # CROPPED image so the frontend can overlay them directly.
+    marker = models.JSONField(default=dict, blank=True)
+    structure = models.CharField(max_length=200, blank=True)
+
+    # ---- Questions -----------------------------------------------------
+    prompt = models.TextField(help_text="The main question shown at this station")
+    accepted_answers = models.JSONField(
+        default=list, help_text="Normalised strings accepted as correct for the main question"
+    )
     explanation = models.TextField(blank=True)
-    
-    # Extraction metadata
+
+    # {"enabled": bool, "question": str, "options": [str x4],
+    #  "correct_index": int, "explanation": str}
+    supporting_question = models.JSONField(default=dict, blank=True)
+    # {"enabled": bool, "statement": str, "answer": bool, "explanation": str}
+    true_false_question = models.JSONField(default=dict, blank=True)
+
+    # ---- Provenance and quality ---------------------------------------
     source_file = models.CharField(max_length=200, blank=True)
     source_page = models.IntegerField(default=0)
-    needs_review = models.BooleanField(default=False)
-    review_reason = models.CharField(max_length=200, blank=True)
-    
+    transcribed_question = models.TextField(blank=True)
+    station_number = models.IntegerField(null=True, blank=True)
+
+    confidence = models.FloatField(default=0.0)
+    needs_review = models.BooleanField(default=False, db_index=True)
+    review_reason = models.TextField(blank=True)
+    quality_flags = models.JSONField(default=list, blank=True)
+    # Cleared by a human; only approved stations are served to students.
+    is_approved = models.BooleanField(default=False, db_index=True)
+
+    times_served = models.IntegerField(default=0)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['source_file', 'source_page', 'id']
-        
+        indexes = [
+            models.Index(fields=['kind', 'region', 'is_approved']),
+            models.Index(fields=['kind', 'histology_topic', 'is_approved']),
+        ]
+
     def __str__(self):
-        return f"{self.id} - {self.prompt[:50]}"
+        return f"{self.id} [{self.kind}/{self.region}] {self.prompt[:40]}"
+
+    @property
+    def is_playable(self) -> bool:
+        """Whether this station can be put in front of a student."""
+        return bool(self.is_approved and self.image_url and self.prompt and self.accepted_answers)
+
+    @property
+    def section(self) -> str:
+        """The grouping students filter by: region for anatomy, tissue for histology."""
+        if self.kind == self.Kind.HISTOLOGY:
+            return self.histology_topic
+        return self.region
+
+
+# Legacy alias. The model was renamed from SteeplechaseQuestion to SpotStation when
+# histology joined the same bank; this keeps older imports working.
+SteeplechaseQuestion = SpotStation
 
 
 # -------------------------
@@ -1065,7 +1189,14 @@ class BrainBattle(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     topic = models.CharField(max_length=200, blank=True, help_text="Topic for AI question generation")
-    
+
+    # The shareable join code. Battles used to be discoverable only by class group, so
+    # there was nothing for a host to share and no way to play across classes.
+    code = models.CharField(
+        max_length=8, unique=True, db_index=True, blank=True,
+        help_text="Short code participants type to join",
+    )
+
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='mixed')
     time_per_question = models.IntegerField(default=20, help_text="Seconds per question")
     
@@ -1087,7 +1218,40 @@ class BrainBattle(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.title} ({self.class_group.name})"
+        return f"{self.title} ({self.code or 'no code'})"
+
+    @staticmethod
+    def generate_code() -> str:
+        """A short, unambiguous code someone can read aloud.
+
+        Excludes characters that are easily confused when typed from a screenshot or
+        dictated across a lecture hall: O/0, I/1/L, S/5, B/8.
+        """
+        import random
+        import string
+
+        alphabet = "".join(
+            c for c in string.ascii_uppercase + string.digits
+            if c not in "O0I1LS5B8"
+        )
+        while True:
+            code = "".join(random.choices(alphabet, k=6))
+            if not BrainBattle.objects.filter(code=code).exists():
+                return code
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = self.generate_code()
+        super().save(*args, **kwargs)
+
+    @property
+    def question_count(self) -> int:
+        return len(self.questions or [])
+
+    @property
+    def is_joinable(self) -> bool:
+        """A battle can be joined until it finishes."""
+        return self.status in {"scheduled", "active"}
 
 
 class BattleParticipant(models.Model):
@@ -1095,7 +1259,10 @@ class BattleParticipant(models.Model):
     battle = models.ForeignKey(BrainBattle, on_delete=models.CASCADE, related_name='participants')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='battle_participations')
     score = models.IntegerField(default=0)
+    correct_count = models.IntegerField(default=0)
+    answered_count = models.IntegerField(default=0)
     joined_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ['battle', 'user']
@@ -1103,3 +1270,38 @@ class BattleParticipant(models.Model):
 
     def __str__(self):
         return f"{self.user.username} in {self.battle.title} - Score: {self.score}"
+
+    @property
+    def accuracy(self) -> float | None:
+        if not self.answered_count:
+            return None
+        return self.correct_count / self.answered_count
+
+
+class BattleAnswer(models.Model):
+    """One participant's answer to one question in a battle.
+
+    Recording answers individually is what makes scoring trustworthy: the score is
+    derived here rather than accepted from the client, and the unique constraint stops a
+    participant submitting the same question twice to inflate their total.
+    """
+
+    participant = models.ForeignKey(
+        BattleParticipant, on_delete=models.CASCADE, related_name='answers'
+    )
+    question_index = models.IntegerField()
+
+    selected_index = models.IntegerField(null=True, blank=True)
+    is_correct = models.BooleanField(default=False)
+    # Faster correct answers are worth more, so the time is part of the record.
+    seconds_taken = models.FloatField(default=0)
+    points = models.IntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['participant', 'question_index']
+        ordering = ['question_index']
+
+    def __str__(self):
+        return f"{self.participant.user.username} Q{self.question_index} ({self.points} pts)"

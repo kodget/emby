@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.3,
+    "y": 0.3,
+    "description": "A green-headed pin is visible in the top-left quadrant of the image, but the specific anatomical structure it indicates is not identifiable."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a collage of four different views of a cadaveric specimen. The orientation is unclear, and the specific anatomical region (e.g., pelvis, neck, axilla) cannot be definitively determined from the visible tissue planes and the pin location. Therefore, a specific exam question cannot be formulated.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.1,
+  "needs_review": true,
+  "review_reason": "The image is a composite of four separate photos rather than a single station view. The anatomical region is ambiguous, and the structure indicated by the pin cannot be confidently identified without more context or a clearer single view.",
+  "quality_flags": [
+    "composite_image",
+    "ambiguous_anatomy",
+    "no_question_paper"
+  ],
+  "_source": {
+    "id": "4bf9098f6db0",
+    "file": "4bf9098f6db0.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 65,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

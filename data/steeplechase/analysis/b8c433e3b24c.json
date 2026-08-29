@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Brain (medial/sagittal view, preserved)",
+  "specimen_bbox": {
+    "x0": 0.18,
+    "y0": 0.02,
+    "x1": 0.85,
+    "y1": 0.98
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "White threads/strings are present but appear to be holding the specimen open rather than indicating a single specific structure; no pin, arrow, tag or paint mark is visible."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "No question paper, station number, or unambiguous marker is present in the photograph, so the specific structure being tested cannot be determined. The specimen is a preserved brain shown from the medial aspect (corpus callosum, cingulate gyrus, fornix and brainstem visible), but without a marker or written question the intended target is unclear.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No question paper, station number, or clear single-structure marker is visible. The image is a multi-panel composite of close-ups of a preserved brain (medial view), and the white threads appear to be holding the specimen apart rather than pointing to a specific structure. The intended target structure cannot be confidently identified, so the station is not usable as-is.",
+  "quality_flags": [
+    "no question paper visible",
+    "no station number visible",
+    "no unambiguous marker for a single structure",
+    "image is a multi-panel composite of close-ups",
+    "threads/strings ambiguous (holding specimen vs. marking structure)"
+  ],
+  "_source": {
+    "id": "b8c433e3b24c",
+    "file": "b8c433e3b24c.jpeg",
+    "width": 1022,
+    "height": 1020,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 15,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

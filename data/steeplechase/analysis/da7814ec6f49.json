@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Hyoid bone",
+  "specimen_bbox": {
+    "x0": 0.35,
+    "y0": 0.2,
+    "x1": 0.75,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "IDENTIFY THIS SPECIMEN\nSTRUCTURE A CULAI WITH FADED BLUE",
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.42,
+    "y": 0.4,
+    "description": "Faded blue paint marking the greater cornu of the hyoid bone"
+  },
+  "structure": "Hyoid bone",
+  "main_question": "Identify this specimen.",
+  "main_answer": "Hyoid bone",
+  "main_explanation": "The specimen is an isolated hyoid bone, a U-shaped bone in the neck that supports the tongue and provides attachment for muscles of the floor of the mouth and larynx.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following is a unique characteristic of the hyoid bone?",
+    "options": [
+      "It articulates directly with the mandible",
+      "It is the only bone in the body that does not articulate with another bone",
+      "It is part of the axial skeleton",
+      "It is a sesamoid bone"
+    ],
+    "correct_index": 1,
+    "explanation": "The hyoid bone is unique because it does not articulate with any other bone; it is suspended in the neck by muscles and ligaments."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Handwritten text is partially illegible",
+    "Paint marker is faded"
+  ],
+  "_source": {
+    "id": "da7814ec6f49",
+    "file": "da7814ec6f49.jpeg",
+    "width": 641,
+    "height": 481,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 6,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "MODEL",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.2,
+    "y0": 0.15,
+    "x1": 0.95,
+    "y1": 0.65
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.45,
+    "y": 0.42,
+    "description": "A blue-headed pin is inserted into the anterior aspect of the model, near the junction of the bladder and the urethra."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a plastic anatomical model of the male pelvic organs (bladder, prostate, urethra, rectum). While a pin is present, there is no question paper or station number visible to define the specific exam question. The image quality is also poor, with significant glare and low resolution.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.8,
+  "needs_review": true,
+  "review_reason": "The image appears to be a composite or a very low-quality photo of a model. It lacks the standard station paper and number, making it unsuitable as a standalone exam station without further context. The specific structure indicated by the pin is ambiguous without a question.",
+  "quality_flags": [
+    "low_resolution",
+    "no_question_paper",
+    "composite_image"
+  ],
+  "_source": {
+    "id": "60f245bcc5ee",
+    "file": "60f245bcc5ee.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 106,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

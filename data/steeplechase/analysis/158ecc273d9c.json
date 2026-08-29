@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PERINEUM",
+  "specimen_label": "Male perineum / scrotum",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.85,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.75,
+    "y": 0.78,
+    "description": "A white paper tag with a blue letter 'A' attached to a pin or probe pointing at the lower scrotum."
+  },
+  "structure": "Scrotum",
+  "main_question": "Identify the structure indicated by the marker.",
+  "main_answer": "Scrotum",
+  "main_explanation": "The image displays the external male genitalia. The marker points to the scrotum, the pouch of skin and muscle that contains the testes.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which muscle is primarily responsible for the cremasteric reflex, which elevates the testis?",
+    "options": [
+      "Bulbospongiosus",
+      "Cremaster",
+      "Ischiocavernosus",
+      "Dartos"
+    ],
+    "correct_index": 1,
+    "explanation": "The cremaster muscle, derived from the internal oblique, contracts to elevate the testis in response to cold or tactile stimulation of the medial thigh (cremasteric reflex)."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple crops",
+    "Specimen is dark and preservation is poor"
+  ],
+  "_source": {
+    "id": "158ecc273d9c",
+    "file": "158ecc273d9c.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 20,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

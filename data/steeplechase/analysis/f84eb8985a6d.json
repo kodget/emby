@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.98,
+    "y1": 0.68
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.42,
+    "y": 0.13,
+    "description": "A small white paper tag with the letter 'A' written in blue ink is attached to the specimen, but no specific structure is clearly indicated by it."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a preserved gross anatomy preparation, but the specific structure being tested cannot be confidently identified from the image. The paper tag marked 'A' does not clearly point to a single identifiable structure, and no handwritten question is legible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specific anatomical structure being tested cannot be confidently identified. The paper tag 'A' is present but does not clearly indicate a single structure, and no legible question paper is visible. The specimen appears to be a preserved tubular/folded organ (possibly GI tract or reproductive), but this is uncertain.",
+  "quality_flags": [
+    "specimen identification uncertain",
+    "no legible question paper",
+    "marker ambiguous - tag does not clearly point to a specific structure",
+    "image is a composite of multiple views making single-structure identification difficult"
+  ],
+  "_source": {
+    "id": "f84eb8985a6d",
+    "file": "f84eb8985a6d.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 52,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

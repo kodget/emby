@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Brain",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.05,
+    "x1": 0.75,
+    "y1": 0.85
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.5,
+    "y": 0.2,
+    "description": "Two pins (one blue, one green) and blue dye are present on the specimen, but no specific structure is clearly indicated for a question."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a brain specimen with pins and dye, but there is no question paper or clear indication of what specific structure is being tested. The pins are placed in a way that does not clearly point to a single anatomical landmark suitable for a standard exam question without context.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.8,
+  "needs_review": true,
+  "review_reason": "No question paper is visible in the frame. The pins are present but it is unclear which specific structure they are intended to identify for an exam context (e.g. is it the central sulcus, a specific gyrus, or a vascular structure?).",
+  "quality_flags": [
+    "No question paper visible",
+    "Marker target ambiguous"
+  ],
+  "_source": {
+    "id": "beca93eab2ee",
+    "file": "beca93eab2ee.jpeg",
+    "width": 1948,
+    "height": 1633,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 28,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

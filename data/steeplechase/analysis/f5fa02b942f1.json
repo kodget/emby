@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PERINEUM",
+  "specimen_label": "Penis (cross-section)",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.05,
+    "x1": 0.55,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.65,
+    "y": 0.6,
+    "description": "A blue-headed pin is inserted into the cross-section of the penis, likely indicating the corpus spongiosum or the deep dorsal vein."
+  },
+  "structure": "Corpus spongiosum",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Corpus spongiosum",
+  "main_explanation": "The pin is located in the ventral (inferior) portion of the penile cross-section, which corresponds to the corpus spongiosum, the erectile tissue that surrounds the urethra.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.85,
+  "needs_review": true,
+  "review_reason": "The image appears to be a composite of three different views of the same specimen rather than a single photograph of a station setup. There is no question paper or station number visible, so it is not a complete exam station.",
+  "quality_flags": [
+    "Composite image",
+    "No question paper visible"
+  ],
+  "_source": {
+    "id": "f5fa02b942f1",
+    "file": "f5fa02b942f1.jpeg",
+    "width": 1114,
+    "height": 1279,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 9,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

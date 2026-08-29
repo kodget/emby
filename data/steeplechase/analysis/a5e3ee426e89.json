@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "39\nSpecifically identify the shunt pins\nby direction of veins shunt for shunt pins\nGreen?\nBlue is called?",
+  "station_number": 39,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only a question paper and a dark background. The anatomical specimen described in the text (likely a heart with shunt pins) is not visible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image does not contain the anatomical specimen, only the question paper. It is not a usable exam station image.",
+  "quality_flags": [
+    "specimen_missing",
+    "only_paper_visible"
+  ],
+  "_source": {
+    "id": "a5e3ee426e89",
+    "file": "a5e3ee426e89.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 39,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

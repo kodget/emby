@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "MODEL",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Sagittal section of the head and neck",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.02,
+    "x1": 0.85,
+    "y1": 0.65
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": 2,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific pin, arrow, or tag is visible indicating a single structure to identify."
+  },
+  "structure": null,
+  "main_question": "Identify the anatomical structures visible in this sagittal section of the head and neck.",
+  "main_answer": "The model displays the nasal cavity, paranasal sinuses, oral cavity, pharynx, larynx, and the cervical vertebral column.",
+  "main_explanation": "This is a standard anatomical model showing a mid-sagittal section. Key features include the nasal septum, the hard and soft palate, the tongue, the laryngeal cartilages (thyroid, cricoid), and the spinal cord within the vertebral canal.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located in the nasopharynx, superior to the soft palate?",
+    "options": [
+      "Tonsils",
+      "Adenoid pad (pharyngeal tonsil)",
+      "Uvula",
+      "Epiglottis"
+    ],
+    "correct_index": 1,
+    "explanation": "The pharyngeal tonsil, or adenoid pad, is a mass of lymphoid tissue located on the posterior wall of the nasopharynx. The palatine tonsils are in the oropharynx, the uvula hangs from the soft palate, and the epiglottis is in the laryngopharynx."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Multiple views of the same specimen are provided in a collage format",
+    "No specific marker is present to target a single structure"
+  ],
+  "_source": {
+    "id": "4902d3533fe2",
+    "file": "4902d3533fe2.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 127,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

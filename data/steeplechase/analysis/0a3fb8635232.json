@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Pelvic prosection",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.45,
+    "y1": 0.45
+  },
+  "question_paper_present": true,
+  "transcribed_question": "1) IDENTIFY THE PINNED STRUCTURE (GREEN?)\n2) IDENTIFY THE PINNED STRUCTURE (BLUE)\n3) IDENTIFY THE AREA PAINTED YELLOW\n\na) Superficial dorsal vein\nb) corpus cavernosum\nc) L5 vertebrae",
+  "station_number": 5,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.35,
+    "y": 0.18,
+    "description": "Blue-headed pin inserted into the tissue"
+  },
+  "structure": "Corpus cavernosum",
+  "main_question": "Identify the structure indicated by the blue pin.",
+  "main_answer": "Corpus cavernosum",
+  "main_explanation": "The specimen shows a prosection of the male perineum/pelvis. The blue pin is inserted into the erectile tissue, which corresponds to the corpus cavernosum.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located in the superficial perineal pouch?",
+    "options": [
+      "Corpus spongiosum",
+      "Bulbourethral gland",
+      "Prostate gland",
+      "Seminal vesicle"
+    ],
+    "correct_index": 0,
+    "explanation": "The corpus spongiosum (along with the bulb and crura of the penis) is located in the superficial perineal pouch, whereas the bulbourethral glands are in the deep pouch, and the prostate and seminal vesicles are pelvic organs."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is partially out of frame on the left",
+    "Image is a composite of two views"
+  ],
+  "_source": {
+    "id": "0a3fb8635232",
+    "file": "0a3fb8635232.jpeg",
+    "width": 3028,
+    "height": 1476,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 6,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

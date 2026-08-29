@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What is the embryological origin of the structure tied. B) Identify the area pinned green",
+  "station_number": 26,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The anatomical specimen is not visible in the photograph. Only the question paper is shown.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.1,
+  "needs_review": true,
+  "review_reason": "The photograph does not show the anatomical specimen. It only shows the question card. The image is also very dark and blurry. It is impossible to identify the structure or region without seeing the specimen.",
+  "quality_flags": [
+    "Specimen not visible",
+    "Very dark image",
+    "Blurry",
+    "Only question paper visible"
+  ],
+  "_source": {
+    "id": "652a9c1dd50d",
+    "file": "652a9c1dd50d.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 113,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

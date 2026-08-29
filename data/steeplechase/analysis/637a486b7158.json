@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Mandible",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.05,
+    "x1": 0.9,
+    "y1": 0.55
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.65,
+    "y": 0.35,
+    "description": "Red marker outline on the posterior body of the mandible, likely indicating the mental foramen or a specific anatomical landmark."
+  },
+  "structure": "Mandible",
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a mandible with a marked area, but there is no question paper or clear exam prompt visible to determine the specific question being asked.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.8,
+  "needs_review": true,
+  "review_reason": "No question paper is visible in the frame, making it impossible to determine the specific exam question intended for this station.",
+  "quality_flags": [
+    "No question paper visible",
+    "Image appears to be a composite or collage of multiple views"
+  ],
+  "_source": {
+    "id": "637a486b7158",
+    "file": "637a486b7158.jpeg",
+    "width": 636,
+    "height": 477,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 15,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

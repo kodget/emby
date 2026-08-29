@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.65,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.13,
+    "y": 0.08,
+    "description": "A small paper tag with a handwritten character (appears to be 'B' or '8') is tied with thread to a structure within the prosection."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a cadaveric limb prosection with a paper tag and thread, but the specific structure indicated by the tag cannot be confidently identified from the available views. The region (which limb, which compartment) is also unclear. No legible question paper is present.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specific structure indicated by the tag cannot be confidently identified. The region (which limb) is unclear. The image is a composite of multiple cropped views, making it difficult to orient. No legible question paper is present. A clearer, single-view photograph with a legible question would be needed to create a valid exam station.",
+  "quality_flags": [
+    "Composite image of multiple cropped views of the same specimen",
+    "No legible question paper present",
+    "Dim lighting and poor contrast",
+    "Specific target structure not clearly identifiable",
+    "Region of the body not determinable"
+  ],
+  "_source": {
+    "id": "907d5493a4f3",
+    "file": "907d5493a4f3.jpeg",
+    "width": 674,
+    "height": 1041,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 11,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

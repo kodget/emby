@@ -1,0 +1,51 @@
+{
+  "is_station": false,
+  "station_kind": "MODEL",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.78,
+    "y1": 0.98
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag, or paint mark is visible on the model itself. A red 'B!' is written on a whiteboard in the background, but this does not mark a specific anatomical structure on the specimen."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "No specific structure is indicated by a marker, and no question is present on a paper. The image shows a plastic thorax model in sagittal section but does not constitute a complete exam station as no structure is singled out for identification.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The image shows a plastic thorax model but lacks any marker (pin, arrow, thread) pointing to a specific structure and has no legible question paper. The red 'B!' on the whiteboard is ambiguous and does not clearly indicate which structure is being tested. It is unclear what the intended question or target structure is.",
+  "quality_flags": [
+    "No marker on specimen",
+    "No question paper present",
+    "Ambiguous whiteboard label 'B!'",
+    "Image appears to be a composite or multi-panel photo"
+  ],
+  "_source": {
+    "id": "a7e0fd148781",
+    "file": "a7e0fd148781.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 96,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

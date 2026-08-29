@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Coronal section of brain",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.0,
+    "x1": 0.75,
+    "y1": 0.32
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify the pin areas (structures).",
+  "station_number": 47,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.6,
+    "y": 0.15,
+    "description": "Two pins inserted into the brain section, one pointing to the superior aspect and one to the inferior aspect."
+  },
+  "structure": "Brain structures (specific structures unclear due to image quality)",
+  "main_question": "Identify the structures indicated by the pins.",
+  "main_answer": null,
+  "main_explanation": "The image quality is too low to definitively identify the specific anatomical structures indicated by the pins on the coronal brain section.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The resolution of the photograph is too low to identify the specific brain structures indicated by the pins. The handwritten question is partially legible but the anatomical targets are ambiguous.",
+  "quality_flags": [
+    "low_resolution",
+    "marker_ambiguous"
+  ],
+  "_source": {
+    "id": "cd53a8f135aa",
+    "file": "cd53a8f135aa.jpeg",
+    "width": 1632,
+    "height": 1224,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 4,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

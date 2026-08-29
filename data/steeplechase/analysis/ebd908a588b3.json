@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Cadaveric head prosection",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.0,
+    "x1": 0.75,
+    "y1": 0.95
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.75,
+    "y": 0.75,
+    "description": "A green-headed pin is inserted into the lower part of the specimen, likely the tongue or floor of the mouth."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a collage of three different views of the same specimen. The pin in the bottom-right panel is located in the oral cavity region, but without a question paper or clear context, the specific structure intended to be identified cannot be determined with certainty.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The image is a composite of three separate photos rather than a single station view. There is no question paper visible to guide identification. The pin location in the bottom panel is ambiguous (could be tongue, floor of mouth, or submandibular region).",
+  "quality_flags": [
+    "Composite image",
+    "No question paper visible",
+    "Ambiguous pin location"
+  ],
+  "_source": {
+    "id": "ebd908a588b3",
+    "file": "ebd908a588b3.jpeg",
+    "width": 1116,
+    "height": 1347,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 10,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

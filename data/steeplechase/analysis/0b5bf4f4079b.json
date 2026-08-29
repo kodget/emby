@@ -1,0 +1,54 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag, or other marker is visible in any of the image panels."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a composite of multiple close-up photographs of a cadaveric dissection. There is no question paper, no station number, and no marker (pin, arrow, thread, tag, or paint) indicating a specific structure. The anatomical structures are difficult to identify with confidence due to the dark lighting and close-up nature of the shots. Without a clear marker or question, this cannot be used as a valid exam station.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "No question paper, no station number, and no marker are visible. The image is a composite of dark, close-up dissection photographs without clear identification of the specimen or the structure being tested. The anatomical region and specific structures cannot be confidently identified.",
+  "quality_flags": [
+    "no_question_paper",
+    "no_marker",
+    "no_station_number",
+    "dark_image",
+    "composite_of_multiple_closeups",
+    "structures_difficult_to_identify",
+    "poor_lighting"
+  ],
+  "_source": {
+    "id": "0b5bf4f4079b",
+    "file": "0b5bf4f4079b.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 100,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

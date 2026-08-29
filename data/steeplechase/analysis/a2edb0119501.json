@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.0,
+    "x1": 0.98,
+    "y1": 0.85
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.08,
+    "y": 0.58,
+    "description": "A green-headed dressmaker pin is inserted into the specimen on the left side; a second blue-headed pin is visible superiorly."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a preserved cadaveric prosection with two pins, but the anatomical region and the specific structures indicated by the pins cannot be confidently identified from the photograph alone. No question paper is visible to provide context.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The anatomical region and the specific structures marked by the pins cannot be confidently identified. The orientation of the specimen is unclear, and there is no question paper or label visible to provide context. A plausible guess would be a serious error.",
+  "quality_flags": [
+    "specimen orientation unclear",
+    "no question paper visible",
+    "region cannot be confidently identified",
+    "marker target structure ambiguous"
+  ],
+  "_source": {
+    "id": "a2edb0119501",
+    "file": "a2edb0119501.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 49,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

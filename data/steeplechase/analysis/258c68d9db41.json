@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.55,
+    "y": 0.45,
+    "description": "A teal/green conical marker or pin head is visible in the center of the tissue."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specific anatomical structure indicated by the marker cannot be identified with confidence due to the lack of surrounding landmarks and context.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.1,
+  "needs_review": true,
+  "review_reason": "Unable to identify the anatomical region or the specific structure marked. The image is a close-up of soft tissue without clear bony landmarks or identifiable organs. No question paper is visible to provide context.",
+  "quality_flags": [
+    "unclear_anatomy",
+    "no_landmarks",
+    "no_question_paper"
+  ],
+  "_source": {
+    "id": "258c68d9db41",
+    "file": "258c68d9db41.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 13,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

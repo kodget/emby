@@ -1,0 +1,58 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Mandible",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.22,
+    "x1": 0.9,
+    "y1": 0.62
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.85,
+    "y": 0.28,
+    "description": "Green paint mark on the tip of the mandibular condyle"
+  },
+  "structure": "Mandibular condyle",
+  "main_question": "Identify the structure indicated by the green paint mark.",
+  "main_answer": "Mandibular condyle",
+  "main_explanation": "The green paint is located on the superior aspect of the mandibular ramus, specifically on the articular surface known as the condyle, which articulates with the mandibular fossa of the temporal bone.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which nerve provides the primary sensory innervation to the temporomandibular joint?",
+    "options": [
+      "Auriculotemporal nerve",
+      "Masseteric nerve",
+      "Buccal nerve",
+      "Nerve to medial pterygoid"
+    ],
+    "correct_index": 0,
+    "explanation": "The auriculotemporal nerve, a branch of the mandibular division of the trigeminal nerve (V3), provides the main sensory innervation to the temporomandibular joint."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "No question paper visible",
+    "Image appears to be a composite or collage of multiple views"
+  ],
+  "_source": {
+    "id": "b2ccbaea064e",
+    "file": "b2ccbaea064e.jpeg",
+    "width": 631,
+    "height": 473,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 1,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

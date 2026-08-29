@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.05,
+    "x1": 0.95,
+    "y1": 0.95
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.6,
+    "y": 0.2,
+    "description": "Green-headed pin/probe inserted into the dissected tissue"
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a dark, low-resolution multi-panel photograph of a cadaveric prosection with a green-headed pin inserted into the tissue. The specific anatomical region and the structure indicated by the pin cannot be confidently identified from the visible landmarks. No question paper is legible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The photograph is dark, low-resolution, and appears to be a composite of multiple views. The anatomical region and the specific structure marked by the green pin cannot be confidently identified. No legible question paper is present to provide context.",
+  "quality_flags": [
+    "very dark",
+    "low resolution",
+    "composite multi-panel image",
+    "no legible question paper",
+    "structure not identifiable"
+  ],
+  "_source": {
+    "id": "5db1a6e73796",
+    "file": "5db1a6e73796.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 69,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

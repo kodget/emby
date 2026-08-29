@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Preserved human brain (sagittal/ventral view) with two labelled pins (A and B)",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.0,
+    "x1": 0.78,
+    "y1": 0.88
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.45,
+    "y": 0.33,
+    "description": "Two metal pins with paper tags labelled 'A' and 'B' inserted into the brainstem/cerebellar region; exact insertion points are not clearly resolvable in this low-resolution composite image."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a preserved brain with two labelled pins in the posterior fossa / brainstem region, but the image is a blurry multi-crop composite and the precise insertion points of pins A and B cannot be confidently identified. No legible question paper is present. Per the no-guessing rule, the structure and main answer are left null.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "Image is a low-resolution, blurry composite of multiple cropped views. The two labelled pins (A and B) are in the brainstem/cerebellar region but their exact insertion points cannot be confidently resolved, so the marked structures cannot be identified without guessing. No legible question paper is visible.",
+  "quality_flags": [
+    "low_resolution",
+    "blurry",
+    "composite_of_multiple_crops",
+    "marker_insertion_point_ambiguous",
+    "no_legible_question_paper"
+  ],
+  "_source": {
+    "id": "7b5aefa569cc",
+    "file": "7b5aefa569cc.jpeg",
+    "width": 414,
+    "height": 552,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 14,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

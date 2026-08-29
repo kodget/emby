@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "HISTOLOGY",
+  "histology_topic": "CARTILAGE_BONE",
+  "region": "UNKNOWN",
+  "specimen_label": "histology slide image A and slide image B",
+  "specimen_bbox": {
+    "x0": 0.07,
+    "y0": 0.13,
+    "x1": 0.87,
+    "y1": 0.92
+  },
+  "question_paper_present": true,
+  "transcribed_question": "1) Identify the slides A & B\n2) Mention two places where A can be found",
+  "station_number": 3,
+  "marker": {
+    "present": true,
+    "type": "arrow",
+    "x": 0.31,
+    "y": 0.42,
+    "description": "Arrow/pointer on slide A pointing to the cartilage-like tissue"
+  },
+  "structure": "cartilage tissue on slide A",
+  "main_question": "Identify the slides A and B, and mention two places where A can be found.",
+  "main_answer": "Slide A: hyaline cartilage. Slide B: compact bone.",
+  "main_explanation": "Slide A shows a glassy cartilage matrix with chondrocytes in lacunae, consistent with hyaline cartilage. Slide B shows layered eosinophilic lamellae and bony architecture consistent with compact bone. Hyaline cartilage is found, for example, in the tracheal rings and the articular surfaces of synovial joints.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which cell type is responsible for maintaining the matrix of slide A?",
+    "options": [
+      "Osteoblasts",
+      "Chondrocytes",
+      "Fibroblasts",
+      "Osteoclasts"
+    ],
+    "correct_index": 1,
+    "explanation": "Chondrocytes maintain the cartilage matrix in hyaline cartilage."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "Hyaline cartilage is found in the tracheal rings and articular surfaces of synovial joints.",
+    "answer": true,
+    "explanation": "These are classic locations of hyaline cartilage."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "glare_on_screen",
+    "question_paper_obscures_lower_part_of_image"
+  ],
+  "_source": {
+    "id": "44470bb14501",
+    "file": "44470bb14501.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 4,
+    "model": "gpt-5.4-mini"
+  }
+}

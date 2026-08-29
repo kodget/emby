@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) What area/region is surrounding the pointer? b) Support your answer with a reason",
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame, only the question paper."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only a sheet of paper with a handwritten question. The anatomical specimen (likely a histology slide or screen) that the question refers to is not visible in the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image contains only the question paper and does not show the anatomical specimen or histology slide being tested. It is not a usable exam station photograph.",
+  "quality_flags": [
+    "No specimen visible",
+    "Only question paper visible"
+  ],
+  "_source": {
+    "id": "5f78a4fbe899",
+    "file": "5f78a4fbe899.jpeg",
+    "width": 640,
+    "height": 480,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 22,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

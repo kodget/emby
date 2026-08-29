@@ -1,0 +1,56 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.18,
+    "y0": 0.03,
+    "x1": 0.97,
+    "y1": 0.85
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify the tied muscle & give the nerve root of its nerve supply to the pinned (specific)?",
+  "station_number": 26,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.32,
+    "y": 0.44,
+    "description": "A thread tied around a thin structure on the left side of the specimen"
+  },
+  "structure": null,
+  "main_question": "Identify the tied muscle and give the nerve root of its nerve supply.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.1,
+  "needs_review": true,
+  "review_reason": "The specimen is an isolated, dissected muscle/nerve preparation held by hands, lacking any surrounding anatomical context or landmarks. It is impossible to confidently identify the specific muscle (tied with a thread) or the nerve from the photograph alone.",
+  "quality_flags": [
+    "specimen_obscured_by_hands",
+    "ambiguous_marker"
+  ],
+  "_source": {
+    "id": "1d3563a1da72",
+    "file": "1d3563a1da72.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 45,
+    "model": "gemini-3.5-flash"
+  }
+}

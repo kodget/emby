@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Coronal section of brain",
+  "specimen_bbox": {
+    "x0": 0.25,
+    "y0": 0.0,
+    "x1": 0.9,
+    "y1": 0.65
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": 8,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.6,
+    "y": 0.4,
+    "description": "A pin with a white tag marked '8' is inserted into the specimen."
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": null,
+  "main_explanation": "The pin is inserted into the brain section, but the specific anatomical structure (e.g., thalamus, caudate nucleus, or internal capsule) cannot be definitively identified due to the image resolution and the angle of the pin.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.4,
+  "needs_review": true,
+  "review_reason": "The specific structure indicated by the pin is not clearly identifiable from the image. The image is low resolution and the pin obscures the target area.",
+  "quality_flags": [
+    "low_resolution",
+    "marker_obscures_structure"
+  ],
+  "_source": {
+    "id": "9d04105baa74",
+    "file": "9d04105baa74.jpeg",
+    "width": 605,
+    "height": 454,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 2,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

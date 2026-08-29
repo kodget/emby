@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, RotateCcw, PartyPopper } from "lucide-react";
+import { ArrowLeft, RotateCcw } from "lucide-react";
+
+import { Axo, AxoError, AxoLoader } from "@/components/brand/axo";
 import { flashcardApi, type Flashcard, type FlashcardRating } from "@/lib/api";
 import { FlashcardCard } from "./flashcard-card";
 import { ReviewRatingButtons } from "./review-rating-buttons";
@@ -96,82 +98,79 @@ export function FlashcardStudy({ subjectId, blockId, subBlockId, topicId, onComp
 
   const currentCard = cards[currentIndex];
   const progress = cards.length > 0 ? Math.round((currentIndex / cards.length) * 100) : 0;
-
   return (
-    <div className="min-h-screen bg-[#080d1a] flex flex-col">
+    <div className="flex min-h-screen flex-col">
       {/* Top bar */}
-      <div className="px-6 pt-6 flex items-center justify-between max-w-2xl mx-auto w-full">
+      <div className="mx-auto flex w-full max-w-2xl items-center justify-between px-4 pt-5 sm:px-6">
         <button
           id="back-to-flashcards"
           onClick={() => router.push("/flashcards")}
-          className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm"
+          className="press flex items-center gap-2 text-sm text-muted-foreground"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="size-4" />
           Back
         </button>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-white/40">
-            {currentIndex + 1} / {cards.length}
-          </span>
-        </div>
+        <span className="text-sm text-muted-foreground tabular">
+          {currentIndex + 1} / {cards.length}
+        </span>
       </div>
 
-      {/* Progress bar */}
-      <div className="px-6 max-w-2xl mx-auto w-full mt-4">
-        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+      {/* Progress */}
+      <div className="mx-auto mt-3 w-full max-w-2xl px-4 sm:px-6">
+        <div
+          className="h-1.5 overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Review progress"
+        >
           <div
-            className="h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full transition-all duration-500"
+            className="h-full rounded-full bg-primary transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 max-w-2xl mx-auto w-full gap-8">
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-7 px-4 py-8 sm:px-6">
         {isLoading ? (
-          <div className="w-10 h-10 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+          <AxoLoader label="Shuffling your deck…" pose="flashcards" />
         ) : error ? (
-          <div className="text-center">
-            <p className="text-red-400 mb-4">{error}</p>
-            <button onClick={loadCards} className="text-sm text-white/60 hover:text-white underline">
-              Retry
-            </button>
-          </div>
+          <AxoError description={error} onRetry={loadCards} />
         ) : sessionComplete ? (
-          /* Session complete state */
-          <div className="flex flex-col items-center gap-6 text-center">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/30 to-emerald-400/10 border border-emerald-500/30 flex items-center justify-center">
-              <PartyPopper className="h-10 w-10 text-emerald-400" />
-            </div>
+          <div className="flex flex-col items-center gap-5 text-center">
+            <Axo pose="celebrate" size="lg" float />
             <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Session Complete!</h2>
-              <p className="text-white/50">
-                You reviewed <span className="text-violet-400 font-semibold">{reviewed}</span> cards.
+              <h2 className="font-display text-2xl">Session complete</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                You reviewed{" "}
+                <span className="font-medium text-foreground tabular">{reviewed}</span>{" "}
+                card{reviewed === 1 ? "" : "s"}.
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap justify-center gap-2">
               {onComplete ? (
                 <button
                   onClick={onComplete}
-                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-sm font-medium transition-all shadow-lg"
+                  className="press rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground"
                 >
-                  Next Activity
+                  Next activity
                 </button>
               ) : (
                 <button
                   onClick={() => router.push("/flashcards")}
-                  className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors"
+                  className="press rounded-full border border-border bg-card px-6 py-3 text-sm"
                 >
-                  Back to Decks
+                  Back to decks
                 </button>
               )}
               <button
                 id="restart-session-btn"
                 onClick={loadCards}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white text-sm font-medium transition-all shadow-lg shadow-violet-900/30"
+                className="press flex items-center gap-2 rounded-full border border-border bg-card px-6 py-3 text-sm"
               >
-                <RotateCcw className="w-4 h-4" />
-                Review Again
+                <RotateCcw className="size-4" />
+                Review again
               </button>
             </div>
           </div>
@@ -179,7 +178,6 @@ export function FlashcardStudy({ subjectId, blockId, subBlockId, topicId, onComp
           <FlashcardEmptyState mode="due" />
         ) : currentCard ? (
           <>
-            {/* Card */}
             <FlashcardCard
               card={currentCard}
               isFlipped={isFlipped}
@@ -187,37 +185,44 @@ export function FlashcardStudy({ subjectId, blockId, subBlockId, topicId, onComp
               className="w-full"
             />
 
-            {/* Action area */}
             {!isFlipped ? (
               <button
                 id="reveal-answer-btn"
                 onClick={() => setIsFlipped(true)}
-                className="px-10 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-semibold transition-all border border-white/10"
+                className="press rounded-full border border-border bg-card px-10 py-3.5 text-sm font-medium"
               >
-                Reveal Answer
+                Reveal answer
               </button>
             ) : (
-              <div className="flex flex-col items-center gap-4 w-full">
-                <p className="text-white/40 text-sm">How well did you know this?</p>
+              <div className="flex w-full flex-col items-center gap-3">
+                <p className="text-sm text-muted-foreground">How well did you know this?</p>
                 <ReviewRatingButtons onRate={handleRate} isLoading={isRating} />
               </div>
             )}
 
-            {/* Hint */}
-            {!isFlipped && (
-              <p className="text-white/25 text-xs">
-                Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[10px]">Space</kbd> to flip
-              </p>
-            )}
-            {isFlipped && (
-              <p className="text-white/25 text-xs">
-                Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[10px]">1</kbd>–
-                <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[10px]">4</kbd> to rate
-              </p>
-            )}
+            {/* Keyboard hints are desktop-only affordances. */}
+            <p className="hidden text-xs text-muted-foreground/70 sm:block">
+              {!isFlipped ? (
+                <>
+                  Press <Kbd>Space</Kbd> to flip
+                </>
+              ) : (
+                <>
+                  Press <Kbd>1</Kbd>–<Kbd>4</Kbd> to rate
+                </>
+              )}
+            </p>
           </>
         ) : null}
       </div>
     </div>
+  );
+}
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+      {children}
+    </kbd>
   );
 }

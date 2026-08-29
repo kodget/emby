@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "3. (a) What is this anomaly (b) What is the embryological basis",
+  "station_number": 3,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker present as no specimen is visible."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a question paper with a diagram, but the actual anatomical specimen or radiograph being tested is not visible in the frame.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image contains only the question paper and a diagram; the actual specimen (bone, organ, or radiograph) is missing from the frame, making it impossible to create a valid exam station.",
+  "quality_flags": [
+    "Specimen not visible",
+    "Only question paper shown"
+  ],
+  "_source": {
+    "id": "924b91173a5a",
+    "file": "924b91173a5a.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 24,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

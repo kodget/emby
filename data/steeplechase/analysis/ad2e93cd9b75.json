@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "21 Identify the pectoral structure",
+  "station_number": 21,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker visible as no specimen is present."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image contains only a question paper and no anatomical specimen.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 1.0,
+  "needs_review": false,
+  "review_reason": "Image shows only a question paper and floor/feet, no anatomical specimen is visible to create a station from.",
+  "quality_flags": [
+    "No specimen visible",
+    "Photo of question paper only"
+  ],
+  "_source": {
+    "id": "ad2e93cd9b75",
+    "file": "ad2e93cd9b75.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 9,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

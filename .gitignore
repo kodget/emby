@@ -11,6 +11,7 @@ next.user-config.*
 .env.local.example
 .env
 .env.local
+.agents
 
 # Common ignores
 node_modules
@@ -50,3 +51,35 @@ Thumbs.db
 # Secrets — add any other files that contain keys here
 *.pem
 *.key
+
+# ---------------------------------------------------------------------------
+# Generated, regenerable, or runtime-only. None of this belongs in history.
+# ---------------------------------------------------------------------------
+
+# Review queue for the 203 stations awaiting a clinician's sign-off. Shared with the
+# reviewer out-of-band rather than through the repo, and rebuildable from
+# data/steeplechase/stations.json plus the images under public/steeplechase/.
+/Unchecked/
+
+# Frames extracted from steeple/*.pdf. Those PDFs ARE committed, so this is a
+# derived 120 MB. Regenerate: python scripts/steeplechase/extract_images.py
+/data/steeplechase/raw/
+
+# Unoptimised brand renders (~56 MB). lib/brand.ts references only the .webp
+# variants; these PNGs are the generator's raw output, kept for re-export.
+/public/brand/**/*.png
+
+# NOTE: data/steeplechase/analysis/ is deliberately NOT ignored. It is only 2 MB
+# and represents many hours of paid vision-model calls; it is also the cache that
+# makes the pipeline resumable. Losing it means paying to regenerate it.
+
+# Databases — real user data, and they churn every request.
+*.sqlite3
+*.sqlite3-journal
+
+# Runtime droppings
+*.log
+*.pid
+
+# Django user uploads. Serve these from Cloudinary, not the repo.
+/backend/media/

@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.01,
+    "x1": 0.78,
+    "y1": 0.97
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": 6,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "A small paper tag with the handwritten number 6 is visible near the upper part of the specimen, but no pin, arrow, thread or paint mark indicates a specific structure to be identified."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a low-resolution composite of a preserved cadaveric prosection (likely thoracic/mediastinal) with a numbered tag, but no specific structure is marked and no question paper is legible, so a definite station question cannot be formulated.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "Image is a low-resolution multi-panel composite; no legible question paper and no clear marker (pin/arrow/thread) indicating a specific structure. The specimen appears to be a preserved thoracic/mediastinal prosection but the exact structure being tested cannot be determined.",
+  "quality_flags": [
+    "very low resolution",
+    "multi-panel composite image",
+    "no legible question paper",
+    "no clear marker indicating a specific structure",
+    "specimen is dark and poorly lit"
+  ],
+  "_source": {
+    "id": "180d91c9a468",
+    "file": "180d91c9a468.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 58,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

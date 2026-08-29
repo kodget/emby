@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.0,
+    "x1": 0.55,
+    "y1": 0.62
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag or paint mark indicating a specific structure is visible; only a small red/white label near the head and an illegible handwritten paper taped to the box edge."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a preserved/mummified cadaver in a wooden trough, but no specific anatomical structure is indicated by a marker, and the accompanying handwritten question paper is illegible (appears to be in a non-English script and is too blurry to transcribe). Without a marked structure or a readable question, a definitive exam item cannot be constructed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "Image is dark and low-resolution; the specimen is a mummified/preserved body without any clear marker (pin, arrow, thread, tag, or paint) identifying a specific structure. The handwritten question paper is illegible and appears to be in a non-English script, so the intended question cannot be transcribed. Cannot confidently identify what is being tested.",
+  "quality_flags": [
+    "very dark image",
+    "low resolution / blurry",
+    "no clear marker indicating a structure",
+    "question paper illegible",
+    "specimen is a mummified whole body rather than a clean prosection",
+    "non-English handwriting on paper"
+  ],
+  "_source": {
+    "id": "603170bf13cd",
+    "file": "603170bf13cd.jpeg",
+    "width": 1224,
+    "height": 1632,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 3,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

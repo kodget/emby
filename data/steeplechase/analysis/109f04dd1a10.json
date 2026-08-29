@@ -1,0 +1,57 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "scapula",
+  "specimen_bbox": {
+    "x0": 0.33,
+    "y0": 0.03,
+    "x1": 0.7,
+    "y1": 0.47
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) At what vertebral level is Area Painted Green?\nB) Name 2 structures attached to the Area Painted Black.\nC) At what level is the Area Painted PINK??",
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.0,
+  "needs_review": true,
+  "review_reason": "The questions refer to areas painted 'Green', 'Black', and 'Pink' on the scapula, but no such painted areas are visible on the specimen. The scapula is uniformly colored, making the questions unanswerable as presented.",
+  "quality_flags": [
+    "marker_ambiguous",
+    "blurry",
+    "poor_lighting"
+  ],
+  "_source": {
+    "id": "109f04dd1a10",
+    "file": "109f04dd1a10.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 24,
+    "model": "gemini-2.5-flash"
+  }
+}

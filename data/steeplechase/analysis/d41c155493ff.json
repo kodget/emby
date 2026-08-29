@@ -1,0 +1,62 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Posterior view of thoracic skeleton (sternum, ribs, thoracic vertebrae, pelvis)",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.27,
+    "y": 0.5,
+    "description": "Dark-headed pin placed on the posterior surface of the sternum; a red painted mark indicates the xiphoid process inferiorly and a red line marks the manubriosternal junction."
+  },
+  "structure": "Sternum (body of sternum, posterior view); xiphoid process marked in red",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Sternum (body of sternum)",
+  "main_explanation": "The pin is placed on the flat, elongated bone in the midline of the anterior thoracic wall, viewed from behind. The red paint at its inferior tip marks the xiphoid process, and the red line above marks the manubriosternal (sternal) angle, confirming the structure is the sternum.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following is a true statement about the sternum?",
+    "options": [
+      "It is a single unsegmented bone from birth.",
+      "The manubriosternal angle (angle of Louis) is at the level of the T4/T5 intervertebral disc.",
+      "It articulates with all twelve pairs of ribs directly.",
+      "The xiphoid process ossifies completely by age 10."
+    ],
+    "correct_index": 1,
+    "explanation": "The sternal angle is at the T4/T5 intervertebral disc level and marks the boundary between the superior and inferior mediastinum. The sternum is composed of three parts (manubrium, body, xiphoid process) that fuse later in life; only the first seven ribs (true ribs) articulate directly with it; and the xiphoid process typically ossifies between ages 40 and 50."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The xiphoid process is the most inferior part of the sternum.",
+    "answer": true,
+    "explanation": "The sternum consists of the manubrium (superior), body (middle), and xiphoid process (inferior). The red paint in the image marks this inferior tip."
+  },
+  "confidence": 0.82,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is visible in the frame, so the intended exam question cannot be transcribed. The image also appears to be a composite of multiple cropped views, which may confuse students. The pin location on the posterior sternum is clear, but the exact intended structure (body vs. manubrium vs. xiphoid) depends on which marker the examiner intended.",
+  "quality_flags": [
+    "No question paper or station number visible",
+    "Image appears to be a composite of multiple cropped views",
+    "Multiple markers (pin, red paint, red line) may create ambiguity about which structure is being tested"
+  ],
+  "_source": {
+    "id": "d41c155493ff",
+    "file": "d41c155493ff.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 3,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

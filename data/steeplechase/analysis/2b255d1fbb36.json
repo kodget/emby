@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.1,
+    "x1": 0.5,
+    "y1": 0.7
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify A",
+  "station_number": 64,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.25,
+    "y": 0.25,
+    "description": "A small white paper tag with the letter 'A' written on it is placed on the specimen."
+  },
+  "structure": null,
+  "main_question": "Identify the structure marked 'A'.",
+  "main_answer": null,
+  "main_explanation": "The image shows a dissection of the head and neck region, likely the lateral aspect of the neck or the base of the skull. However, the resolution is too low to definitively identify the specific anatomical structure indicated by the tag 'A'.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The image quality is very poor (blurry, low resolution), making it impossible to confidently identify the specific anatomical structure marked with the tag 'A'. The specimen appears to be a head/neck dissection, but the details are obscured.",
+  "quality_flags": [
+    "very_blurry",
+    "low_resolution",
+    "marker_ambiguous"
+  ],
+  "_source": {
+    "id": "2b255d1fbb36",
+    "file": "2b255d1fbb36.jpeg",
+    "width": 1632,
+    "height": 1224,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 5,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

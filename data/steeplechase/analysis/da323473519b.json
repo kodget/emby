@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.18,
+    "x1": 0.55,
+    "y1": 0.78
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.07,
+    "y": 0.72,
+    "description": "Blue-headed pin with a thin metal shaft entering the preserved specimen from the lower left; a small green/teal surface mark sits just above the entry point, and a thin wire loops around the left edge."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a preserved soft-tissue mass with a pin and a small surface tag, but no anatomical landmarks, no question paper, and no station number are visible. The right half of the frame is blank. Without legible context or identifiable features, the marked structure cannot be determined with confidence, so the identification is left null rather than guessed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specimen is a preserved soft-tissue mass but lacks identifiable landmarks; the right half of the image is blank; there is no question paper or station number; and the pin points to an indeterminate surface point. The structure cannot be confidently named, so all identification fields are null pending review.",
+  "quality_flags": [
+    "Right half of the image is blank/empty",
+    "No question paper or station number visible",
+    "Specimen lacks clear anatomical landmarks",
+    "Marker points to an indeterminate surface point",
+    "Low overall image clarity for confident identification"
+  ],
+  "_source": {
+    "id": "da323473519b",
+    "file": "da323473519b.jpeg",
+    "width": 1444,
+    "height": 2588,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 31,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

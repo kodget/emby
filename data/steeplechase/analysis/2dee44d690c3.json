@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.05,
+    "x1": 0.55,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(A) To what structure does the tubercle of its attach to? (B) Why do you preserve the parasternal during surgery?",
+  "station_number": 20,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific pin or arrow is visible marking a structure on the bone."
+  },
+  "structure": null,
+  "main_question": "To what structure does the tubercle attach?",
+  "main_answer": null,
+  "main_explanation": "The question refers to a 'tubercle' on the specimen, but the specific bone is not clearly identifiable from the photograph, making it impossible to determine the attachment site with certainty.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specimen is not clearly identifiable. The question text is partially legible but refers to a 'tubercle' without specifying the bone, and the image is dark and low resolution.",
+  "quality_flags": [
+    "very dark",
+    "specimen mostly out of frame",
+    "marker ambiguous"
+  ],
+  "_source": {
+    "id": "2dee44d690c3",
+    "file": "2dee44d690c3.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 29,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

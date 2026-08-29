@@ -1,5 +1,6 @@
 "use client";
 
+import { MONTHLY_PRICE_LABEL, YEARLY_PRICE_LABEL, formatNaira, yearlySavings } from "@/lib/pricing";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -63,7 +64,7 @@ const subscriptionTiers = [
   {
     value: "premium",
     title: "Premium",
-    price: "₦1,499/month",
+    price: `${MONTHLY_PRICE_LABEL}/month`,
     features: [
       "Unlimited course materials",
       "Unlimited AI tutor",
@@ -517,7 +518,7 @@ export default function OnboardingPage() {
                   <Alert>
                     <AlertDescription>
                       <p className="font-semibold mb-2">
-                        🎉 Premium Access Included
+                        Premium access included
                       </p>
                       <p className="text-sm">
                         As a class head, you automatically get full access to

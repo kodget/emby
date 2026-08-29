@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "printed photograph of a fetus with sirenomelia",
+  "specimen_bbox": {
+    "x0": 0.19,
+    "y0": 0.15,
+    "x1": 0.7,
+    "y1": 0.46
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What is your Diagnosis\nB) What is embryological basis of this PATHOLOGY",
+  "station_number": 35,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": "Sirenomelia (mermaid syndrome)",
+  "main_question": "What is your diagnosis for the congenital pathology shown in the photograph?",
+  "main_answer": "Sirenomelia (Mermaid syndrome)",
+  "main_explanation": "Sirenomelia is a rare congenital developmental disorder characterized by anomalies of the caudal region, most notably complete or partial fusion of the lower limbs.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What is the primary embryological basis of sirenomelia?",
+    "options": [
+      "Defective neural crest cell migration to the pharyngeal arches",
+      "Abnormal gastrulation resulting in insufficient mesoderm formation in the caudal region of the embryo",
+      "Failure of the lateral body folds to fuse in the midline",
+      "Incomplete division of the embryonic disc during early cleavage"
+    ],
+    "correct_index": 1,
+    "explanation": "Sirenomelia is believed to result from abnormal gastrulation, where mesoderm formation is disrupted in the caudal-most region of the embryo, leading to fusion of the lower limb buds and associated urogenital and gastrointestinal anomalies."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "Sirenomelia is strongly associated with maternal diabetes.",
+    "answer": true,
+    "explanation": "Caudal regression syndrome, of which sirenomelia is considered by some to be an extreme form, is strongly associated with maternal diabetes."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [],
+  "_source": {
+    "id": "70c376652ff9",
+    "file": "70c376652ff9.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 44,
+    "model": "gemini-3.5-flash"
+  }
+}

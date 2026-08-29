@@ -16,26 +16,34 @@ import {
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   closeScheduleModal,
-  addScheduleItem,
-  updateScheduleItem,
+  createScheduleItem,
+  saveScheduleItem,
   type ScheduleItem,
   type ScheduleItemType,
 } from "@/store/schedule-slice";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { curriculum } from "@/lib/curriculum";
 import { getSlidesForCourse } from "@/lib/slides";
 
-const typeIcons = {
+// Every activity type the backend accepts needs an entry here, otherwise picking one
+// renders an undefined icon and label. Typing the maps to ScheduleItemType means a new
+// activity type fails the build rather than failing silently at runtime.
+const typeIcons: Record<ScheduleItemType, IconDefinition> = {
   read: faBook,
   quiz: faListCheck,
+  theory: faListCheck,
   flashcards: faClone,
   steeplechase: faTrophy,
+  histology: faTrophy,
 };
 
-const typeLabels = {
+const typeLabels: Record<ScheduleItemType, string> = {
   read: "Read Slides",
   quiz: "Take Quiz",
+  theory: "Theory Questions",
   flashcards: "Review Flashcards",
   steeplechase: "Steeplechase Practice",
+  histology: "Histology Practice",
 };
 
 export function ScheduleModal() {
@@ -112,9 +120,9 @@ export function ScheduleModal() {
     };
 
     if (editingItem) {
-      dispatch(updateScheduleItem(item));
+      void dispatch(saveScheduleItem(item));
     } else {
-      dispatch(addScheduleItem(item));
+      void dispatch(createScheduleItem(item));
     }
 
     handleClose();

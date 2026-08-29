@@ -82,7 +82,7 @@ export function BattleArena({ battleId }: { battleId: string }) {
     if (userStr) {
       const user = JSON.parse(userStr);
       setCurrentUserId(user.id);
-      api.get(`/api/brain-battles/${battleId}/`).then(res => {
+      api.get(`/api/battles/${battleId}/`).then(res => {
         setIsHost(res.data.host === Number(user.id));
       }).catch(console.error);
     }
@@ -237,7 +237,7 @@ export function BattleArena({ battleId }: { battleId: string }) {
     return (
       <div className="max-w-4xl mx-auto text-center space-y-12 py-12 relative">
         <SoundToggle />
-        <h1 className="text-6xl font-black text-yellow-400 mb-12">🏆 Final Results 🏆</h1>
+        <h1 className="text-6xl font-black text-yellow-400 mb-12">Final results</h1>
         <div className="flex justify-center items-end gap-6 h-64">
           {/* 2nd Place */}
           {participants[1] && (

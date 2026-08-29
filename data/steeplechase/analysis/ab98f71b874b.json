@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull base prosection",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.75,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify the structure indicated by the pin",
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.5,
+    "y": 0.62,
+    "description": "A green-headed pin is inserted into a bony foramen on the skull base."
+  },
+  "structure": "Foramen ovale",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Foramen ovale",
+  "main_explanation": "The pin is located in the foramen ovale, a large opening in the greater wing of the sphenoid bone. It transmits the mandibular nerve (V3), accessory meningeal artery, and lesser petrosal nerve.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures passes through the foramen indicated by the pin?",
+    "options": [
+      "Mandibular nerve (V3)",
+      "Maxillary nerve (V2)",
+      "Facial nerve (CN VII)",
+      "Glossopharyngeal nerve (CN IX)"
+    ],
+    "correct_index": 0,
+    "explanation": "The mandibular nerve (V3) is the largest branch of the trigeminal nerve and passes through the foramen ovale. The maxillary nerve passes through the foramen rotundum, the facial nerve through the stylomastoid foramen, and the glossopharyngeal nerve through the jugular foramen."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The foramen indicated by the pin is located in the temporal bone.",
+    "answer": false,
+    "explanation": "The foramen ovale is located in the sphenoid bone (specifically the greater wing), not the temporal bone."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "ab98f71b874b",
+    "file": "ab98f71b874b.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 11,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

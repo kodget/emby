@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Sagittal section of brain",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.05,
+    "x1": 1.0,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.65,
+    "y": 0.25,
+    "description": "A pin with a white paper tag marked 'B' is inserted into the brain tissue."
+  },
+  "structure": "Corpus callosum",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Corpus callosum",
+  "main_explanation": "The pin is located in the large, C-shaped band of white matter that connects the left and right cerebral hemispheres, which is the corpus callosum.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located immediately inferior to the structure indicated by the pin?",
+    "options": [
+      "Thalamus",
+      "Pons",
+      "Cerebellum",
+      "Medulla oblongata"
+    ],
+    "correct_index": 0,
+    "explanation": "The thalamus is a large mass of grey matter situated deep in the brain, directly below the corpus callosum."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The structure indicated by the pin is primarily composed of grey matter.",
+    "answer": false,
+    "explanation": "The corpus callosum is a major commissural tract composed of white matter (axons)."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "29aa4a9dce22",
+    "file": "29aa4a9dce22.jpeg",
+    "width": 592,
+    "height": 444,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 25,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

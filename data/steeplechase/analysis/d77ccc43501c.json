@@ -1,0 +1,63 @@
+{
+  "is_station": true,
+  "station_kind": "HISTOLOGY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "two histology slide images on a screen",
+  "specimen_bbox": {
+    "x0": 0.08,
+    "y0": 0.13,
+    "x1": 0.94,
+    "y1": 0.78
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Identify the slides A and B\nB) Mention where slide A can be found\nC) Mention the predominant cell in B",
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "Identify the slides A and B, state where slide A can be found, and name the predominant cell in B.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which feature is most consistent with an epithelial lining in a histology specimen?",
+    "options": [
+      "Closely packed cells resting on a basement membrane",
+      "Abundant extracellular matrix with scattered fibroblasts",
+      "Long parallel fibres with peripheral nuclei",
+      "Large lipid-filled cells separated by reticular fibres"
+    ],
+    "correct_index": 0,
+    "explanation": "An epithelium is characterized by tightly packed cells arranged on a basement membrane with minimal extracellular matrix."
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.23,
+  "needs_review": true,
+  "review_reason": "The image shows two microscope fields on a screen, but the tissue types are not identifiable with confidence from the blurry photo. The handwritten prompt is legible, but the specimens themselves are too unclear for safe identification.",
+  "quality_flags": [
+    "blurred",
+    "specimen not confidently identifiable",
+    "paper obscures lower part of image",
+    "screen/photo of slide rather than direct specimen"
+  ],
+  "_source": {
+    "id": "d77ccc43501c",
+    "file": "d77ccc43501c.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 3,
+    "model": "gpt-5.4-mini"
+  }
+}

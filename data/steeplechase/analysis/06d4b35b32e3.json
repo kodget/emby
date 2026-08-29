@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Mandible",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.05,
+    "x1": 0.6,
+    "y1": 0.45
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) What structure is related to the area painted blue and state its embryonic origin\nb) Identify the area painted black and state what passes through\nc) Identify the region painted pinked\nd) Identify the structure related to the area painted white",
+  "station_number": 4,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.55,
+    "y": 0.2,
+    "description": "Blue paint on the lateral surface of the mandibular ramus"
+  },
+  "structure": "Mandibular foramen",
+  "main_question": "Identify the structure related to the area painted blue and state its embryonic origin.",
+  "main_answer": "Mandibular nerve (branch of trigeminal nerve); Neural crest origin",
+  "main_explanation": "The blue paint is located on the lateral surface of the ramus, corresponding to the position of the mandibular foramen. The mandibular nerve (V3) enters the mandible through this foramen. As a branch of the trigeminal nerve, it is derived from the first branchial arch, which is of neural crest origin.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is most likely to be indicated by the area painted black?",
+    "options": [
+      "Mandibular foramen",
+      "Mental foramen",
+      "Submandibular fossa",
+      "Mylohyoid line"
+    ],
+    "correct_index": 1,
+    "explanation": "The black paint is located on the anterior body of the mandible, which is the typical location for the mental foramen, the exit point for the mental nerve and vessels."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "06d4b35b32e3",
+    "file": "06d4b35b32e3.jpeg",
+    "width": 958,
+    "height": 1280,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 4,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

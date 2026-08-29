@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) IDENTIFY THE PINNED STRUCTURE (BLUE)\nB) IDENTIFY THE EPITHELIUM PRESENT IN THE PINNED STRUCTURE (GREEN)",
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker or anatomical specimen is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a question paper and a bench surface, but the anatomical specimen or histology slide that is the subject of the question is not visible in the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image is missing the actual specimen (histology slide or prosection) required to answer the questions on the paper. It appears to be a photo of the question card only.",
+  "quality_flags": [
+    "Specimen not visible",
+    "Only question paper and background visible"
+  ],
+  "_source": {
+    "id": "d45e65ef4551",
+    "file": "d45e65ef4551.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 9,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

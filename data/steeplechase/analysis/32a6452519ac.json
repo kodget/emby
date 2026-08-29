@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "dissected plantar aspect of the foot",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.04,
+    "x1": 0.98,
+    "y1": 0.51
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.46,
+    "y": 0.45,
+    "description": "green needle pinning a muscle on the lateral side of the sole of the foot"
+  },
+  "structure": "abductor digiti minimi muscle",
+  "main_question": "Identify the muscle pinned.",
+  "main_answer": "Abductor digiti minimi",
+  "main_explanation": "The pinned structure is the abductor digiti minimi muscle, which lies on the lateral border of the sole of the foot, originating from the calcaneus and inserting onto the base of the proximal phalanx of the fifth digit.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which nerve innervates the pinned muscle?",
+    "options": [
+      "Medial plantar nerve",
+      "Lateral plantar nerve",
+      "Deep fibular nerve",
+      "Superficial fibular nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The abductor digiti minimi muscle is innervated by the lateral plantar nerve, which is a branch of the tibial nerve."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "This muscle is located in the first layer of the sole of the foot.",
+    "answer": true,
+    "explanation": "The first (most superficial) layer of the sole of the foot consists of the abductor hallucis, flexor digitorum brevis, and abductor digiti minimi muscles."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [],
+  "_source": {
+    "id": "32a6452519ac",
+    "file": "32a6452519ac.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 55,
+    "model": "gemini-3.5-flash"
+  }
+}

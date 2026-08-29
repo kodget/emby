@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Dissected lower leg and foot",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.45,
+    "x1": 0.95,
+    "y1": 0.95
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.45,
+    "y": 0.65,
+    "description": "Thread indicating a muscle in the anterior compartment of the leg"
+  },
+  "structure": "Tibialis anterior muscle",
+  "main_question": "Identify the structure indicated by the thread.",
+  "main_answer": "Tibialis anterior muscle",
+  "main_explanation": "The tibialis anterior is the most prominent muscle in the anterior compartment of the leg, originating from the lateral condyle and upper half of the lateral surface of the tibia and the interosseous membrane.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which nerve innervates the tibialis anterior muscle?",
+    "options": [
+      "Superficial fibular nerve",
+      "Deep fibular nerve",
+      "Tibial nerve",
+      "Sural nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The tibialis anterior muscle, along with other muscles of the anterior compartment of the leg, is innervated by the deep fibular nerve (L4, L5, S1)."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The primary actions of the tibialis anterior muscle are dorsiflexion and inversion of the foot.",
+    "answer": true,
+    "explanation": "The tibialis anterior muscle is a powerful dorsiflexor of the ankle and also contributes to inversion of the foot."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "question paper illegible",
+    "dark image"
+  ],
+  "_source": {
+    "id": "185ee2a38522",
+    "file": "185ee2a38522.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 35,
+    "model": "gemini-2.5-flash"
+  }
+}

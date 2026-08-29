@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.45
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.38,
+    "y": 0.55,
+    "description": "Green-headed dressmaker pin inserted into a soft tissue structure in the head/neck region"
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a cadaveric prosection of the head/neck region with a green pin marking a structure, but the specific anatomical structure cannot be confidently identified from the available views. The dissection plane, orientation, and surrounding landmarks are insufficient for a definitive identification.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specific structure marked by the green pin cannot be confidently identified. The image is a composite of multiple cropped views without clear orientation landmarks, and no question paper or station number is visible. The region appears to be head/neck (possibly oral cavity, tongue base, or pharynx) but the exact structure is unclear.",
+  "quality_flags": [
+    "No question paper visible",
+    "No station number visible",
+    "Composite of multiple cropped views makes orientation difficult",
+    "Specific marked structure cannot be confidently identified",
+    "Image quality is moderate with some areas out of focus"
+  ],
+  "_source": {
+    "id": "8fbab22cd067",
+    "file": "8fbab22cd067.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 14,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

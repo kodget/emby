@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "NEUROANATOMY",
+  "specimen_label": "Sagittal section of human brain (preserved/plastinated)",
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.18,
+    "x1": 0.99,
+    "y1": 0.78
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.66,
+    "y": 0.35,
+    "description": "Two dressmaker pins (blue-headed and green-headed) inserted into the brain section; the blue pin is in the upper-mid region and the green pin is in the lower-mid region. Exact intended target structure is not unambiguously identifiable."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "No question paper is present and the precise structure indicated by the pins cannot be confidently identified from the visible section plane and orientation, so no definitive main question/answer can be supplied without risking an incorrect teaching point.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.35,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is visible, and the exact anatomical structure(s) marked by the blue and green pins cannot be confidently determined from the section orientation and visible landmarks. A reviewer with the original station sheet is needed to confirm the intended target(s).",
+  "quality_flags": [
+    "No question paper or station number visible in frame",
+    "Image appears to be a vertical composite of three overlapping views of the same specimen",
+    "Section plane / orientation of the brain block is ambiguous, making pin targets hard to confirm",
+    "Two pins present but no legend indicating which structure each marks"
+  ],
+  "_source": {
+    "id": "6442abb4d4ff",
+    "file": "6442abb4d4ff.jpeg",
+    "width": 1674,
+    "height": 1474,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 8,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

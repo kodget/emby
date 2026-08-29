@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.55
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.42,
+    "y": 0.24,
+    "description": "A teal/green-headed dressmaker pin is placed in a foramen on the bony specimen; a second blue-headed pin is visible lower and to the right. The exact structures they indicate cannot be confirmed from this view."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "No question paper or station number is visible in the photograph, and the orientation of the dried bony specimen (likely a section of the skull base / upper cervical region) is ambiguous. The two coloured pins mark specific foramina or processes, but without the accompanying question and a clearer, fully-framed view the exact indicated structures cannot be confidently identified. Per the no-invention rule, the structure and main question are left null.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is present in the frame, the specimen is only partially in view and its orientation is unclear, and the two pin markers cannot be confidently mapped to named foramina or processes. The structure and main question are therefore left null pending a clearer photograph with the question sheet.",
+  "quality_flags": [
+    "No question paper or station number visible",
+    "Specimen only partially in frame (bottom half is empty floor)",
+    "Specimen orientation ambiguous",
+    "Marker target structure not confidently identifiable"
+  ],
+  "_source": {
+    "id": "3a610466973d",
+    "file": "3a610466973d.jpeg",
+    "width": 606,
+    "height": 455,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 16,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

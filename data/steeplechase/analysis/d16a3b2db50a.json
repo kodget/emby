@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Vertebral body and posterior elements",
+  "specimen_bbox": {
+    "x0": 0.22,
+    "y0": 0.15,
+    "x1": 0.58,
+    "y1": 0.38
+  },
+  "question_paper_present": true,
+  "transcribed_question": "9. LIST THE COMPONENT OF THE STRUCTURE FOUND THE AREA PAINTED BLACK\nb. What Structure enters into the Pinned area",
+  "station_number": 24,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.42,
+    "y": 0.28,
+    "description": "A dark area painted on the anterior surface of the vertebral body"
+  },
+  "structure": "Vertebral body",
+  "main_question": "List the components of the structure found in the area painted black.",
+  "main_answer": "The vertebral body (centrum) consists of a cancellous bone core surrounded by a thin layer of cortical bone.",
+  "main_explanation": "The painted area covers the anterior aspect of the vertebral body. The body is the weight-bearing part of the vertebra, composed of spongy bone enclosed by a shell of compact bone.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.4,
+  "needs_review": true,
+  "review_reason": "The image is very dark and the specific vertebra (cervical, thoracic, or lumbar) cannot be definitively identified. The 'painted black' area is difficult to distinguish from the shadows in the low light. The question asks for components of the structure, which is a bit ambiguous without knowing the specific level.",
+  "quality_flags": [
+    "very_dark",
+    "low_contrast"
+  ],
+  "_source": {
+    "id": "d16a3b2db50a",
+    "file": "d16a3b2db50a.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 19,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

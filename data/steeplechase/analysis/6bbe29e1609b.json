@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull base prosection",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.55,
+    "x1": 0.95,
+    "y1": 0.98
+  },
+  "question_paper_present": true,
+  "transcribed_question": "What is the pink painted point related to? Identify the vessel that passes through the space painted blue",
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.35,
+    "y": 0.75,
+    "description": "Pink and blue paint marks on the skull base indicating specific anatomical structures."
+  },
+  "structure": "Skull base",
+  "main_question": "Identify the structure indicated by the pink paint.",
+  "main_answer": null,
+  "main_explanation": "The pink paint is located on the skull base, likely indicating a foramen or specific bony landmark, but the exact structure is difficult to determine without a clearer view or more context.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.4,
+  "needs_review": true,
+  "review_reason": "The specific structure indicated by the pink paint is not clearly identifiable from the image. The image is a composite of multiple photos, making it difficult to assess the full context of the station.",
+  "quality_flags": [
+    "Composite image",
+    "Marker location ambiguous",
+    "Specimen partially obscured"
+  ],
+  "_source": {
+    "id": "6bbe29e1609b",
+    "file": "6bbe29e1609b.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 5,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

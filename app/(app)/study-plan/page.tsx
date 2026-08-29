@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Check, Pencil, Trash2, Wand2 } from "lucide-react";
 import { TodayPlan } from "@/components/dashboard/today-plan";
 import { ScheduleModal } from "@/components/dashboard/schedule-modal";
 import { StudyPlannerWizard } from "@/components/dashboard/study-planner-wizard";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
+  fetchSchedule,
   openScheduleModal,
-  completeScheduleItem,
-  uncompleteScheduleItem,
-  deleteScheduleItem,
+  removeScheduleItem,
+  toggleScheduleItem,
 } from "@/store/schedule-slice";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,14 @@ export default function StudyPlanPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const dispatch = useAppDispatch();
   const items = useAppSelector((state) => state.schedule.items);
+  const status = useAppSelector((state) => state.schedule.status);
+  const error = useAppSelector((state) => state.schedule.error);
+  const pending = useAppSelector((state) => state.schedule.pending);
+
+  // The plan lives on the server; load it once the page mounts.
+  useEffect(() => {
+    void dispatch(fetchSchedule());
+  }, [dispatch]);
 
   const groupedItems = useMemo(() => {
     return items
@@ -160,8 +168,8 @@ export default function StudyPlanPage() {
                                 type="button"
                                 onClick={() =>
                                   item.completed
-                                    ? dispatch(uncompleteScheduleItem(item.id))
-                                    : dispatch(completeScheduleItem(item.id))
+                                    ? dispatch(toggleScheduleItem({ id: item.id, completed: false }))
+                                    : dispatch(toggleScheduleItem({ id: item.id, completed: true }))
                                 }
                                 className={cn(
                                   "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition-colors",
@@ -189,7 +197,7 @@ export default function StudyPlanPage() {
                                 type="button"
                                 onClick={() => {
                                   if (confirm("Delete this schedule item?")) {
-                                    dispatch(deleteScheduleItem(item.id));
+                                    dispatch(removeScheduleItem(item.id));
                                   }
                                 }}
                                 className="inline-flex items-center justify-center rounded-full border border-border bg-background p-2 text-muted-foreground hover:text-destructive"

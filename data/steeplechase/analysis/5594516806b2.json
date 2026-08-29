@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.04,
+    "x1": 0.85,
+    "y1": 0.99
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": 34,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.45,
+    "y": 0.68,
+    "description": "Red painted line and several black painted marks on the surface of a flat bony section; the specific structure indicated cannot be determined from the image alone."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a thin, flat bony section (possibly a cut through a flat bone such as the ilium, scapula, or a vertebral/rib section), but its exact identity and the structure indicated by the red and black painted marks cannot be confidently determined from the photograph. No legible question paper is present, only the station number 34.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The bony specimen's identity is uncertain (flat bone section of unknown origin) and the painted marks do not unambiguously indicate a single named structure. No legible handwritten question is visible, so the intended target structure cannot be confirmed.",
+  "quality_flags": [
+    "specimen identity uncertain",
+    "no legible question paper",
+    "marker ambiguous",
+    "specimen partially out of frame at bottom"
+  ],
+  "_source": {
+    "id": "5594516806b2",
+    "file": "5594516806b2.jpeg",
+    "width": 576,
+    "height": 620,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 31,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

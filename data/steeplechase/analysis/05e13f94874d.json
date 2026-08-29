@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "Radius",
+  "specimen_bbox": {
+    "x0": 0.22,
+    "y0": 0.0,
+    "x1": 0.62,
+    "y1": 0.82
+  },
+  "question_paper_present": true,
+  "transcribed_question": "1) Specifically identify the bone\n2) what clinical condition arises from the\ndamage to the pointed part\n11",
+  "station_number": 11,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.28,
+    "y": 0.75,
+    "description": "green painted mark on the distal end of the bone"
+  },
+  "structure": "Radial styloid process",
+  "main_question": "Specifically identify the bone.",
+  "main_answer": "Radius",
+  "main_explanation": "The specimen is an isolated radius, a long bone of the forearm. Its characteristic distal end, including the styloid process, identifies it.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What clinical condition commonly arises from damage to the pointed part of this bone (the radial styloid process)?",
+    "options": [
+      "Scaphoid fracture",
+      "Colles fracture",
+      "Monteggia fracture",
+      "Galeazzi fracture"
+    ],
+    "correct_index": 1,
+    "explanation": "A Colles fracture is a common fracture of the distal radius, typically occurring about 2.5 cm proximal to the radiocarpal joint, often involving the radial styloid process and resulting in dorsal displacement of the distal fragment."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The radial styloid process is located medial to the ulnar styloid process.",
+    "answer": false,
+    "explanation": "The radial styloid process is located on the lateral side of the distal radius, while the ulnar styloid process is on the medial side of the distal ulna."
+  },
+  "confidence": 1.0,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "blurred",
+    "hand_obscures_specimen"
+  ],
+  "_source": {
+    "id": "05e13f94874d",
+    "file": "05e13f94874d.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 14,
+    "model": "gemini-2.5-flash"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Isolated bone (likely temporal bone)",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.28,
+    "x1": 0.35,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Identify the bone (be specific) B) Identify the area painted blue and what does it articulate with",
+  "station_number": 4,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.08,
+    "y": 0.35,
+    "description": "A specific area on the bone is painted blue."
+  },
+  "structure": "Temporal bone (specifically the mastoid process region)",
+  "main_question": "Identify the bone and the area painted blue.",
+  "main_answer": "Temporal bone; Mastoid process",
+  "main_explanation": "The specimen is an isolated temporal bone. The blue paint highlights the mastoid process, a conical projection of the temporal bone located behind the ear.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which muscle attaches to the mastoid process?",
+    "options": [
+      "Sternocleidomastoid",
+      "Sternohyoid",
+      "Sternothyroid",
+      "Omohyoid"
+    ],
+    "correct_index": 0,
+    "explanation": "The mastoid process serves as the attachment site for the sternocleidomastoid muscle, as well as the posterior belly of the digastric and the occipital belly of the sternocleidomastoid."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "e844a5649ccc",
+    "file": "e844a5649ccc.jpeg",
+    "width": 768,
+    "height": 534,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 5,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

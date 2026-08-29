@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "dissected upper limb specimen",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.15,
+    "x1": 1.0,
+    "y1": 0.58
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Identify the pinned structure?\nB) Identify the neurovascular structures tied?",
+  "station_number": 30,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.21,
+    "y": 0.42,
+    "description": "blue pin in the muscle block on the left"
+  },
+  "structure": null,
+  "main_question": "Identify the pinned structure.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following muscles inserts onto the lesser tubercle of the humerus?",
+    "options": [
+      "Subscapularis",
+      "Supraspinatus",
+      "Infraspinatus",
+      "Teres minor"
+    ],
+    "correct_index": 0,
+    "explanation": "The subscapularis muscle arises from the subscapular fossa of the scapula and inserts onto the lesser tubercle of the humerus."
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specimen is highly degraded, poorly preserved, and difficult to orient with certainty. The pinned structure on the left muscle block and the tied neurovascular structures cannot be reliably identified.",
+  "quality_flags": [
+    "specimen_mostly_out_of_frame",
+    "marker_ambiguous"
+  ],
+  "_source": {
+    "id": "88191980a450",
+    "file": "88191980a450.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 39,
+    "model": "gemini-3.5-flash"
+  }
+}

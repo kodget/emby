@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.98,
+    "y1": 0.98
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "probe",
+    "x": 0.62,
+    "y": 0.3,
+    "description": "Metal dissection probe inserted into the prosected tissue; the exact structure it indicates cannot be confidently identified."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a cadaveric prosection with a probe, but no question paper, station number, or identifiable landmark is visible. The region and the specific structure indicated by the probe cannot be determined with confidence from the image alone, so no main question or answer can be safely constructed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is visible, and the prosected region and the structure indicated by the probe cannot be confidently identified from the image. The tissue is heavily desiccated and lacks visible bony or vascular landmarks that would allow a reliable identification.",
+  "quality_flags": [
+    "no_question_paper",
+    "no_station_number",
+    "specimen_orientation_unclear",
+    "marker_target_unidentifiable",
+    "poor_lighting",
+    "heavily_desiccated_tissue"
+  ],
+  "_source": {
+    "id": "a1e40992bdcb",
+    "file": "a1e40992bdcb.jpeg",
+    "width": 546,
+    "height": 409,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 9,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

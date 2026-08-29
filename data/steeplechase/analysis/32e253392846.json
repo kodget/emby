@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.45
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.35,
+    "y": 0.12,
+    "description": "A thin white thread is visible in the upper portion of the prosection, tied around an unidentified structure. A small green/teal marker is also present near the centre."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The prosection appears to be of the lower limb (thigh/leg), but the specific structure indicated by the thread or green marker cannot be confidently identified from the image. The dissection is messy, the image is dark, and no clear anatomical landmarks are visible to orient the specimen.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The marked structure (thread and/or green marker) cannot be confidently identified. The image is dark, the dissection is disorganised, and there is no question paper or station number to provide context. The region is tentatively lower limb but this is also uncertain.",
+  "quality_flags": [
+    "very_dark",
+    "specimen_disorganised",
+    "marker_ambiguous",
+    "no_question_paper",
+    "no_station_number",
+    "poor_orientation"
+  ],
+  "_source": {
+    "id": "32e253392846",
+    "file": "32e253392846.jpeg",
+    "width": 2432,
+    "height": 1094,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 40,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.18,
+    "x1": 0.68,
+    "y1": 0.78
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "probe",
+    "x": 0.18,
+    "y": 0.45,
+    "description": "A thin probe or pin is inserted into the specimen from the left side, but the exact structure it indicates cannot be determined from the image."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a preserved soft-tissue organ with a folded surface, but the image is too low-resolution and the question paper is not legible to confidently identify the structure or the intended question.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The image is blurry and low-resolution. The specimen cannot be confidently identified (could be stomach, intestine, or another folded organ). No legible handwritten question is visible on the paper. The probe/marker target is ambiguous.",
+  "quality_flags": [
+    "low_resolution",
+    "blurry",
+    "specimen_partially_out_of_frame",
+    "no_legible_question_text",
+    "marker_target_ambiguous"
+  ],
+  "_source": {
+    "id": "ddace7f1d4c6",
+    "file": "ddace7f1d4c6.jpeg",
+    "width": 548,
+    "height": 731,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 22,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

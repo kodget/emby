@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Kidney",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.45,
+    "x1": 0.65,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) What is the weight of this structure\nb) Mention two congenital anomalies associated with this",
+  "station_number": 14,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker (pin, arrow, or tag) is visible on the specimen."
+  },
+  "structure": "Kidney",
+  "main_question": "What is the weight of this structure?",
+  "main_answer": "Approximately 150g",
+  "main_explanation": "The normal weight of an adult human kidney is typically between 125g and 170g, with 150g being a standard average value.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following is a congenital anomaly associated with the kidney?",
+    "options": [
+      "Polycystic kidney disease",
+      "Nephrolithiasis",
+      "Pyelonephritis",
+      "Glomerulonephritis"
+    ],
+    "correct_index": 0,
+    "explanation": "Polycystic kidney disease is a genetic disorder characterized by the growth of numerous cysts in the kidneys. The other options are acquired conditions."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "low_light",
+    "specimen_partially_out_of_frame"
+  ],
+  "_source": {
+    "id": "70a3c271846f",
+    "file": "70a3c271846f.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 131,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "MODEL",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Sagittal section of head and neck model",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.02,
+    "x1": 0.95,
+    "y1": 0.68
+  },
+  "question_paper_present": true,
+  "transcribed_question": "What is the structure?",
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.2,
+    "y": 0.2,
+    "description": "A pin with a white paper tag pointing to the nasal cavity region."
+  },
+  "structure": "Nasal cavity",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Nasal cavity",
+  "main_explanation": "The pin is inserted into the anterior portion of the head model, specifically into the nasal cavity, which is the air-filled space above the oral cavity and below the cranial cavity.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures forms the roof of the nasal cavity?",
+    "options": [
+      "Palatine bone",
+      "Vomer",
+      "Ethmoid bone",
+      "Maxilla"
+    ],
+    "correct_index": 2,
+    "explanation": "The roof of the nasal cavity is formed by the nasal bones, the frontal processes of the maxillae, the frontal bones, the ethmoid bone, and the body of the sphenoid bone. The ethmoid bone is a major contributor to the roof."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a collage of multiple views",
+    "Lighting is uneven"
+  ],
+  "_source": {
+    "id": "344a8830431d",
+    "file": "344a8830431d.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 22,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Large intestine with appendices epiploicae",
+  "specimen_bbox": {
+    "x0": 0.2,
+    "y0": 0.0,
+    "x1": 0.85,
+    "y1": 0.45
+  },
+  "question_paper_present": true,
+  "transcribed_question": "6\n(CA) Identify the structure Pinned BLUE\nAppendices Epiploic\n(CB) LIST TWO CARDINAL FEATURES OF THE LARGE INTESTINE: Hustration, taenia coli\n(CC) What is the cutaneous area supplied at the area pinned GREEN?\nGenital branch of genitofemoral nerve",
+  "station_number": 6,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.28,
+    "y": 0.31,
+    "description": "A blue-headed pin is inserted into the specimen, likely marking an appendix epiploica."
+  },
+  "structure": "Appendix epiploica",
+  "main_question": "Identify the structure indicated by the blue pin.",
+  "main_answer": "Appendix epiploica",
+  "main_explanation": "The blue pin indicates a small, fat-filled pouch of peritoneum projecting from the colon, known as an appendix epiploica (or epiploic appendage).",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following is a cardinal feature of the large intestine?",
+    "options": [
+      "Plicae circulares",
+      "Taeniae coli",
+      "Villi",
+      "Brunner's glands"
+    ],
+    "correct_index": 1,
+    "explanation": "The large intestine is characterized by taeniae coli (longitudinal muscle bands), haustra (sacculations), and appendices epiploicae. Plicae circulares and villi are features of the small intestine."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "5d39f47bb393",
+    "file": "5d39f47bb393.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 7,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

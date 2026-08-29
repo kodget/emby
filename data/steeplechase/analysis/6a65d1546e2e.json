@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.0,
+    "x1": 0.9,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.42,
+    "y": 0.45,
+    "description": "Two pins (green and blue) are visible on the posterior elements of the cervical vertebrae."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a cervical spine prosection with pins, but lacks the necessary question paper to define the specific exam task.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "Image is missing the question paper and station number required to constitute a valid exam station.",
+  "quality_flags": [
+    "missing_question_paper",
+    "missing_station_number"
+  ],
+  "_source": {
+    "id": "6a65d1546e2e",
+    "file": "6a65d1546e2e.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 8,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.2,
+    "y0": 0.0,
+    "x1": 0.45,
+    "y1": 0.05
+  },
+  "question_paper_present": true,
+  "transcribed_question": "20\n(A) Identify the structure bearing the blue pin\n(B) What structure does the green pin",
+  "station_number": 20,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pins or markers are visible in the frame, only the question paper referencing them."
+  },
+  "structure": null,
+  "main_question": "Identify the structure bearing the blue pin.",
+  "main_answer": null,
+  "main_explanation": "The anatomical specimen and the pin are not visible in the photograph, making identification impossible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.1,
+  "needs_review": true,
+  "review_reason": "The photograph is cropped such that the anatomical specimen is almost entirely out of frame. Only a small fragment of tissue is visible at the top edge, and the pins mentioned in the question are not visible.",
+  "quality_flags": [
+    "specimen_mostly_out_of_frame",
+    "marker_not_visible"
+  ],
+  "_source": {
+    "id": "05457ac0bc18",
+    "file": "05457ac0bc18.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 8,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.38,
+    "x1": 0.66,
+    "y1": 0.68
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag, or painted mark is visible on either bony fragment."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "Two small, pale bony fragments are present on a worn bench, but no marker, question paper, or station number is visible, and the surface morphology is too indistinct at this resolution to confidently name the bone or process. Identification is therefore withheld.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "Specimen identity is uncertain: two small bony fragments with no marker, no question paper, and no station number. Surface features are not sharp enough to confidently assign a bone or anatomical region. A clearer, better-lit image with a marker or question card is needed before this can be used as an exam station.",
+  "quality_flags": [
+    "no question paper visible",
+    "no marker present",
+    "low resolution / soft focus on specimen",
+    "poor lighting and chipped bench surface reduce contrast",
+    "specimen identity ambiguous"
+  ],
+  "_source": {
+    "id": "14227305bb44",
+    "file": "14227305bb44.jpeg",
+    "width": 1944,
+    "height": 2592,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 2,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

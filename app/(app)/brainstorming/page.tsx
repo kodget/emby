@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 
 export default function BrainstormingPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] bg-[url('/grid.svg')] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background bg-[url('/grid.svg')] flex items-center justify-center p-4">
       <div className="max-w-4xl w-full space-y-12">
         {/* Header Section */}
         <div className="text-center space-y-4">
@@ -16,9 +16,9 @@ export default function BrainstormingPage() {
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", duration: 0.8 }}
-            className="w-20 h-20 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-violet-500/20"
+            className="w-20 h-20 bg-gradient-to-br from-primary to-indigo-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-primary/20"
           >
-            <Sparkles className="w-10 h-10 text-white" />
+            <Sparkles className="w-10 h-10 text-foreground" />
           </motion.div>
           <motion.h1
             initial={{ y: 20, opacity: 0 }}
@@ -47,21 +47,21 @@ export default function BrainstormingPage() {
         >
           {/* Join Battle */}
           <Link href="/battles">
-            <Card className="group relative overflow-hidden bg-white/5 border-white/10 hover:border-violet-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-violet-500/20 p-8 h-full flex flex-col items-center justify-center text-center space-y-6">
-              <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 to-indigo-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 p-8 h-full flex flex-col items-center justify-center text-center space-y-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-indigo-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               
-              <div className="w-24 h-24 bg-violet-500/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Swords className="w-12 h-12 text-violet-400" />
+              <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <Swords className="w-12 h-12 text-primary" />
               </div>
               
               <div className="space-y-2 relative z-10">
-                <h3 className="text-2xl font-bold text-white group-hover:text-violet-300 transition-colors">Join a Battle</h3>
+                <h3 className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">Join a Battle</h3>
                 <p className="text-muted-foreground">
                   Enter an existing lobby, answer fast, and earn points against your peers.
                 </p>
               </div>
 
-              <Button size="lg" className="w-full bg-white/10 hover:bg-violet-600 text-white border-0 mt-4">
+              <Button size="lg" className="w-full bg-muted hover:bg-primary text-foreground border-0 mt-4">
                 Enter Lobby <Trophy className="w-4 h-4 ml-2" />
               </Button>
             </Card>
@@ -69,21 +69,21 @@ export default function BrainstormingPage() {
 
           {/* Host Battle */}
           <Link href="/battles/create">
-            <Card className="group relative overflow-hidden bg-white/5 border-white/10 hover:border-emerald-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-emerald-500/20 p-8 h-full flex flex-col items-center justify-center text-center space-y-6">
+            <Card className="group relative overflow-hidden bg-card border-border hover:border-mastery/50 transition-all duration-300 hover:shadow-2xl hover:shadow-mastery/20 p-8 h-full flex flex-col items-center justify-center text-center space-y-6">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/10 to-teal-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               
-              <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Trophy className="w-12 h-12 text-emerald-400" />
+              <div className="w-24 h-24 bg-mastery/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <Trophy className="w-12 h-12 text-mastery" />
               </div>
               
               <div className="space-y-2 relative z-10">
-                <h3 className="text-2xl font-bold text-white group-hover:text-emerald-300 transition-colors">Host a Battle</h3>
+                <h3 className="text-2xl font-bold text-foreground group-hover:text-mastery transition-colors">Host a Battle</h3>
                 <p className="text-muted-foreground">
                   Create a custom quiz room and act as the gamemaster for your class.
                 </p>
               </div>
 
-              <Button size="lg" className="w-full bg-white/10 hover:bg-emerald-600 text-white border-0 mt-4">
+              <Button size="lg" className="w-full bg-muted hover:bg-emerald-600 text-foreground border-0 mt-4">
                 Create Room <Plus className="w-4 h-4 ml-2" />
               </Button>
             </Card>

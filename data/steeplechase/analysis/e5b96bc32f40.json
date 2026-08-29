@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.2,
+    "y0": 0.0,
+    "x1": 0.75,
+    "y1": 0.4
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.45,
+    "y": 0.25,
+    "description": "A small paper tag with a handwritten letter is attached to the specimen surface, but the specific structure it indicates is unclear."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is too dark and the marker is ambiguous to determine which specific anatomical structure is being tested. The specimen appears to be a heart or similar organ, but the exact point of interest cannot be confirmed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The image is very dark, appears to be a composite of multiple views, and the marker (paper tag) does not clearly indicate a specific structure. There is no legible question paper. The exact anatomical structure being tested cannot be confidently identified.",
+  "quality_flags": [
+    "very dark image",
+    "specimen partially out of frame",
+    "marker ambiguous",
+    "no legible question paper",
+    "composite or multi-panel image"
+  ],
+  "_source": {
+    "id": "e5b96bc32f40",
+    "file": "e5b96bc32f40.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 64,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

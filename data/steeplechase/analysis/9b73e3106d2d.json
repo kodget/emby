@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.6
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.75,
+    "y": 0.32,
+    "description": "A green-headed pin is inserted into the specimen, and a blue pin is visible on the left."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a collage of four different views of a cadaveric specimen, likely a section of the thorax or upper abdomen. However, there is no question paper, station number, or clear context to identify the specific anatomical structure indicated by the pins. The tissue is preserved and somewhat distorted, making positive identification of the specific targeted structure difficult without a question.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The image is a composite of multiple photos rather than a single station view. There is no visible question paper or station number. The specific anatomical structure indicated by the pins cannot be confidently identified from the visual evidence alone.",
+  "quality_flags": [
+    "composite_image",
+    "no_question_paper",
+    "unclear_specimen"
+  ],
+  "_source": {
+    "id": "9b73e3106d2d",
+    "file": "9b73e3106d2d.jpeg",
+    "width": 2083,
+    "height": 1390,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 6,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

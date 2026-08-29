@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No clear pin, arrow, tag, or paint mark identifying a specific structure. A thin thread/suture is visible but its target is ambiguous."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a cadaveric prosection but no legible question paper, station number, or unambiguous marker is present. The anatomical region and the intended target structure cannot be confidently identified from the image alone, so no exam question can be reliably constructed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "No question paper, station number, or clear marker visible. The anatomical region (thorax vs abdomen vs pelvis) and the specific structure of interest cannot be confidently determined from the preserved tissue shown. A thin thread is present but its target is ambiguous.",
+  "quality_flags": [
+    "no_question_paper",
+    "no_clear_marker",
+    "region_unclear",
+    "poor_lighting",
+    "specimen_orientation_unclear"
+  ],
+  "_source": {
+    "id": "bd75e7fa4f06",
+    "file": "bd75e7fa4f06.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 98,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

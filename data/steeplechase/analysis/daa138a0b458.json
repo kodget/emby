@@ -1,0 +1,56 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "dissected lower limb and foot",
+  "specimen_bbox": {
+    "x0": 0.22,
+    "y0": 0.08,
+    "x1": 1.0,
+    "y1": 0.53
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) IDENTIFY THE STRUCTURE TIED A B) IDENTIFY THE STRUCTURE TIED B",
+  "station_number": 32,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": null,
+    "y": null,
+    "description": "Threads are mentioned in the question paper, but they are not clearly visible or labeled on the specimen."
+  },
+  "structure": null,
+  "main_question": "Identify the structures tied A and B.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The markers (Tied A and Tied B) are not clearly visible or labeled on the specimen in this photograph, making it impossible to confidently identify the specific structures being tested.",
+  "quality_flags": [
+    "marker_ambiguous",
+    "specimen_unclear"
+  ],
+  "_source": {
+    "id": "daa138a0b458",
+    "file": "daa138a0b458.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 42,
+    "model": "gemini-3.5-flash"
+  }
+}

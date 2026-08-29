@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Specimen B",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.15,
+    "x1": 0.75,
+    "y1": 0.65
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.38,
+    "y": 0.18,
+    "description": "A paper tag with the letter 'B' written on it, attached to the specimen with pins."
+  },
+  "structure": "Cerebellum",
+  "main_question": "Identify the structure indicated by the tag.",
+  "main_answer": "Cerebellum",
+  "main_explanation": "The specimen is a sagittal section of the brain. The tag is positioned over the posterior-inferior part of the brain, which corresponds to the cerebellum, characterized by its distinct folia (leaf-like folds).",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located immediately anterior to the cerebellum?",
+    "options": [
+      "Pons",
+      "Medulla oblongata",
+      "Midbrain",
+      "Thalamus"
+    ],
+    "correct_index": 0,
+    "explanation": "The pons is located anterior to the cerebellum, separated by the fourth ventricle. The medulla is inferior to the pons, the midbrain is superior to the pons, and the thalamus is located much more anteriorly and superiorly."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The cerebellum is primarily responsible for voluntary motor control and planning.",
+    "answer": false,
+    "explanation": "The cerebellum is primarily responsible for coordination, precision, and timing of movements, as well as balance and posture. It does not initiate voluntary movement (which is the role of the motor cortex) but rather refines it."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is a sagittal section, not a whole organ"
+  ],
+  "_source": {
+    "id": "7e54b96bdd3e",
+    "file": "7e54b96bdd3e.jpeg",
+    "width": 611,
+    "height": 458,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 18,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

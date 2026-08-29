@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Preserved stomach",
+  "specimen_bbox": {
+    "x0": 0.03,
+    "y0": 0.01,
+    "x1": 0.99,
+    "y1": 0.57
+  },
+  "question_paper_present": true,
+  "transcribed_question": "What is the embryological origin of the structure pinned blue\nb) What is the Volume of the organ at birth.",
+  "station_number": 2,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.65,
+    "y": 0.15,
+    "description": "blue pin"
+  },
+  "structure": "Stomach",
+  "main_question": "Identify the embryological origin of the structure indicated by the pin. What is the volume of the organ at birth?",
+  "main_answer": "a) Dorsal Mesogastrum; b) 30mL",
+  "main_explanation": "The pin indicates the stomach. The dorsal mesogastrium is the embryonic mesentery that suspends the stomach from the posterior abdominal wall and is crucial for its development and rotation. At birth, the stomach typically has a volume of approximately 30 mL.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which part of the adult stomach is derived from the greater curvature and is typically the most superior part?",
+    "options": [
+      "Pylorus",
+      "Fundus",
+      "Cardia",
+      "Body"
+    ],
+    "correct_index": 1,
+    "explanation": "During embryonic development, the stomach rotates, and the greater curvature grows more rapidly, forming the fundus, which is the dome-shaped superior part of the stomach."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The stomach receives parasympathetic innervation primarily from the vagus nerves.",
+    "answer": true,
+    "explanation": "The vagus nerves (cranial nerve X) provide parasympathetic innervation to the stomach, promoting gastric motility and secretion."
+  },
+  "confidence": 1.0,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "specimen discolored",
+    "specimen shriveled"
+  ],
+  "_source": {
+    "id": "152b1a08c3ea",
+    "file": "152b1a08c3ea.jpeg",
+    "width": 1944,
+    "height": 2220,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 2,
+    "model": "gemini-2.5-flash"
+  }
+}

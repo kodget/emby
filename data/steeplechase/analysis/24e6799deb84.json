@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "18\n(a) What structure is related to the arrow pin green?\n(b) What structure normally lies in the groove pin blue?",
+  "station_number": 18,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker visible in the image. The text refers to pins, but they are not shown."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image contains only the question paper. The anatomical specimen or model that the questions refer to is not visible in the photograph.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The photograph shows only the handwritten question card (Station 18) and does not include the anatomical specimen, model, or radiograph that the questions are asking about. The specimen is missing from the frame.",
+  "quality_flags": [
+    "Specimen missing",
+    "Photo of question paper only"
+  ],
+  "_source": {
+    "id": "24e6799deb84",
+    "file": "24e6799deb84.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 34,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

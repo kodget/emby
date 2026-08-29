@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.27,
+    "y0": 0.28,
+    "x1": 0.78,
+    "y1": 0.62
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.47,
+    "y": 0.51,
+    "description": "Green-headed dressmaker pin with a paper tag marked 'B' attached to the organ; a length of white thread is also tied nearby."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a stacked/composite view showing a preserved organ with a pin and tag, but the specific structure indicated by the pin cannot be confidently identified, and no legible handwritten question is visible. The organ identity itself is uncertain.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The photograph is a composite of multiple partial crops, the question paper is not legible, and neither the organ nor the specific structure marked by the pin can be confidently identified. A null answer is preferred over a guess.",
+  "quality_flags": [
+    "composite/stacked image with multiple partial views",
+    "question paper not legible",
+    "specimen identity uncertain",
+    "marker target structure unclear"
+  ],
+  "_source": {
+    "id": "a4af7b34bba3",
+    "file": "a4af7b34bba3.jpeg",
+    "width": 780,
+    "height": 681,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 8,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.78,
+    "y1": 0.78
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.3,
+    "y": 0.33,
+    "description": "A white paper tag with a red handwritten mark (appears to be the letter 'A') is placed on the specimen, but it does not clearly point to a single identifiable structure."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a dark, preserved cadaveric prosection, but the orientation and the specific anatomical region are not clear enough to identify the structure indicated by the tag. The image is also a composite of multiple views, making it difficult to determine a single, consistent station question.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The anatomical specimen cannot be confidently identified. The image is dark, low-resolution, and appears to be a collage of different angles of the same prosection. The marker (a paper tag with a red 'A') does not clearly indicate a specific, identifiable structure, and there is no legible question paper to guide identification.",
+  "quality_flags": [
+    "very dark",
+    "low resolution",
+    "specimen orientation unclear",
+    "marker ambiguous",
+    "composite image of multiple views"
+  ],
+  "_source": {
+    "id": "d21303adb122",
+    "file": "d21303adb122.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 60,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

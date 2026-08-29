@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.08,
+    "x1": 0.95,
+    "y1": 0.58
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag or paint mark indicating a specific structure is visible."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image contains printed photographs of what appear to be fetal/neonatal specimens with abdominal wall defects, but there is no legible question, no station number, and no marker indicating which structure is being tested. It does not meet the criteria for a usable steeplechase station.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "No legible handwritten question, no station number, and no marker (pin/arrow/thread/tag) present. The image is a composite of multiple overlapping printed photographs of fetal/neonatal specimens, making it unclear what specific structure or concept is being tested. Cannot confidently construct a valid exam station.",
+  "quality_flags": [
+    "no_legible_question",
+    "no_marker",
+    "composite_overlapping_photos",
+    "low_resolution",
+    "no_station_number"
+  ],
+  "_source": {
+    "id": "05070c4899a3",
+    "file": "05070c4899a3.jpeg",
+    "width": 625,
+    "height": 469,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 15,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

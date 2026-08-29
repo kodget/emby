@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "41\n(A) Identify the area marked pink (size 3cm)\n(B) What area is pointed below",
+  "station_number": 41,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a question paper and a floor surface, but the anatomical specimen or structure being tested is not visible in the frame.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 1.0,
+  "needs_review": true,
+  "review_reason": "The image does not contain a visible anatomical specimen, model, or radiograph. It only shows the question paper and the floor, making it impossible to create a valid exam station.",
+  "quality_flags": [
+    "Specimen not visible",
+    "Photo shows only question paper and floor"
+  ],
+  "_source": {
+    "id": "4be58bc48cf7",
+    "file": "4be58bc48cf7.jpeg",
+    "width": 606,
+    "height": 455,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 15,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

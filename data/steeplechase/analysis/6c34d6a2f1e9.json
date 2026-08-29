@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.0,
+    "x1": 0.85,
+    "y1": 0.5
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.62,
+    "y": 0.68,
+    "description": "A blue-headed dressmaker pin is inserted into the surface of the specimen, but the structure it indicates cannot be confidently identified."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen appears to be a preserved cadaveric prosection, but the orientation, the region of the body, and the specific structure indicated by the pin are not clear from the image. A probe or instrument is also present near the upper part of the specimen, but its target is uncertain.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specimen is not clearly identifiable: the body region, orientation, and the structure marked by the pin are all ambiguous. There is no legible question paper or station number visible. A guess would risk producing an incorrect exam item.",
+  "quality_flags": [
+    "specimen orientation unclear",
+    "marked structure not identifiable",
+    "no legible question paper",
+    "no station number visible",
+    "image is a composite of multiple views"
+  ],
+  "_source": {
+    "id": "6c34d6a2f1e9",
+    "file": "6c34d6a2f1e9.jpeg",
+    "width": 1917,
+    "height": 1980,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 25,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

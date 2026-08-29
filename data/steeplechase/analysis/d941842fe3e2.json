@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Femur",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.55,
+    "y1": 0.3
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What Structure is inserted on the area painted GREEN\nB) What Structure passes through Area Painted Pink",
+  "station_number": 50,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.48,
+    "y": 0.21,
+    "description": "Green paint on the distal lateral aspect of the bone"
+  },
+  "structure": "Lateral epicondyle",
+  "main_question": "Identify the structure indicated by the green paint.",
+  "main_answer": "Lateral epicondyle",
+  "main_explanation": "The green paint is located on the lateral prominence of the distal femur, which is the lateral epicondyle.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is attached to the structure indicated by the green paint?",
+    "options": [
+      "Lateral collateral ligament",
+      "Medial collateral ligament",
+      "Popliteus muscle",
+      "Sartorius muscle"
+    ],
+    "correct_index": 0,
+    "explanation": "The lateral collateral ligament (fibular collateral ligament) attaches to the lateral epicondyle of the femur."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is partially out of frame at the top",
+    "Pink paint mentioned in question is not clearly visible in the provided crop"
+  ],
+  "_source": {
+    "id": "d941842fe3e2",
+    "file": "d941842fe3e2.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 66,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

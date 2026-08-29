@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.28,
+    "y0": 0.28,
+    "x1": 0.42,
+    "y1": 0.38
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Specifically identify this Bone. B) What articulates to the area pointed - to this",
+  "station_number": 49,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific pin, arrow, or tag is visible on the bone itself in the provided view."
+  },
+  "structure": null,
+  "main_question": "Specifically identify this bone.",
+  "main_answer": null,
+  "main_explanation": "The bone is held in a hand and is too small and poorly lit to be definitively identified. It appears to be a small, irregular bone, possibly from the foot or hand, but the specific features required for identification are not visible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specimen is extremely small in the frame, held by a hand, and lacks any specific markers. It is impossible to confidently identify the bone from this image alone.",
+  "quality_flags": [
+    "specimen_too_small",
+    "poor_lighting",
+    "marker_ambiguous"
+  ],
+  "_source": {
+    "id": "f9c557a5e0ab",
+    "file": "f9c557a5e0ab.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 65,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

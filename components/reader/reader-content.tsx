@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { AlertTriangle, Highlighter, Sparkles } from "lucide-react";
 import type { ReaderBlock } from "@/lib/data";
 import { SelectableImagePage } from "./selectable-image-page";
+import { SlideViewer } from "./slide-viewer";
 
 export type SelectionPayload = {
   text: string;
@@ -98,22 +99,26 @@ function HintBar() {
 }
 
 function SlideImageBlock({ page }: { page: any }) {
+  // A rendered slide is unreadable at phone width, so every page is tappable into the
+  // immersive viewer (fullscreen, rotate, pinch-zoom).
+  if (page.image_url) {
+    return (
+      <SlideViewer
+        src={page.image_url}
+        alt={`Page ${page.page_number}`}
+        caption={`Page ${page.page_number}${page.width ? ` · ${page.width} × ${page.height}` : ""}`}
+      />
+    );
+  }
+
+  // No rendered image for this page — say so plainly rather than showing a broken frame.
   return (
     <figure className="overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
-      {page.image_url ? (
-        <img
-          src={page.image_url}
-          alt={`Page ${page.page_number}`}
-          className="w-full"
-          loading={page.page_number <= 3 ? "eager" : "lazy"}
-        />
-      ) : (
-        <div className="flex h-96 items-center justify-center bg-muted">
-          <p className="text-sm text-muted-foreground">
-            Page {page.page_number} - Image not available
-          </p>
-        </div>
-      )}
+      <div className="flex h-56 items-center justify-center bg-muted sm:h-96">
+        <p className="px-6 text-center text-sm text-muted-foreground">
+          Page {page.page_number} hasn&apos;t finished processing yet.
+        </p>
+      </div>
       <figcaption className="flex items-center justify-between border-t border-border px-4 py-2.5 text-[11px] text-muted-foreground">
         <span>Page {page.page_number}</span>
         <span>

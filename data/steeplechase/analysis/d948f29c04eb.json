@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull base prosection",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.6,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": "25\na) Identify the content of the structure\nb) The structure pointed 'Blue' is at what vertebral level?\nc) What is the embryological origin of the structure",
+  "station_number": 25,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.4,
+    "y": 0.55,
+    "description": "A length of white thread is tied around a structure in the lower part of the specimen."
+  },
+  "structure": "Skull base (likely foramen magnum region)",
+  "main_question": "Identify the structure indicated by the thread.",
+  "main_answer": "Foramen magnum",
+  "main_explanation": "The specimen is a prosection of the skull base. The thread is tied around the large opening at the base of the skull, which is the foramen magnum.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures passes through the foramen indicated by the thread?",
+    "options": [
+      "Internal carotid artery",
+      "Spinal accessory nerve",
+      "Mandibular division of the trigeminal nerve",
+      "Facial nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The spinal accessory nerve (CN XI) exits the skull through the foramen magnum. The internal carotid artery passes through the carotid canal, the mandibular nerve through the foramen ovale, and the facial nerve through the stylomastoid foramen."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The foramen magnum is located in the sphenoid bone.",
+    "answer": false,
+    "explanation": "The foramen magnum is located in the occipital bone."
+  },
+  "confidence": 0.85,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is partially out of frame on the left side",
+    "Image is a composite of multiple views"
+  ],
+  "_source": {
+    "id": "d948f29c04eb",
+    "file": "d948f29c04eb.jpeg",
+    "width": 1280,
+    "height": 958,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 21,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

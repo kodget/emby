@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) What is the arterial supply of the fundus?\nb) What is the length of the small intestine?\nc) What is the embryonic origin of Diaphragm?",
+  "station_number": 499,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical marker visible as no specimen is present."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image contains only a question paper and no anatomical specimen to identify.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The photograph shows only the question paper (Station 499) and does not include the anatomical specimen, model, or radiograph that the questions refer to. It is not a complete exam station image.",
+  "quality_flags": [
+    "No specimen visible",
+    "Question paper only"
+  ],
+  "_source": {
+    "id": "3a5c16bf656e",
+    "file": "3a5c16bf656e.jpeg",
+    "width": 2321,
+    "height": 994,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 45,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

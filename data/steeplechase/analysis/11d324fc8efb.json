@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "NEUROANATOMY",
+  "specimen_label": "Sagittal section of human brain",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.15,
+    "x1": 0.98,
+    "y1": 0.55
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.55,
+    "y": 0.35,
+    "description": "A metal pin with a white paper tag labelled 'B' in red marker is inserted into the brain, pointing to a structure in the diencephalon/thalamus region. A second pin is also visible nearby."
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the pin labelled B.",
+  "main_answer": null,
+  "main_explanation": "The pin labelled B is inserted into the central region of the brain in a sagittal section. Based on the position, it likely indicates the thalamus or a nearby diencephalic structure, but the exact target cannot be confirmed with certainty from this image due to the angle and resolution.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.45,
+  "needs_review": true,
+  "review_reason": "The exact structure indicated by the pin labelled B cannot be confidently identified. The pin appears to be in the diencephalon region (possibly thalamus, hypothalamus, or third ventricle area), but the image resolution and angle make precise identification uncertain. No question paper is visible to confirm what is being asked.",
+  "quality_flags": [
+    "Image is somewhat blurry",
+    "No visible question paper with the actual question",
+    "Pin target structure is ambiguous - could be thalamus, hypothalamus, or ventricular region",
+    "Lighting is uneven with glare on the blue tray"
+  ],
+  "_source": {
+    "id": "11d324fc8efb",
+    "file": "11d324fc8efb.jpeg",
+    "width": 550,
+    "height": 412,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 25,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

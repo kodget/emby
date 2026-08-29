@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.0,
+    "x1": 0.95,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.45,
+    "y": 0.62,
+    "description": "Blue-headed pin indicating a structure in the deep fascia/muscle layer."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The question paper contains text in a non-Latin script (likely Arabic), which cannot be transcribed into English as per the rules. Without the specific question, the exact structure indicated by the pin cannot be definitively identified for an exam key.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The handwritten question on the paper is in a non-Latin script (appears to be Arabic). Per the rules, I cannot transcribe it into English or output the original script. Therefore, the specific anatomical target cannot be confirmed, making this unsuitable for an English-language question bank without manual translation and verification.",
+  "quality_flags": [
+    "Question paper text is in a non-Latin script",
+    "Specimen identification is ambiguous without the question context"
+  ],
+  "_source": {
+    "id": "09ed1e3f2ac8",
+    "file": "09ed1e3f2ac8.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 53,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

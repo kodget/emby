@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Cadaveric lower limb prosection",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.66,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.28,
+    "y": 0.82,
+    "description": "A yellow paper tag labeled 'B' attached to a thread looped around a specific anatomical structure."
+  },
+  "structure": "Popliteal artery",
+  "main_question": "Identify the structure indicated by the tag labeled 'B'.",
+  "main_answer": "Popliteal artery",
+  "main_explanation": "The specimen shows a posterior view of the knee region (popliteal fossa). The thread and tag 'B' are attached to a large vessel located deep to the muscles of the fossa, consistent with the position of the popliteal artery.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which nerve is most closely related to the structure indicated by the tag?",
+    "options": [
+      "Common peroneal nerve",
+      "Tibial nerve",
+      "Sural nerve",
+      "Obturator nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The tibial nerve is the major nerve accompanying the popliteal artery in the popliteal fossa, typically lying medial to the artery."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.65,
+  "needs_review": true,
+  "review_reason": "The image is a composite of multiple views of the same specimen. While the region (popliteal fossa) and the likely structure (popliteal artery) are identifiable, the lack of a clear question paper and the composite nature of the image require verification of the specific structure intended by the tag 'B' (e.g., distinguishing it from the vein or nerve).",
+  "quality_flags": [
+    "composite_image",
+    "no_question_paper"
+  ],
+  "_source": {
+    "id": "0dcda58d700c",
+    "file": "0dcda58d700c.jpeg",
+    "width": 1114,
+    "height": 1780,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 26,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

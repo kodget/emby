@@ -184,18 +184,27 @@ class StudyProfileSerializer(serializers.ModelSerializer):
 
 
 class ScheduleItemSerializer(serializers.ModelSerializer):
+    """Serializer for planner items.
+
+    This previously declared a `topic` field, but ScheduleItem has no such relation — it
+    links to `sub_block`. DRF only resolves fields when it serializes an instance, so an
+    empty planner returned 200 and the endpoint blew up with ImproperlyConfigured the
+    moment a user actually had an item. The frontend never called it, so it went unnoticed.
+    """
+
     slide_title = serializers.CharField(source='slide.title', read_only=True, allow_null=True)
-    topic_name = serializers.CharField(source='topic.name', read_only=True, allow_null=True)
+    sub_block_name = serializers.CharField(source='sub_block.name', read_only=True, allow_null=True)
     block_name = serializers.CharField(source='block.name', read_only=True, allow_null=True)
-    
+
     class Meta:
         model = ScheduleItem
         fields = [
             'id', 'activity_type', 'title', 'slide', 'slide_title',
-            'topic', 'topic_name', 'block', 'block_name',
+            'sub_block', 'sub_block_name', 'block', 'block_name',
             'scheduled_date', 'scheduled_time', 'estimated_minutes',
             'completed', 'completed_at', 'created_at', 'updated_at'
         ]
+        read_only_fields = ['completed_at', 'created_at', 'updated_at']
 
 
 class UserStatsSerializer(serializers.ModelSerializer):
@@ -680,7 +689,11 @@ class BrainBattleSerializer(serializers.ModelSerializer):
     class Meta:
         model = BrainBattle
         fields = '__all__'
-        read_only_fields = ['host', 'class_group', 'status', 'start_time', 'created_at']
-        
+        # `code` is generated server-side and shared by the host; a client must never
+        # be able to choose or overwrite it.
+        read_only_fields = [
+            'host', 'class_group', 'status', 'start_time', 'created_at', 'code',
+        ]
+
     def get_participants_count(self, obj):
         return obj.participants.count()

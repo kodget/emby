@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Mandible",
+  "specimen_bbox": {
+    "x0": 0.2,
+    "y0": 0.25,
+    "x1": 0.55,
+    "y1": 0.5
+  },
+  "question_paper_present": true,
+  "transcribed_question": "16\nA) IDENTIFY THE STRUCTURE(S) RELATED TO THE LINE PAINTED BLACK?",
+  "station_number": 16,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.48,
+    "y": 0.38,
+    "description": "A line painted black on the superior border of the mandible, near the mental foramen."
+  },
+  "structure": "Mental foramen",
+  "main_question": "Identify the structure(s) related to the line painted black.",
+  "main_answer": "Mental foramen",
+  "main_explanation": "The black line is painted on the superior aspect of the mandible, directly above the mental foramen. This foramen transmits the mental nerve and vessels.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which nerve passes through the structure indicated by the black line?",
+    "options": [
+      "Inferior alveolar nerve",
+      "Mental nerve",
+      "Long buccal nerve",
+      "Lingual nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The mental nerve, a terminal branch of the inferior alveolar nerve, exits the mandible through the mental foramen to supply the skin of the chin and lower lip."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The mental foramen is typically located between the roots of the first and second premolars.",
+    "answer": true,
+    "explanation": "The mental foramen is classically situated on the anterior surface of the mandible, midway between the inferior border and the alveolar margin, usually between the apices of the first and second premolars."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "91ef06d07b6a",
+    "file": "91ef06d07b6a.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 5,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

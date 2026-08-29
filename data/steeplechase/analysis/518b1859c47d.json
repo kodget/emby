@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Dissected lower limb (thigh/knee region)",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.65,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "1. Identify the indicated structure\n2. What is its blood supply?\n3. What is its cutaneous supply?\n4. Structure pinned: Biceps",
+  "station_number": 45,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.68,
+    "y": 0.25,
+    "description": "A string with a tag labelled 'B' is held by a hand, pointing to a structure in the distal thigh region."
+  },
+  "structure": "Biceps femoris",
+  "main_question": "Identify the structure indicated by the tag 'B'.",
+  "main_answer": "Biceps femoris",
+  "main_explanation": "The handwritten note on the question paper explicitly identifies the structure pinned/tagged as 'Biceps'. Anatomically, the location in the posterior thigh corresponds to the biceps femoris muscle.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which nerve provides the primary motor innervation to the long head of the biceps femoris muscle?",
+    "options": [
+      "Common fibular nerve",
+      "Tibial nerve",
+      "Obturator nerve",
+      "Superior gluteal nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The long head of the biceps femoris is innervated by the tibial part of the sciatic nerve, while the short head is innervated by the common fibular part."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is partially out of frame in the main view"
+  ],
+  "_source": {
+    "id": "518b1859c47d",
+    "file": "518b1859c47d.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 60,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

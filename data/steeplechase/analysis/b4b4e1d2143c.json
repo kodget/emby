@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Inguinal region prosection",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.35,
+    "y1": 0.42
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A IDENTIFY THE STRUCTURE PINNED \"GREEN\"\nB WHAT IS NERVE SUPPLY TO THE STRUCTURE PINNED \"BLUE\"",
+  "station_number": 34,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.25,
+    "y": 0.33,
+    "description": "Blue-headed pin indicating a structure in the inguinal region"
+  },
+  "structure": "Genital branch of genitofemoral nerve",
+  "main_question": "Identify the structure pinned blue.",
+  "main_answer": "Genital branch of genitofemoral nerve",
+  "main_explanation": "The specimen is a prosection of the inguinal region. The blue pin indicates a nerve structure, which the answer key identifies as the genital branch of the genitofemoral nerve.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What is the nerve supply to the structure pinned blue?",
+    "options": [
+      "It is a branch of the femoral nerve",
+      "It is a branch of the obturator nerve",
+      "It is a branch of the lumbar plexus (L1-L2)",
+      "It is a branch of the sacral plexus"
+    ],
+    "correct_index": 2,
+    "explanation": "The genitofemoral nerve arises directly from the anterior rami of the first and second lumbar spinal nerves (L1-L2), which are part of the lumbar plexus."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is small relative to the frame",
+    "Image is a composite of multiple views"
+  ],
+  "_source": {
+    "id": "b4b4e1d2143c",
+    "file": "b4b4e1d2143c.jpeg",
+    "width": 1932,
+    "height": 1368,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 40,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

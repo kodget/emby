@@ -1,0 +1,57 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Dissected neck/shoulder region with nerve",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.05,
+    "x1": 0.45,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Identify the pinned muscle & give the nerve root of its nerve supply? B) What is the nerve supply to the pinned Structure (be Specific)",
+  "station_number": 36,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.32,
+    "y": 0.45,
+    "description": "Green-headed pin indicating a nerve."
+  },
+  "structure": null,
+  "main_question": "A) Identify the pinned muscle & give the nerve root of its nerve supply? B) What is the nerve supply to the pinned Structure (be Specific)",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The pin clearly indicates a nerve, but the transcribed question asks to identify a 'pinned muscle' in part A. Part B asks about 'pinned Structure'. It is unclear if the question intends for the student to identify the nerve or a nearby muscle. The specific nerve is also difficult to identify from the image alone.",
+  "quality_flags": [
+    "Marker ambiguous",
+    "Specimen difficult to identify",
+    "Question unclear/contradictory"
+  ],
+  "_source": {
+    "id": "9acf1782c715",
+    "file": "9acf1782c715.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 46,
+    "model": "gemini-2.5-flash"
+  }
+}

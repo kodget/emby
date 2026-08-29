@@ -1,0 +1,63 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Fetus with sacrococcygeal teratoma",
+  "specimen_bbox": {
+    "x0": 0.1837,
+    "y0": 0.0581,
+    "x1": 0.807,
+    "y1": 0.5148
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What is your Diagnosis\nB) characterize the TUMOR (Component)\n18",
+  "station_number": 18,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "What is your Diagnosis?",
+  "main_answer": "Sacrococcygeal teratoma",
+  "main_explanation": "The image shows a fetus with a large, externally visible mass protruding from the sacral region, which is characteristic of a sacrococcygeal teratoma. This is the most common tumor found in newborns.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following statements is true regarding sacrococcygeal teratomas?",
+    "options": [
+      "They are always malignant.",
+      "They are more common in males.",
+      "They typically arise from multipotent stem cells in Hensen's node.",
+      "Surgical resection is usually delayed until infancy."
+    ],
+    "correct_index": 2,
+    "explanation": "Sacrococcygeal teratomas are believed to arise from pluripotent stem cells in the region of Hensen's node (primitive streak remnants) at the caudal end of the embryo. Most are benign, but a small percentage can be malignant. They are more common in females, and early surgical intervention is often necessary, sometimes even prenatally."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "Sacrococcygeal teratomas are typically composed of tissues derived from all three germ layers.",
+    "answer": true,
+    "explanation": "As teratomas, these tumors are derived from pluripotent germ cells and characteristically contain tissues from all three embryonic germ layers: ectoderm, mesoderm, and endoderm."
+  },
+  "confidence": 1.0,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "Blurred",
+    "Dark",
+    "Poor lighting",
+    "Foot/shoe visible"
+  ],
+  "_source": {
+    "id": "9d9bf4883c0b",
+    "file": "9d9bf4883c0b.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 23,
+    "model": "gemini-2.5-flash"
+  }
+}

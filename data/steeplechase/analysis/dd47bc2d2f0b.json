@@ -1,0 +1,62 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Dissected lower limb prosection",
+  "specimen_bbox": {
+    "x0": 0.04,
+    "y0": 0.18,
+    "x1": 0.96,
+    "y1": 0.62
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Cutaneous supply to the Area pinned blue\nB) IDENTIFY THE STRUCTURE TIED A\nC) IDENTIFY THE STRUCTURE",
+  "station_number": 27,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.45,
+    "y": 0.4,
+    "description": "A thread tied around a nerve winding around the fibular neck."
+  },
+  "structure": "Common fibular nerve (Common peroneal nerve)",
+  "main_question": "Identify the structure indicated by the thread.",
+  "main_answer": "Common fibular nerve (Common peroneal nerve)",
+  "main_explanation": "The thread is tied around the common fibular nerve (also known as the common peroneal nerve) as it winds around the neck of the fibula. This nerve is a terminal branch of the sciatic nerve.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following is a common clinical manifestation of injury to the indicated structure?",
+    "options": [
+      "Inability to flex the hip",
+      "Foot drop",
+      "Weakness in knee extension",
+      "Loss of sensation over the medial leg"
+    ],
+    "correct_index": 1,
+    "explanation": "Injury to the common fibular nerve (common peroneal nerve) typically results in foot drop, characterized by weakness or paralysis of the muscles that dorsiflex the foot (tibialis anterior, extensor digitorum longus, extensor hallucis longus) and evert the foot (fibularis longus and brevis). This leads to the inability to lift the front part of the foot, causing it to drag during walking."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The common fibular nerve is a terminal branch of the femoral nerve.",
+    "answer": false,
+    "explanation": "The common fibular nerve is a terminal branch of the sciatic nerve, which itself is a branch of the sacral plexus. The femoral nerve is a branch of the lumbar plexus."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "blurry",
+    "dark",
+    "hand_obscuring_view"
+  ],
+  "_source": {
+    "id": "dd47bc2d2f0b",
+    "file": "dd47bc2d2f0b.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 33,
+    "model": "gemini-2.5-flash"
+  }
+}

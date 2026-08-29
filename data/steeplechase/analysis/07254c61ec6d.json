@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.62
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag, or paint mark is visible indicating a specific structure."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a composite of close-up views of a preserved prosection with no question paper, no station number, and no marker. The specific structure being tested cannot be determined from the visible features alone.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "No question paper, no station number, and no marker are present. The image is a multi-panel composite of a preserved prosection, but the specific structure of interest and the body region cannot be confidently identified. The dark curved structure in the upper-right panel could be a vessel, ligament, or tendon, but this is uncertain.",
+  "quality_flags": [
+    "No question paper visible",
+    "No station number visible",
+    "No marker indicating a specific structure",
+    "Composite image of multiple close-up views",
+    "Specimen orientation ambiguous"
+  ],
+  "_source": {
+    "id": "07254c61ec6d",
+    "file": "07254c61ec6d.jpeg",
+    "width": 606,
+    "height": 455,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 16,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

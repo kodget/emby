@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.72
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.83,
+    "y": 0.13,
+    "description": "A green/teal plastic-headed dressmaker pin and a blue plastic-headed pin are inserted into the prosection, marking two different structures, but the targets cannot be confidently identified from the cropped views."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a composite of several close-up crops of a cadaveric prosection with two plastic-headed pins, but no question paper, station number, or legible label is present, and the anatomical region and the specific marked structures cannot be confidently identified from the visible tissue alone.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "Cannot confidently identify the anatomical region or the structures marked by the pins. The image is a multi-crop composite with no visible question paper, station number, or label, so the intended question and the target structures are unclear. A plausible guess would risk students revising from incorrect anatomy.",
+  "quality_flags": [
+    "no_question_paper_visible",
+    "no_station_number_visible",
+    "composite_of_multiple_crops",
+    "marker_targets_ambiguous",
+    "region_unclear"
+  ],
+  "_source": {
+    "id": "2e950c5ae68d",
+    "file": "2e950c5ae68d.jpeg",
+    "width": 1280,
+    "height": 958,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 31,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

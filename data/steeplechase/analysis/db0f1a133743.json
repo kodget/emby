@@ -1,0 +1,51 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.65
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker (pin, arrow, or tag) is visible indicating a particular anatomical structure."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a preserved heart specimen, but there is no question paper, station number, or specific marker to define an exam station.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "Image is a collage of photos of a heart specimen without any exam station context (no paper, no marker).",
+  "quality_flags": [
+    "Image is a collage of multiple views",
+    "No question paper present",
+    "No station number visible",
+    "No specific marker present"
+  ],
+  "_source": {
+    "id": "db0f1a133743",
+    "file": "db0f1a133743.jpeg",
+    "width": 1632,
+    "height": 1224,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 10,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

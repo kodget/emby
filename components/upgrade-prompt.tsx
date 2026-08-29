@@ -1,3 +1,4 @@
+import { MONTHLY_PRICE_LABEL, YEARLY_PRICE_LABEL, formatNaira, yearlySavings } from "@/lib/pricing";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,17 +8,18 @@ const lockedFeatures: Record<string, { locked: string[]; unlocked: string[] }> =
   {
     default: {
       locked: [
-        "Unlimited quizzes & steeplechase",
-        "Unlimited AI tutor explanations",
+        "Unlimited Steeplechase & Histology rounds",
+        "The full question bank (up to 100 per quiz)",
+        "Theory questions with AI marking",
+        "A far larger AI credit allowance",
+        "Weak-area analysis & revision suggestions",
         "Post & reply in community",
-        "Spaced-repetition flashcards",
-        "Advanced analytics & weak topics",
-        "Offline PDF reader",
       ],
       unlocked: [
-        "Your class materials",
-        "Daily study plan (30 min)",
-        "1 quiz + 1 flashcard deck / day",
+        "Your class slides and materials",
+        "Spaced-repetition flashcards",
+        "10 MCQs per quiz",
+        "5 Steeplechase & 5 Histology rounds a month",
         "Community read-only",
       ],
     },
@@ -114,7 +116,7 @@ export function UpgradePrompt({
         <Link href="/premium">
           <Button size="sm" className="w-full">
             <Crown className="mr-1.5 h-3.5 w-3.5" />
-            Upgrade · ₦1,499/mo
+            Upgrade · {MONTHLY_PRICE_LABEL}/mo
           </Button>
         </Link>
       </div>
@@ -169,11 +171,11 @@ export function UpgradePrompt({
         <Link href="/premium" className="block">
           <Button className="w-full" size="lg">
             <Crown className="mr-2 h-4 w-4" />
-            Upgrade to Premium · ₦1,499/mo
+            Upgrade to Premium · {MONTHLY_PRICE_LABEL}/mo
           </Button>
         </Link>
         <p className="text-center text-xs text-muted-foreground">
-          or ₦15,000/year · save 17%
+          {`or ${YEARLY_PRICE_LABEL}/year · save ${formatNaira(yearlySavings())}`}
         </p>
       </CardContent>
     </Card>

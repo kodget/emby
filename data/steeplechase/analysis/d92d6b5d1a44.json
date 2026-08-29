@@ -1,0 +1,59 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Dissected lower limb (thigh/knee region)",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.0,
+    "x1": 0.7,
+    "y1": 0.5
+  },
+  "question_paper_present": true,
+  "transcribed_question": "What is the nerve marked in green? a) Lymph node of Cloquet b) Ilioinguinal Nerve (cutaneous branch) c) L1",
+  "station_number": 44,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.38,
+    "y": 0.25,
+    "description": "A green-headed pin is inserted into a nerve structure within the dissected tissue."
+  },
+  "structure": "Nerve in the lower limb (likely femoral or obturator nerve based on location)",
+  "main_question": "Identify the nerve indicated by the green pin.",
+  "main_answer": null,
+  "main_explanation": "The green pin marks a nerve in the lower limb. While the specific nerve (e.g., femoral, obturator) cannot be definitively identified from the image alone without more context, the question paper suggests it is a major nerve in the region.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located in the femoral triangle?",
+    "options": [
+      "Lymph node of Cloquet",
+      "Ilioinguinal nerve",
+      "Femoral vein",
+      "Obturator artery"
+    ],
+    "correct_index": 2,
+    "explanation": "The femoral triangle contains the femoral nerve, femoral artery, and femoral vein (NAVEL). The lymph node of Cloquet is a deep inguinal node, and the ilioinguinal nerve is a cutaneous branch."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.6,
+  "needs_review": true,
+  "review_reason": "The specific nerve marked by the green pin is not clearly identifiable from the image. The question paper lists options that do not clearly match a single nerve, and the anatomical context is limited.",
+  "quality_flags": [
+    "Specimen is partially out of frame",
+    "Marker is small and could be missed",
+    "Question paper is partially obscured by the bench edge"
+  ],
+  "_source": {
+    "id": "d92d6b5d1a44",
+    "file": "d92d6b5d1a44.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 18,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

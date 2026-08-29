@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(A) Identify the structure bearing the green pin. (B) What structure bears the blue pin.",
+  "station_number": 40,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only a question paper and a floor; the anatomical specimen is not visible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 1.0,
+  "needs_review": true,
+  "review_reason": "The anatomical specimen is not visible in the photograph; only the question paper and the floor are shown.",
+  "quality_flags": [
+    "specimen_out_of_frame",
+    "no_specimen_visible"
+  ],
+  "_source": {
+    "id": "200362669022",
+    "file": "200362669022.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 7,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

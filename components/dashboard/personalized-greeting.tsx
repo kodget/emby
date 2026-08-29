@@ -8,7 +8,6 @@ import { Sparkles } from "lucide-react";
 type GreetingData = {
   timeGreeting: string;
   motivationalMessage: string;
-  emoji: string;
 };
 
 export function PersonalizedGreeting() {
@@ -58,7 +57,6 @@ export function PersonalizedGreeting() {
     return {
       timeGreeting,
       motivationalMessage: randomMessage.message,
-      emoji: randomMessage.emoji,
     };
   };
 
@@ -71,32 +69,26 @@ export function PersonalizedGreeting() {
     if (profile.streak === 0) {
       messages.push({
         message: `Start your learning streak today`,
-        emoji: "🎯",
       });
     } else if (profile.streak < 3) {
       messages.push({
         message: `You're building momentum. Keep it up!`,
-        emoji: "💪",
       });
     } else if (profile.streak < 7) {
       messages.push({
         message: `${profile.streak} days strong! You're on fire!`,
-        emoji: "🔥",
       });
     } else if (profile.streak < 14) {
       messages.push({
         message: `${profile.streak}-day streak! Consistency is key!`,
-        emoji: "⭐",
       });
     } else if (profile.streak < 30) {
       messages.push({
         message: `${profile.streak} days! You're unstoppable!`,
-        emoji: "🚀",
       });
     } else {
       messages.push({
         message: `${profile.streak}-day streak! You're a legend!`,
-        emoji: "👑",
       });
     }
 
@@ -105,22 +97,18 @@ export function PersonalizedGreeting() {
       if (stats.points < 100) {
         messages.push({
           message: `Every point counts. Keep learning!`,
-          emoji: "📚",
         });
       } else if (stats.points < 500) {
         messages.push({
           message: `${stats.points} points! You're making progress!`,
-          emoji: "🌟",
         });
       } else if (stats.points < 1000) {
         messages.push({
           message: `${stats.points} points! Halfway to mastery!`,
-          emoji: "💎",
         });
       } else {
         messages.push({
           message: `${stats.points} points! You're crushing it!`,
-          emoji: "🏆",
         });
       }
     }
@@ -130,17 +118,14 @@ export function PersonalizedGreeting() {
       if (stats.rank === 1) {
         messages.push({
           message: `You're #1! Keep defending that crown!`,
-          emoji: "👑",
         });
       } else if (stats.rank <= 3) {
         messages.push({
           message: `Top 3! The podium is yours!`,
-          emoji: "🥇",
         });
       } else if (stats.rank <= 10) {
         messages.push({
           message: `Top 10! You're among the best!`,
-          emoji: "🌟",
         });
       }
     }
@@ -151,7 +136,6 @@ export function PersonalizedGreeting() {
       if (hours > 0) {
         messages.push({
           message: `${hours}+ hours of study time! Dedication pays off!`,
-          emoji: "⏰",
         });
       }
     }
@@ -161,17 +145,14 @@ export function PersonalizedGreeting() {
       if (stats.slides_completed < 10) {
         messages.push({
           message: `${stats.slides_completed} slides down! Keep the momentum!`,
-          emoji: "📖",
         });
       } else if (stats.slides_completed < 50) {
         messages.push({
           message: `${stats.slides_completed} slides completed! You're on a roll!`,
-          emoji: "🎯",
         });
       } else {
         messages.push({
           message: `${stats.slides_completed} slides! You're a reading machine!`,
-          emoji: "📚",
         });
       }
     }
@@ -180,35 +161,27 @@ export function PersonalizedGreeting() {
     messages.push(
       {
         message: `Ready to conquer today's goals? Let's go!`,
-        emoji: "💪",
       },
       {
         message: `Your future self will thank you for studying today!`,
-        emoji: "🌟",
       },
       {
         message: `Small steps lead to big achievements!`,
-        emoji: "🚀",
       },
       {
         message: `You're one study session away from a breakthrough!`,
-        emoji: "✨",
       },
       {
         message: `Excellence is a habit. Let's build it today!`,
-        emoji: "🎯",
       },
       {
         message: `Your dedication is inspiring! Keep pushing!`,
-        emoji: "💎",
       },
       {
         message: `Success is built one day at a time!`,
-        emoji: "🏆",
       },
       {
         message: `You've got this! Let's make today count!`,
-        emoji: "🔥",
       }
     );
 

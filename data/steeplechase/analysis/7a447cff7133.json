@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Sacrum",
+  "specimen_bbox": {
+    "x0": 0.08,
+    "y0": 0.0,
+    "x1": 0.55,
+    "y1": 0.48
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) WHAT ARE THE STRUCTURES PAINTED RED? B) WHAT STRUCTURES ARE PAINTED BLUE?",
+  "station_number": 17,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.3,
+    "y": 0.25,
+    "description": "Blue paint applied to the midline of the sacral surface and red paint on the lateral margins."
+  },
+  "structure": "Sacral foramina and sacral canal",
+  "main_question": "Identify the structures painted blue on the specimen.",
+  "main_answer": "Sacral canal (and sacral foramina)",
+  "main_explanation": "The blue paint highlights the midline sacral canal and the anterior sacral foramina, which transmit the anterior rami of the sacral spinal nerves.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is most likely indicated by the red paint on the lateral aspect of the sacrum?",
+    "options": [
+      "Medial sacral artery",
+      "Obturator nerve",
+      "Lumbosacral plexus",
+      "Sympathetic chain ganglia"
+    ],
+    "correct_index": 1,
+    "explanation": "The red paint is located on the lateral margin near the sacroiliac joint, a region where the obturator nerve and vessels are in close relation to the pelvis."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The blue-painted midline structure is the spinal canal.",
+    "answer": true,
+    "explanation": "The blue paint covers the sacral canal, which is the continuation of the vertebral canal."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "7a447cff7133",
+    "file": "7a447cff7133.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 21,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

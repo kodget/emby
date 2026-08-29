@@ -1,0 +1,53 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No clear pin, arrow, tag, or painted mark indicating a specific structure. Some thread/string and a small green tag are visible but do not unambiguously mark a named structure."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a composite of four blurry close-up photographs of a cadaveric prosection. No question paper, station number, or unambiguous marker is present, and the anatomical region and the structure of interest cannot be confidently identified from what is visible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "No legible question paper, no station number, and no unambiguous marker identifying a specific structure. The four close-up views are blurry and the anatomical region (thorax vs abdomen vs back) cannot be confidently determined. Cannot construct a valid exam station without guessing.",
+  "quality_flags": [
+    "very blurry / low resolution",
+    "no question paper present",
+    "no station number visible",
+    "no unambiguous marker on a named structure",
+    "composite of multiple close-up crops rather than a single clear view",
+    "anatomical region cannot be confidently identified"
+  ],
+  "_source": {
+    "id": "0be1384f8ff8",
+    "file": "0be1384f8ff8.jpeg",
+    "width": 780,
+    "height": 1040,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 37,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

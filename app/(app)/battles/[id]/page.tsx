@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function BattleArenaPage({ params }: { params: { id: string } }) {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] bg-[url('/grid.svg')] text-white p-6 md:p-12">
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       <BattleArena battleId={params.id} />
     </div>
   );

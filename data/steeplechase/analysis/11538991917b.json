@@ -1,0 +1,57 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull base (inferior view)",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.7,
+    "y1": 0.5
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.52,
+    "y": 0.42,
+    "description": "Blue painted lines on the lateral aspect of the skull base, likely indicating the petrous part of the temporal bone."
+  },
+  "structure": "Petrous part of the temporal bone",
+  "main_question": "Identify the region of the skull base indicated by the blue paint.",
+  "main_answer": "Petrous part of the temporal bone",
+  "main_explanation": "The blue paint highlights the pyramidal-shaped petrous portion of the temporal bone, which houses the organs of hearing and balance.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located within the petrous part of the temporal bone?",
+    "options": [
+      "Mandibular fossa",
+      "Labyrinth",
+      "Foramen ovale",
+      "Greater wing"
+    ],
+    "correct_index": 1,
+    "explanation": "The labyrinth (inner ear) is contained within the petrous part of the temporal bone. The mandibular fossa is in the squamous part, the foramen ovale is in the greater wing of the sphenoid, and the greater wing is part of the sphenoid bone."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Multiple views of the same specimen are presented in a single image."
+  ],
+  "_source": {
+    "id": "11538991917b",
+    "file": "11538991917b.jpeg",
+    "width": 448,
+    "height": 597,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 4,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

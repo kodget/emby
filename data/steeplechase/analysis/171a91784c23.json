@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) Identify the structure pinned green\nb) Identify the structure tied (B)\nc) What I-C-S does the pinned structure lie <blue>?",
+  "station_number": 27,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical marker visible, only the question paper."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows only the question paper and does not contain the anatomical specimen required to answer the questions.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 1.0,
+  "needs_review": true,
+  "review_reason": "Image contains only the question paper; the anatomical specimen is missing.",
+  "quality_flags": [
+    "Specimen missing",
+    "Only question paper visible"
+  ],
+  "_source": {
+    "id": "171a91784c23",
+    "file": "171a91784c23.jpeg",
+    "width": 1904,
+    "height": 1344,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 32,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

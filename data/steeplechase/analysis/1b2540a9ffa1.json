@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull base (inferior view)",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.15,
+    "x1": 0.75,
+    "y1": 0.85
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.35,
+    "y": 0.7,
+    "description": "White paper tag with red letter 'D' attached to a probe or pin indicating a structure in the middle cranial fossa."
+  },
+  "structure": "Foramen ovale",
+  "main_question": "Identify the structure indicated by the tag.",
+  "main_answer": "Foramen ovale",
+  "main_explanation": "The tag is positioned in the middle cranial fossa, lateral to the body of the sphenoid bone. The foramen ovale is a large opening in the greater wing of the sphenoid bone that transmits the mandibular nerve (V3), accessory meningeal artery, and lesser petrosal nerve.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures passes through the foramen indicated by the tag?",
+    "options": [
+      "Maxillary nerve (V2)",
+      "Mandibular nerve (V3)",
+      "Facial nerve (CN VII)",
+      "Glossopharyngeal nerve (CN IX)"
+    ],
+    "correct_index": 1,
+    "explanation": "The foramen ovale transmits the mandibular nerve (V3). The maxillary nerve (V2) passes through the foramen rotundum, the facial nerve through the internal acoustic meatus, and the glossopharyngeal nerve through the jugular foramen."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The foramen ovale is located in the greater wing of the sphenoid bone.",
+    "answer": true,
+    "explanation": "The foramen ovale is a large opening in the greater wing of the sphenoid bone in the middle cranial fossa."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is preserved and may have altered coloration"
+  ],
+  "_source": {
+    "id": "1b2540a9ffa1",
+    "file": "1b2540a9ffa1.jpeg",
+    "width": 540,
+    "height": 720,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 3,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

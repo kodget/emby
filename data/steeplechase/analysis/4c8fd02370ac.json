@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.42,
+    "y": 0.3,
+    "description": "Green and blue pins/tags visible on the dissection, but the specific structures they indicate cannot be confidently identified"
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a cadaveric dissection with colored pins, but the image quality is too poor (dark, low resolution, composite of multiple views) to confidently identify the anatomical structures being tested. No question paper is visible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "Image is a composite of multiple dark, low-resolution photographs of a cadaveric dissection. The anatomical structures cannot be confidently identified. No question paper or station number is visible. The colored pins are present but the structures they mark are unclear due to poor image quality and lack of orientation context.",
+  "quality_flags": [
+    "very_dark",
+    "low_resolution",
+    "composite_image",
+    "poor_orientation",
+    "no_question_paper",
+    "structures_not_clearly_identifiable"
+  ],
+  "_source": {
+    "id": "4c8fd02370ac",
+    "file": "4c8fd02370ac.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 41,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

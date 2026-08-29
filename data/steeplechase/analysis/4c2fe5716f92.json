@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Dissected limb specimen",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.77
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) What is the clinical significance of the pinned structure\nb) Damage to the tied structure will present with which ANATOMICAL DEFORMITY",
+  "station_number": 38,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.61,
+    "y": 0.09,
+    "description": "blue pin in the upper part of the specimen"
+  },
+  "structure": null,
+  "main_question": "Identify the pinned structure and state its clinical significance.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": true,
+    "question": "Damage to which nerve results in a 'claw hand' deformity due to loss of innervation to the medial lumbricals?",
+    "options": [
+      "Median nerve",
+      "Ulnar nerve",
+      "Radial nerve",
+      "Musculocutaneous nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The ulnar nerve innervates the medial two lumbricals. Damage to this nerve leads to the characteristic 'claw hand' deformity (hyperextension at the metacarpophalangeal joints and flexion at the interphalangeal joints of the 4th and 5th digits)."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The ulnar nerve passes posterior to the medial epicondyle of the humerus.",
+    "answer": true,
+    "explanation": "The ulnar nerve runs in the cubital tunnel posterior to the medial epicondyle, where it is vulnerable to compression or injury."
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specimen is highly dried and poorly preserved, making it difficult to unambiguously identify the specific nerves/muscles pinned and tied. The question paper asks about a pinned structure and a tied structure, but without clear anatomical context, the exact structures cannot be determined with high confidence.",
+  "quality_flags": [
+    "specimen_poorly_preserved",
+    "ambiguous_marker"
+  ],
+  "_source": {
+    "id": "4c2fe5716f92",
+    "file": "4c2fe5716f92.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 49,
+    "model": "gemini-3.5-flash"
+  }
+}

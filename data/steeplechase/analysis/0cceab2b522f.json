@@ -1,0 +1,59 @@
+{
+  "is_station": true,
+  "station_kind": "MODEL",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Sagittal section of the head and neck",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.1,
+    "x1": 0.6,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What is the structure pinned A.\nB) What is the embryological origin of the structure pinned B.",
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.4,
+    "y": 0.35,
+    "description": "A pin with a green head is inserted into the model, pointing to a structure in the oropharyngeal region."
+  },
+  "structure": "Tonsil (likely palatine or lingual)",
+  "main_question": "What is the structure pinned A?",
+  "main_answer": "Tonsil",
+  "main_explanation": "The pin is located in the lateral wall of the pharynx, corresponding to the position of a tonsil (likely palatine or lingual depending on the exact level of the section).",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What is the embryological origin of the structure indicated by the pin?",
+    "options": [
+      "First pharyngeal arch",
+      "Second pharyngeal arch",
+      "Third pharyngeal arch",
+      "Fourth pharyngeal arch"
+    ],
+    "correct_index": 1,
+    "explanation": "If the structure is the palatine tonsil, it develops from the second pharyngeal arch (specifically the second pharyngeal pouch). If it is the lingual tonsil, it is from the third arch. Given the position, second arch is a strong candidate for palatine tonsil."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.6,
+  "needs_review": true,
+  "review_reason": "The image is a composite with a large black area, and the specific structure pinned is difficult to identify with 100% certainty without a clearer view of the anatomical landmarks. The pin location suggests a tonsil, but the exact type (palatine vs lingual) is ambiguous.",
+  "quality_flags": [
+    "composite_image",
+    "dark_background",
+    "marker_position_ambiguous"
+  ],
+  "_source": {
+    "id": "0cceab2b522f",
+    "file": "0cceab2b522f.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 89,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

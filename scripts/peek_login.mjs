@@ -1,0 +1,17 @@
+import { chromium } from "playwright";
+const [BASE, OUT] = process.argv.slice(2);
+const b = await chromium.launch();
+const c = await b.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+const p = await c.newPage();
+p.on("pageerror", e => console.log("  ! page error:", e.message));
+await p.goto(BASE + "/signin", { waitUntil: "load" });
+await p.waitForTimeout(1500);
+await p.fill('input[type="email"], input[name="email"]', "demo@emby.app");
+await p.fill('input[type="password"], input[name="password"]', "emby1234");
+await p.click('button[type="submit"]');
+await p.waitForTimeout(6000);
+console.log("  landed on:", p.url().replace(BASE, "") || "/");
+await p.screenshot({ path: OUT });
+const body = (await p.textContent("body")) || "";
+console.log("  signed in:", /Ada|Ready to study|Good morning|Good afternoon|Good evening/i.test(body));
+await b.close();

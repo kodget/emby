@@ -1,364 +1,413 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { authApi, statsApi, progressApi } from "@/lib/api";
-import { UserProfile, UserStats, UserProgress } from "@/lib/api";
-import AuthGuard from "@/components/auth/auth-guard";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { UpgradePrompt } from "@/components/premium/upgrade-prompt";
-import {
-  ArrowLeft,
-  TrendingUp,
-  TrendingDown,
-  Award,
-  BookOpen,
-  Clock,
-  Target,
-  BarChart3,
-  Activity,
-  Lock,
-} from "lucide-react";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+/**
+ * Analytics.
+ *
+ * The previous version drew hardcoded charts: a fixed Mon–Sun study bar chart, invented
+ * subject progress, a made-up four-week streak history, and a green "trending up" arrow
+ * on every card regardless of what had actually happened. All of it is gone.
+ *
+ * Every number here comes from `/api/learning/analytics/`, computed from recorded
+ * activity. Where the evidence is too thin to answer a question — fewer than ten
+ * answered items in a period, no tracked topics yet — the page says so instead of
+ * drawing a confident-looking zero.
+ *
+ * The page is organised around the questions a student actually asks:
+ * am I improving, what am I weak at, how consistent am I, and where did it happen.
+ */
 
-const COLORS = ["#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Crown } from "lucide-react";
+
+import AuthGuard from "@/components/auth/auth-guard";
+import { Axo, AxoEmpty, AxoLoader } from "@/components/brand/axo";
+import { Icon3D } from "@/components/brand/icon-3d";
+import { StatTile, SurfaceSkeleton } from "@/components/ui/surface";
+import { analyticsApi, type AnalyticsReport } from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+const WINDOWS = [7, 30, 90] as const;
 
 export default function AnalyticsPage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [stats, setStats] = useState<UserStats | null>(null);
-  const [progress, setProgress] = useState<UserProgress[]>([]);
+  const [report, setReport] = useState<AnalyticsReport | null>(null);
+  const [days, setDays] = useState<number>(30);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const load = useCallback(async (window: number) => {
+    setLoading(true);
+    setFailed(false);
     try {
-      const [profileData, statsData, progressData] = await Promise.all([
-        authApi.getProfile(),
-        statsApi.getMyStats(),
-        progressApi.getProgress(),
-      ]);
-      setProfile(profileData);
-      setStats(statsData);
-      setProgress(progressData);
-    } catch (error) {
-      console.error("Failed to load analytics:", error);
+      setReport(await analyticsApi.getReport(window));
+    } catch {
+      setFailed(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  if (loading) {
-    return (
-      <AuthGuard>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading analytics...</p>
+  useEffect(() => {
+    void load(days);
+  }, [days, load]);
+
+  return (
+    <AuthGuard>
+      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
+        <header className="flex items-start gap-4">
+          <Icon3D name="analytics" size="lg" />
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+              Your progress
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Built from what you have actually studied — nothing here is illustrative.
+            </p>
           </div>
+          <Axo pose="teaching" size="md" float className="hidden sm:block" />
+        </header>
+
+        {/* Period */}
+        <div className="mt-5 flex gap-2" role="group" aria-label="Time period">
+          {WINDOWS.map((w) => (
+            <button
+              key={w}
+              type="button"
+              onClick={() => setDays(w)}
+              aria-pressed={days === w}
+              className={cn(
+                "press rounded-full border px-4 py-1.5 text-sm transition-colors",
+                days === w
+                  ? "border-primary bg-primary/10 font-medium text-primary"
+                  : "border-border bg-card hover:border-primary/40",
+              )}
+            >
+              {w} days
+            </button>
+          ))}
         </div>
-      </AuthGuard>
-    );
-  }
 
-  // Prepare chart data
-  const studyTimeData = [
-    { day: "Mon", minutes: 45 },
-    { day: "Tue", minutes: 60 },
-    { day: "Wed", minutes: 30 },
-    { day: "Thu", minutes: 75 },
-    { day: "Fri", minutes: 50 },
-    { day: "Sat", minutes: 90 },
-    { day: "Sun", minutes: 40 },
-  ];
+        {loading ? (
+          <div className="mt-6 space-y-4">
+            <SurfaceSkeleton lines={2} />
+            <SurfaceSkeleton lines={4} />
+          </div>
+        ) : failed || !report ? (
+          <AxoEmpty
+            title="Couldn't load your analytics"
+            description="Check your connection and try again."
+            pose="oops"
+            action={
+              <button
+                type="button"
+                onClick={() => void load(days)}
+                className="press rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
+              >
+                Retry
+              </button>
+            }
+          />
+        ) : !report.overview.has_data ? (
+          <AxoEmpty
+            className="mt-4"
+            title="Not enough activity yet"
+            description="Once you've answered a few questions, this page will show your accuracy, what you're weak at, and whether you're improving."
+            pose="sleeping"
+            action={
+              <Link
+                href="/quiz"
+                className="press inline-flex h-11 items-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground"
+              >
+                Start a quiz
+              </Link>
+            }
+          />
+        ) : (
+          <Report report={report} />
+        )}
+      </div>
+    </AuthGuard>
+  );
+}
 
-  const progressBySubject = [
-    { subject: "Anatomy", completed: 12, total: 20 },
-    { subject: "Physiology", completed: 8, total: 15 },
-    { subject: "Biochemistry", completed: 15, total: 18 },
-  ];
+function Report({ report }: { report: AnalyticsReport }) {
+  const { overview, improvement, consistency } = report;
+  const pct = (v: number | null | undefined) =>
+    v === null || v === undefined ? "—" : `${Math.round(v * 100)}%`;
 
-  const completionData = progressBySubject.map((item) => ({
-    name: item.subject,
-    value: Math.round((item.completed / item.total) * 100),
-  }));
+  return (
+    <div className="mt-6 space-y-6">
+      {/* Headline */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <StatTile
+          label="Accuracy"
+          value={pct(overview.accuracy)}
+          hint={`${overview.correct} of ${overview.attempted}`}
+          tone="primary"
+          icon={<Icon3D name="target" size="sm" />}
+        />
+        <StatTile
+          label="Answered"
+          value={overview.attempted.toLocaleString()}
+          hint={`${overview.sessions} sessions`}
+          icon={<Icon3D name="quiz" size="sm" />}
+        />
+        <StatTile
+          label="Study time"
+          value={`${Math.floor(overview.study_minutes / 60)}h ${overview.study_minutes % 60}m`}
+          icon={<Icon3D name="planner" size="sm" />}
+        />
+        <StatTile
+          label="Active days"
+          value={`${consistency.active_days}/${consistency.window_days}`}
+          hint={`${consistency.current_streak}-day streak`}
+          tone={consistency.active_rate >= 0.5 ? "mastery" : "review"}
+          icon={<Icon3D name="streak" size="sm" />}
+        />
+      </div>
 
-  const streakData = [
-    { week: "Week 1", streak: 3 },
-    { week: "Week 2", streak: 5 },
-    { week: "Week 3", streak: 7 },
-    { week: "Week 4", streak: stats?.current_streak || 0 },
-  ];
+      {/* Am I improving? — the honest version */}
+      <section className="card-3d p-5">
+        <h2 className="font-display text-base font-semibold">Am I improving?</h2>
+        {improvement.direction === "insufficient_data" ? (
+          <p className="mt-2 text-pretty text-sm text-muted-foreground">
+            {improvement.note}
+          </p>
+        ) : (
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <span
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold",
+                improvement.direction === "up"
+                  ? "bg-mastery/15 text-mastery"
+                  : improvement.direction === "down"
+                    ? "bg-weakness/15 text-weakness"
+                    : "bg-secondary text-muted-foreground",
+              )}
+            >
+              {improvement.direction === "up" ? (
+                <ArrowUpRight className="size-4" />
+              ) : improvement.direction === "down" ? (
+                <ArrowDownRight className="size-4" />
+              ) : (
+                <ArrowRight className="size-4" />
+              )}
+              {improvement.change !== null
+                ? `${improvement.change > 0 ? "+" : ""}${Math.round(improvement.change * 100)} points`
+                : "No change"}
+            </span>
+            <p className="text-sm text-muted-foreground">
+              {pct(improvement.earlier_accuracy)} earlier in this period →{" "}
+              <span className="font-medium text-foreground">
+                {pct(improvement.recent_accuracy)}
+              </span>{" "}
+              recently
+            </p>
+          </div>
+        )}
+      </section>
 
-  const totalStudyHours = Math.floor((stats?.total_study_minutes || 0) / 60);
-  const avgDailyMinutes = Math.round((stats?.total_study_minutes || 0) / 30);
+      {/* Consistency — real per-day minutes, gaps included */}
+      <section className="card-3d p-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="font-display text-base font-semibold">How consistent am I?</h2>
+          <span className="text-xs text-muted-foreground tabular">
+            {consistency.average_minutes_per_active_day} min per active day
+          </span>
+        </div>
+        <ActivityChart data={report.daily_activity} />
+      </section>
 
-  // Check if user has premium access
-  const isPremium = profile?.is_premium || false;
-
-  if (!isPremium) {
-    return (
-      <AuthGuard>
-        <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 py-8 px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-4 mb-8">
-              <Button variant="ghost" onClick={() => router.push("/dashboard")}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-              <div>
-                <h1 className="text-4xl font-bold">Analytics</h1>
-                <p className="text-muted-foreground">Track your learning progress</p>
-              </div>
-            </div>
-            
-            <Card className="p-12 text-center">
-              <div className="flex justify-center mb-6">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-                  <Lock className="h-10 w-10 text-primary" />
+      {/* Where the work happened */}
+      {report.by_assessment.length > 0 && (
+        <section className="card-3d p-5">
+          <h2 className="font-display text-base font-semibold">Where did it happen?</h2>
+          <ul className="mt-3 space-y-2.5">
+            {report.by_assessment.map((row) => (
+              <li key={row.activity}>
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="font-medium">{row.label}</span>
+                  <span className="text-muted-foreground tabular">
+                    {row.accuracy === null
+                      ? `${row.sessions} sessions`
+                      : `${Math.round(row.accuracy * 100)}% · ${row.correct}/${row.attempted}`}
+                  </span>
                 </div>
-              </div>
-              <h2 className="text-2xl font-bold mb-4">Premium Feature</h2>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Weekly analytics dashboard is only available for Premium users. Upgrade to track your progress with detailed charts and insights.
-              </p>
-              <Button onClick={() => router.push('/premium')} size="lg">
-                Upgrade to Premium
-              </Button>
-            </Card>
+                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className={cn(
+                      "h-full rounded-full",
+                      (row.accuracy ?? 0) >= 0.7
+                        ? "bg-mastery"
+                        : (row.accuracy ?? 0) >= 0.4
+                          ? "bg-review"
+                          : "bg-weakness",
+                    )}
+                    style={{ width: `${Math.max(3, (row.accuracy ?? 0) * 100)}%` }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Topic detail — premium */}
+      {report.topics ? (
+        <TopicPerformance topics={report.topics} bank={report.question_bank} />
+      ) : (
+        <section className="flex items-start gap-3 rounded-2xl border border-primary/20 plinth p-5">
+          <Axo pose="rocket" size="sm" />
+          <div className="min-w-0 flex-1">
+            <h2 className="flex items-center gap-1.5 font-display text-base font-semibold">
+              <Crown className="size-4 text-primary" />
+              Topic-level analysis
+            </h2>
+            <p className="mt-1 text-pretty text-sm text-muted-foreground">
+              Premium shows exactly which topics are dragging your score down, ranked by how
+              urgently they need revision, plus how much of the question bank you have
+              covered.
+            </p>
+            <Link
+              href="/premium"
+              className="press mt-3 inline-flex h-9 items-center rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground"
+            >
+              See Premium
+            </Link>
           </div>
-        </div>
-      </AuthGuard>
+        </section>
+      )}
+    </div>
+  );
+}
+
+/** Per-day study minutes. Days with nothing are drawn as gaps, because that is the signal. */
+function ActivityChart({
+  data,
+}: {
+  data: Array<{ date: string; minutes: number; sessions: number }>;
+}) {
+  const peak = Math.max(1, ...data.map((d) => d.minutes));
+
+  return (
+    <div className="mt-4">
+      <div className="flex h-28 items-end gap-[3px]" role="img" aria-label="Daily study minutes">
+        {data.map((day) => {
+          const height = day.minutes ? Math.max(6, (day.minutes / peak) * 100) : 3;
+          return (
+            <div
+              key={day.date}
+              className="group relative flex-1"
+              style={{ height: `${height}%` }}
+              title={`${day.date}: ${day.minutes} min`}
+            >
+              <div
+                className={cn(
+                  "h-full w-full rounded-sm transition-colors",
+                  day.minutes ? "bg-primary/70 group-hover:bg-primary" : "bg-border",
+                )}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground">
+        <span>{data[0]?.date.slice(5)}</span>
+        <span className="tabular">peak {peak} min</span>
+        <span>{data[data.length - 1]?.date.slice(5)}</span>
+      </div>
+    </div>
+  );
+}
+
+function TopicPerformance({
+  topics,
+  bank,
+}: {
+  topics: NonNullable<AnalyticsReport["topics"]>;
+  bank?: AnalyticsReport["question_bank"];
+}) {
+  if (topics.tracked_nodes === 0) {
+    return (
+      <section className="card-3d p-5">
+        <h2 className="font-display text-base font-semibold">What am I weak at?</h2>
+        <p className="mt-2 text-pretty text-sm text-muted-foreground">
+          Nothing tracked yet. Once you have answered questions across a few topics, the
+          weakest ones will be ranked here by how urgently they need revision.
+        </p>
+      </section>
     );
   }
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 py-8 px-4">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => router.push("/dashboard")}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-              <div>
-                <h1 className="text-4xl font-bold">Analytics</h1>
-                <p className="text-muted-foreground">Track your learning progress</p>
-              </div>
-            </div>
+    <>
+      <section className="card-3d p-5">
+        <h2 className="font-display text-base font-semibold">What should I revise?</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Ranked by weakness and how long since you last practised it.
+        </p>
+        <ul className="mt-3 space-y-2">
+          {topics.weakest.map((topic) => (
+            <li key={topic.label} className="flex items-center gap-3 rounded-xl bg-secondary/40 px-3 py-2.5">
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">{topic.label}</span>
+              <span className="text-xs text-muted-foreground tabular">
+                {topic.correct}/{topic.attempted}
+              </span>
+              <span
+                className={cn(
+                  "w-12 rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular",
+                  topic.mastery < 0.4
+                    ? "bg-weakness/15 text-weakness"
+                    : topic.mastery < 0.7
+                      ? "bg-review/15 text-review"
+                      : "bg-mastery/15 text-mastery",
+                )}
+              >
+                {Math.round(topic.mastery * 100)}%
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {topics.strongest.length > 0 && (
+          <>
+            <h3 className="mt-5 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+              Strongest
+            </h3>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {topics.strongest.slice(0, 5).map((topic) => (
+                <li
+                  key={topic.label}
+                  className="rounded-full bg-mastery/10 px-3 py-1 text-xs font-medium text-mastery"
+                >
+                  {topic.label} · {Math.round(topic.mastery * 100)}%
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
+
+      {bank && bank.total > 0 && (
+        <section className="card-3d p-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="font-display text-base font-semibold">Question bank</h2>
+            <span className="text-sm text-muted-foreground tabular">
+              {bank.percent_seen}% seen
+            </span>
           </div>
-
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-2">
-                <Award className="w-8 h-8 text-yellow-600" />
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              </div>
-              <p className="text-3xl font-bold">{stats?.points || 0}</p>
-              <p className="text-sm text-muted-foreground">Total Points</p>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-2">
-                <BookOpen className="w-8 h-8 text-blue-600" />
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              </div>
-              <p className="text-3xl font-bold">{stats?.slides_completed || 0}</p>
-              <p className="text-sm text-muted-foreground">Slides Completed</p>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-2">
-                <Clock className="w-8 h-8 text-purple-600" />
-                <Activity className="w-5 h-5 text-blue-600" />
-              </div>
-              <p className="text-3xl font-bold">{totalStudyHours}h</p>
-              <p className="text-sm text-muted-foreground">Total Study Time</p>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-2">
-                <Target className="w-8 h-8 text-green-600" />
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              </div>
-              <p className="text-3xl font-bold">{avgDailyMinutes}m</p>
-              <p className="text-sm text-muted-foreground">Avg Daily Study</p>
-            </Card>
+          <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-secondary">
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${bank.percent_seen}%` }}
+            />
           </div>
-
-          {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Study Time Chart */}
-            <Card className="p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                Weekly Study Time
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={studyTimeData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="minutes" fill="#8b5cf6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-
-            {/* Streak Progress */}
-            <Card className="p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Streak Progress
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={streakData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="streak" stroke="#f59e0b" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </Card>
-
-            {/* Subject Progress */}
-            <Card className="p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
-                Progress by Subject
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={progressBySubject} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="subject" type="category" />
-                  <Tooltip />
-                  <Bar dataKey="completed" fill="#10b981" />
-                  <Bar dataKey="total" fill="#e5e7eb" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-
-            {/* Completion Pie Chart */}
-            <Card className="p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <Target className="w-5 h-5" />
-                Completion Rate
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={completionData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {completionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </Card>
-          </div>
-
-          {/* Recent Activity */}
-          <Card className="p-6">
-            <h3 className="text-lg font-bold mb-4">Recent Activity</h3>
-            {progress.length === 0 ? (
-              <div className="text-center py-12">
-                <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No activity yet. Start studying to see your progress!</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {progress.slice(0, 5).map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <BookOpen className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="font-medium">{item.slide_title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Page {item.current_page} of {item.total_pages}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{item.progress_percentage}%</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.time_spent_minutes}m studied
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-
-          {/* Insights */}
-          <Card className="p-6 mt-6 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
-            <h3 className="text-lg font-bold mb-4">📊 Insights</h3>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <TrendingUp className="w-5 h-5 text-green-600 mt-0.5" />
-                <div>
-                  <p className="font-medium">Great Progress!</p>
-                  <p className="text-sm text-muted-foreground">
-                    You've completed {stats?.slides_completed || 0} slides. Keep up the momentum!
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Target className="w-5 h-5 text-blue-600 mt-0.5" />
-                <div>
-                  <p className="font-medium">Study Consistency</p>
-                  <p className="text-sm text-muted-foreground">
-                    Your current streak is {stats?.current_streak || 0} days. Try to maintain it!
-                  </p>
-                </div>
-              </div>
-              {stats && stats.current_streak < stats.longest_streak && (
-                <div className="flex items-start gap-3">
-                  <Award className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium">Beat Your Record</p>
-                    <p className="text-sm text-muted-foreground">
-                      Your longest streak was {stats.longest_streak} days. You can do it again!
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-      </div>
-    </AuthGuard>
+          <p className="mt-2 text-sm text-muted-foreground tabular">
+            {bank.seen} of {bank.total} seen · {bank.answered} answered · {bank.missed} missed
+            at least once
+          </p>
+        </section>
+      )}
+    </>
   );
 }

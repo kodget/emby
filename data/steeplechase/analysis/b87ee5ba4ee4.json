@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.0,
+    "x1": 0.85,
+    "y1": 0.65
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.45,
+    "y": 0.35,
+    "description": "Two dressmaker pins visible: a blue pin in the central nasal cavity region and a green pin on the lateral nasal wall. The blue pin appears to mark a structure in the nasal septum or middle meatus region, while the green pin marks the lateral wall or inferior turbinate area."
+  },
+  "structure": null,
+  "main_question": "Identify the structures indicated by the blue and green pins in this inferior view of the nasal cavity.",
+  "main_answer": null,
+  "main_explanation": "The image shows an inferior view of the nasal cavity with two pins. Due to image quality and angle, the exact structures cannot be confidently identified. The blue pin appears to be in the region of the nasal septum or middle turbinate, and the green pin appears to be on the lateral nasal wall near the inferior turbinate or maxillary sinus ostium.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.35,
+  "needs_review": true,
+  "review_reason": "Image quality is poor and appears to be a composite of multiple cropped views. The exact structures indicated by the blue and green pins cannot be confidently identified. No question paper is visible to confirm what is being asked. The angle and resolution make it difficult to determine whether the pins mark the nasal septum, turbinates, sinus ostia, or other structures.",
+  "quality_flags": [
+    "Poor image resolution",
+    "Composite or multi-panel image making orientation difficult",
+    "No question paper visible",
+    "Marker structures ambiguous due to angle and quality",
+    "Specimen partially out of frame in some panels"
+  ],
+  "_source": {
+    "id": "b87ee5ba4ee4",
+    "file": "b87ee5ba4ee4.jpeg",
+    "width": 1949,
+    "height": 1462,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 12,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

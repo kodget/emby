@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.38,
+    "y": 0.18,
+    "description": "Green-headed dressmaker pin with a small paper tag attached, placed in preserved cadaveric tissue"
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is too blurry and the anatomical region/structure cannot be confidently identified. The pin and tag indicate a marked structure, but the surrounding tissue is unrecognisable at this resolution.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The image is a composite of multiple very blurry close-up photographs. The specific anatomical structure, body region, and any question text cannot be identified. The pin and tag are visible but the marked structure is unrecognisable. A clearer, single photograph with a legible question paper is needed.",
+  "quality_flags": [
+    "extremely blurry / low resolution",
+    "composite of multiple overlapping crops",
+    "no legible question paper visible",
+    "anatomical structure not identifiable",
+    "body region not identifiable",
+    "specimen partially out of frame in all crops"
+  ],
+  "_source": {
+    "id": "87c112e2da90",
+    "file": "87c112e2da90.jpeg",
+    "width": 1949,
+    "height": 1462,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 19,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

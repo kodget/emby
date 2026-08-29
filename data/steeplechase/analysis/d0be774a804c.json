@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.18,
+    "y0": 0.0,
+    "x1": 0.97,
+    "y1": 0.36
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.34,
+    "y": 0.27,
+    "description": "Blue-headed dressmaker pin inserted into the surface of the preserved specimen; a short length of white thread is also visible nearby."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a preserved cadaveric prosection, but the visible region lacks clear anatomical landmarks and the lower half of the image is blank, so the structure indicated by the pin cannot be confidently identified from this photograph alone.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specimen's identity and the structure marked by the blue pin cannot be confidently determined. The image is a composite of cropped views with a large blank white area, no legible question paper, and no station number. The pointed projection and surface texture are ambiguous (could be head/face, limb, or torso fragment). A clearer, single, well-framed photograph with the question sheet visible is required before this can be used as an exam station.",
+  "quality_flags": [
+    "Specimen identity ambiguous; no clear anatomical landmarks visible",
+    "Lower half of image is blank white (no question paper or station number)",
+    "Image appears to be a composite of multiple cropped views of the same specimen",
+    "Marker (blue pin) location lacks surrounding context to identify the targeted structure",
+    "No legible handwritten question present"
+  ],
+  "_source": {
+    "id": "d0be774a804c",
+    "file": "d0be774a804c.jpeg",
+    "width": 2128,
+    "height": 957,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 22,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

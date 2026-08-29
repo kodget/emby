@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Hip bone (os coxae)",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.05,
+    "x1": 0.85,
+    "y1": 0.6
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": 36,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker (pin, arrow, or tag) is visible on the specimen."
+  },
+  "structure": "Hip bone (os coxae)",
+  "main_question": "Identify the bone shown in the photograph.",
+  "main_answer": "Hip bone (os coxae)",
+  "main_explanation": "The specimen is a hip bone, which is formed by the fusion of the ilium, ischium, and pubis. The large, flared iliac blade and the acetabulum (the socket for the femoral head) are clearly visible.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located on the external surface of the ilium?",
+    "options": [
+      "Acetabulum",
+      "Iliac fossa",
+      "Pubic symphysis",
+      "Ischial spine"
+    ],
+    "correct_index": 1,
+    "explanation": "The iliac fossa is a large, smooth, concave area on the internal surface of the ilium. The acetabulum is on the lateral aspect, the pubic symphysis is on the pubis, and the ischial spine is on the ischium."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The acetabulum is formed by the fusion of the ilium, ischium, and pubis.",
+    "answer": true,
+    "explanation": "The acetabulum, which articulates with the head of the femur, is formed by the junction of the three bones that make up the hip bone: the ilium, ischium, and pubis."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "No question paper visible",
+    "No specific marker indicating a particular anatomical feature"
+  ],
+  "_source": {
+    "id": "698369375790",
+    "file": "698369375790.jpeg",
+    "width": 768,
+    "height": 482,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 33,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

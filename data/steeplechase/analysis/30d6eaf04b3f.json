@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Fibula",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.2,
+    "x1": 0.9,
+    "y1": 0.5
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify the bone",
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker (pin, arrow, or tag) is present to indicate a specific anatomical feature on the bone."
+  },
+  "structure": "Fibula",
+  "main_question": "Identify the bone indicated by the green paint.",
+  "main_answer": "Fibula",
+  "main_explanation": "The bone is the fibula, a long bone of the lower leg. It is identified by its slender shaft, the small head at the proximal end, and the distinct lateral malleolus at the distal end.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures articulates with the head of the fibula?",
+    "options": [
+      "Talus",
+      "Calcaneus",
+      "Lateral condyle of the tibia",
+      "Medial condyle of the tibia"
+    ],
+    "correct_index": 2,
+    "explanation": "The head of the fibula articulates with the lateral condyle of the tibia at the proximal tibiofibular joint."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The fibula bears the majority of the weight of the body during standing.",
+    "answer": false,
+    "explanation": "The tibia is the weight-bearing bone of the lower leg, while the fibula serves primarily as a site for muscle attachment and provides lateral stability."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Low resolution"
+  ],
+  "_source": {
+    "id": "30d6eaf04b3f",
+    "file": "30d6eaf04b3f.jpeg",
+    "width": 565,
+    "height": 424,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 23,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

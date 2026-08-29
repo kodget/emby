@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) Azygos vein (be specific) b) Identify the structure in the picture c) What structure is reflected in the area shaded blue",
+  "station_number": 42,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag, or painted mark is visible on any specimen; the image shows only a question paper."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph contains only a sheet of paper with a handwritten question and printed answer options (right lung, eparterial bronchus, suprapleural membrane) plus the station number 42. No anatomical specimen, prosection, bone, organ, model, radiograph, or histology slide is present in the frame, so the structure to be identified cannot be determined from the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": true,
+  "review_reason": "No anatomical specimen is visible in the photograph; only the question paper and station number are shown. The structure being tested cannot be identified, so no answer can be supplied without guessing.",
+  "quality_flags": [
+    "No specimen visible in frame",
+    "Only question paper and station number shown",
+    "Marker absent / nothing to point at"
+  ],
+  "_source": {
+    "id": "3ccd81a2284a",
+    "file": "3ccd81a2284a.jpeg",
+    "width": 1588,
+    "height": 1084,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 48,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

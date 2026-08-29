@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull base (inferior view)",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.1,
+    "x1": 0.7,
+    "y1": 0.95
+  },
+  "question_paper_present": true,
+  "transcribed_question": "29",
+  "station_number": 29,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.43,
+    "y": 0.25,
+    "description": "Blue-headed pin inserted into the anterior cranial fossa, pointing towards the crista galli."
+  },
+  "structure": "Crista galli",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Crista galli",
+  "main_explanation": "The pin is inserted into the crista galli, a midline bony ridge on the ethmoid bone that projects superiorly into the anterior cranial fossa. It serves as an attachment point for the falx cerebri.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which dural fold attaches to the structure indicated by the pin?",
+    "options": [
+      "Tentorium cerebelli",
+      "Falx cerebri",
+      "Falx cerebelli",
+      "Diaphragma sellae"
+    ],
+    "correct_index": 1,
+    "explanation": "The crista galli is the attachment site for the falx cerebri, a sickle-shaped fold of dura mater that separates the two cerebral hemispheres."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "ecc0e3ead1a2",
+    "file": "ecc0e3ead1a2.jpeg",
+    "width": 958,
+    "height": 1280,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 37,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

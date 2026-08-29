@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "Right scapula",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.6,
+    "y1": 0.6
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What VESSELS Pass through the Part Painted Yellow B) What is the root value of the nerve supply to the Structure in the Part Painted BLUE GREEN C) What structure passes through the Area Painted RED.",
+  "station_number": 20,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.44,
+    "y": 0.49,
+    "description": "Blue-green paint on the glenoid cavity"
+  },
+  "structure": "Glenoid cavity of the scapula (part of the glenohumeral joint)",
+  "main_question": "What is the root value of the nerve supply to the structure in the part painted blue-green?",
+  "main_answer": "C5, C6",
+  "main_explanation": "The blue-green paint indicates the glenoid cavity, which forms part of the glenohumeral joint. The joint is primarily innervated by branches from the axillary nerve and suprascapular nerve, both of which derive their fibers from the C5 and C6 spinal nerve roots.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which structure passes through the area painted yellow on the superior border of the scapula?",
+    "options": [
+      "Suprascapular artery and vein",
+      "Suprascapular nerve",
+      "Transverse scapular ligament",
+      "Suprascapular artery, vein, and nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The yellow paint indicates the suprascapular notch. The suprascapular nerve passes through the suprascapular notch, inferior to the superior transverse scapular ligament. The suprascapular artery and vein pass superior to the ligament."
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.9,
+  "needs_review": true,
+  "review_reason": "The 'red painted area' referred to in question C is not visible on the specimen. The wording of the original question A ('What VESSELS Pass through the Part Painted Yellow') is ambiguous as the suprascapular nerve passes through the notch, while the suprascapular vessels pass over the ligament bridging the notch.",
+  "quality_flags": [
+    "Marker ambiguous",
+    "Question ambiguous"
+  ],
+  "_source": {
+    "id": "e9870465860f",
+    "file": "e9870465860f.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 25,
+    "model": "gemini-2.5-flash"
+  }
+}

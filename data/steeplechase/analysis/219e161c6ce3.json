@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Specifically identify the structure pinned green? B) Dilatation of veins around the structure pinned blue is called?",
+  "station_number": 39,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame, only the question paper."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only the question paper and station number. The anatomical specimen that the questions refer to is not visible in the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image contains only the question paper; the anatomical specimen is not visible, making it impossible to create a valid exam station.",
+  "quality_flags": [
+    "specimen_not_visible",
+    "only_question_paper_shown"
+  ],
+  "_source": {
+    "id": "219e161c6ce3",
+    "file": "219e161c6ce3.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 40,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

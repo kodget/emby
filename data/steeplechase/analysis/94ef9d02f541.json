@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Kidney",
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.28,
+    "x1": 0.38,
+    "y1": 0.62
+  },
+  "question_paper_present": true,
+  "transcribed_question": "17\n(a) Identify the structure pinned green\n(b) What is the embryological origin of the part pinned \"A\"?",
+  "station_number": 17,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.14,
+    "y": 0.55,
+    "description": "Green-headed pins indicating specific structures on the kidney"
+  },
+  "structure": "Kidney",
+  "main_question": "Identify the structure pinned green.",
+  "main_answer": "Ureter",
+  "main_explanation": "The pin at the lower pole of the kidney indicates the ureter, which drains the renal pelvis.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What is the embryological origin of the ureter?",
+    "options": [
+      "Metanephric mesenchyme",
+      "Ureteric bud",
+      "Pronephros",
+      "Mesonephric duct"
+    ],
+    "correct_index": 1,
+    "explanation": "The ureter develops from the ureteric bud, which is an outgrowth of the mesonephric (Wolffian) duct."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.85,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "dark lighting",
+    "low resolution"
+  ],
+  "_source": {
+    "id": "94ef9d02f541",
+    "file": "94ef9d02f541.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 43,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

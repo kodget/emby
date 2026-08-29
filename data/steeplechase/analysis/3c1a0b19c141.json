@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "dry bone fragment",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.999,
+    "y1": 0.999
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) side this bone (please be specific)\nB) on what surface is it located (please be specific)",
+  "station_number": 7,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "Identify this bone and state the surface shown.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.11,
+  "needs_review": true,
+  "review_reason": "The photograph does not show enough of the specimen to identify the bone or determine the surface with confidence; only a small, indistinct fragment is visible and no marker is present.",
+  "quality_flags": [
+    "specimen mostly out of frame",
+    "specimen identification unclear",
+    "marker absent",
+    "paper obscures most of the view"
+  ],
+  "_source": {
+    "id": "3c1a0b19c141",
+    "file": "3c1a0b19c141.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 8,
+    "model": "gpt-5.4-mini"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.2,
+    "y0": 0.05,
+    "x1": 0.6,
+    "y1": 0.8
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.25,
+    "y": 0.25,
+    "description": "A green-headed pin is inserted into the lateral aspect of the cerebral hemisphere."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image appears to be a composite or collage of multiple views of a brain specimen rather than a single, coherent exam station. There is no question paper or station number visible to define the specific query.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": true,
+  "review_reason": "The image is a composite of multiple photos and lacks the standard question paper and station number required for a valid exam station.",
+  "quality_flags": [
+    "composite_image",
+    "no_question_paper",
+    "no_station_number"
+  ],
+  "_source": {
+    "id": "7991c9126f5f",
+    "file": "7991c9126f5f.jpeg",
+    "width": 1761,
+    "height": 2348,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 5,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

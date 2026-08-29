@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.98,
+    "y1": 0.98
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.32,
+    "y": 0.24,
+    "description": "Blue-headed dressmaker pin inserted into the preserved tissue in the top panel; the exact structure it marks cannot be confidently identified from the close-up view."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a preserved cadaveric prosection with a blue-headed pin, but the anatomical region and the specific structure indicated by the pin cannot be confidently identified from the available close-up views. No question paper or station number is legible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specimen is a preserved cadaveric prosection with a pin marker, but the anatomical region and the specific structure being tested cannot be confidently identified from the close-up photographs. No question paper or station number is visible. A wider or better-oriented view would be needed to assign a structure and write a valid question.",
+  "quality_flags": [
+    "specimen mostly out of frame / extreme close-up",
+    "no legible question paper",
+    "no station number visible",
+    "marker target structure not identifiable",
+    "image is a vertical stack of multiple close-ups rather than a single station view"
+  ],
+  "_source": {
+    "id": "db1255ac927a",
+    "file": "db1255ac927a.jpeg",
+    "width": 1949,
+    "height": 1462,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 19,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

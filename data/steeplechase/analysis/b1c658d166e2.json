@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull (inferior view)",
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.01,
+    "x1": 0.85,
+    "y1": 0.68
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": 41,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.48,
+    "y": 0.48,
+    "description": "Blue striped paint mark on a structure in the cranial base"
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the blue mark on the cranial base.",
+  "main_answer": null,
+  "main_explanation": "The specimen is a dry skull viewed from below (inferior/basilar aspect). A blue striped paint mark indicates a specific foramen or groove in the cranial base, but the exact structure cannot be confidently identified from the image resolution and angle.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.45,
+  "needs_review": true,
+  "review_reason": "The blue striped mark's exact target structure on the cranial base cannot be confidently identified. The image resolution is limited and the angle makes it difficult to determine whether the mark indicates the hypoglossal canal, jugular foramen, or another foramen. The handwritten question text is not clearly legible.",
+  "quality_flags": [
+    "Low image resolution",
+    "Marker target structure ambiguous",
+    "Handwritten question text not clearly legible",
+    "Specimen partially obscured by shadows"
+  ],
+  "_source": {
+    "id": "b1c658d166e2",
+    "file": "b1c658d166e2.jpeg",
+    "width": 575,
+    "height": 431,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 19,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

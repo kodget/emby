@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.05,
+    "x1": 0.8,
+    "y1": 0.62
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.52,
+    "y": 0.58,
+    "description": "Blue-headed pin placed on a muscle belly of the prosection"
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a preserved cadaveric prosection (likely a hip or shoulder region) with a blue-headed pin marking a muscle, but no question paper or station number is visible and the orientation/landmarks are insufficient to confidently name the marked muscle. Therefore the structure is left null and the station is flagged for review.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is visible in the frame, and the prosection orientation and landmarks are unclear, so the specific muscle indicated by the blue pin cannot be confidently identified. The region (hip vs shoulder) is also ambiguous.",
+  "quality_flags": [
+    "no question paper visible",
+    "no station number visible",
+    "specimen orientation ambiguous",
+    "marker target muscle not confidently identifiable",
+    "large empty floor area in frame"
+  ],
+  "_source": {
+    "id": "edd11830438e",
+    "file": "edd11830438e.jpeg",
+    "width": 1462,
+    "height": 1949,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 23,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

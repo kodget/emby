@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.1,
+    "x1": 0.95,
+    "y1": 0.7
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.58,
+    "y": 0.22,
+    "description": "Blue paint mark on the nasal bridge / midface region; a separate pink/magenta paint mark is visible in the oral cavity. The intended structure for each mark is not unambiguously identifiable."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "No legible question paper is present and the paint marks do not unambiguously identify a single named structure, so a definitive main question cannot be constructed without guessing.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is visible. Two paint marks (blue on the nasal bridge, pink in the oral cavity) are present but the intended target structures are ambiguous; the photo appears to be a composite of multiple views of the same head. Cannot construct a reliable exam item without guessing.",
+  "quality_flags": [
+    "no legible question paper",
+    "no station number",
+    "marker ambiguous (paint marks do not clearly indicate a single named structure)",
+    "image appears to be a composite of multiple views",
+    "specimen partially out of frame in some panels"
+  ],
+  "_source": {
+    "id": "e190d89a1391",
+    "file": "e190d89a1391.jpeg",
+    "width": 606,
+    "height": 455,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 15,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

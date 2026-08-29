@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Search, Pencil, Trash2, RotateCcw } from "lucide-react";
 import { flashcardApi, type Flashcard } from "@/lib/api";
-import { loadCurriculum, type SubjectId, type BlockId, type TopicId, type Subject } from "@/lib/curriculum";
+import { loadCurriculum, type SubjectId, type BlockId, type Subject } from "@/lib/curriculum";
 import { CreateFlashcardModal } from "@/components/flashcards/create-flashcard-modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,8 +30,11 @@ function ManageFlashcardsContent() {
   const [curriculum, setCurriculum] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<SubjectId | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<BlockId | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<TopicId | null>(null);
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  // These two mirror the API fields they are submitted as. They were previously named
+  // "topic"/"section", one level off from the curriculum, which is how a Topic id ended
+  // up being written into the sub_block foreign key.
+  const [selectedSubBlock, setSelectedSubBlock] = useState<string | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
 
   useEffect(() => {
     loadCurriculum().then(setCurriculum).catch(console.error);
@@ -40,9 +43,13 @@ function ManageFlashcardsContent() {
   const subject = selectedSubject ? curriculum.find((s) => s.id === selectedSubject) : null;
   const blocks = subject?.blocks || [];
   const block = selectedBlock ? blocks.find((b) => b.id === selectedBlock) : null;
-  const topics = block?.topics || [];
-  const topicObj = selectedTopic ? topics.find((t) => t.id === selectedTopic) : null;
-  const sections = topicObj?.sections || [];
+  const subBlocks = block?.subBlocks || [];
+  const subBlockObj = selectedSubBlock
+    ? subBlocks.find((sb) => String(sb.id) === selectedSubBlock)
+    : null;
+  // Topics hang off the chosen sub-block; a block can also own topics directly, which
+  // are the right list when no sub-block is picked.
+  const topics = subBlockObj ? subBlockObj.topics : block?.topics || [];
 
   const load = useCallback(async (q?: string) => {
     setLoading(true);
@@ -84,8 +91,8 @@ function ManageFlashcardsContent() {
     setEditExplanation(card.explanation);
     setSelectedSubject(card.subject || null);
     setSelectedBlock(card.block || null);
-    setSelectedTopic(card.sub_block?.toString() || null);
-    setSelectedSection(card.topic?.toString() || null);
+    setSelectedSubBlock(card.sub_block?.toString() || null);
+    setSelectedTopic(card.topic?.toString() || null);
   };
 
   const saveEdit = async () => {
@@ -98,8 +105,8 @@ function ManageFlashcardsContent() {
         explanation: editExplanation,
         subject: selectedSubject || null,
         block: selectedBlock || null,
-        sub_block: selectedTopic ? Number(selectedTopic) : null,
-        topic: selectedSection ? Number(selectedSection) : null,
+        sub_block: selectedSubBlock ? Number(selectedSubBlock) : null,
+        topic: selectedTopic ? Number(selectedTopic) : null,
       });
       setCards((prev) => prev.map((c) => c.id === updated.id ? updated : c));
       setEditCard(null);
@@ -119,21 +126,21 @@ function ManageFlashcardsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080d1a] text-white">
+    <div className="min-h-screen">
       {/* Header */}
       <div className="px-6 pt-8 pb-6 max-w-4xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link
               href="/flashcards"
-              className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm"
             >
               <ArrowLeft className="w-4 h-4" />
               Back
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-white">Manage Flashcards</h1>
-              <p className="text-white/40 text-sm">{count} cards total</p>
+              <h1 className="text-2xl font-bold text-foreground">Manage Flashcards</h1>
+              <p className="text-muted-foreground text-sm">{count} card{count === 1 ? "" : "s"} total</p>
             </div>
           </div>
           <CreateFlashcardModal
@@ -151,32 +158,32 @@ function ManageFlashcardsContent() {
       <div className="px-6 pb-8 max-w-4xl mx-auto space-y-5">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             id="flashcard-search"
             placeholder="Search cards..."
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+            className="pl-10 bg-card border-border text-foreground placeholder:text-muted-foreground"
           />
         </div>
 
         {/* Cards list */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+            <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           </div>
         ) : error ? (
           <div className="text-center py-12">
-            <p className="text-red-400">{error}</p>
-            <button onClick={() => load()} className="mt-3 text-sm text-white/60 hover:text-white underline">
+            <p className="text-destructive">{error}</p>
+            <button onClick={() => load()} className="mt-3 text-sm text-muted-foreground hover:text-foreground underline">
               Retry
             </button>
           </div>
         ) : cards.length === 0 ? (
-          <div className="text-center py-16 text-white/40">
+          <div className="text-center py-16 text-muted-foreground">
             No flashcards found.{" "}
-            <button onClick={() => setCreateOpen(true)} className="text-violet-400 underline">
+            <button onClick={() => setCreateOpen(true)} className="text-primary underline">
               Create one
             </button>
           </div>
@@ -186,30 +193,30 @@ function ManageFlashcardsContent() {
               <div
                 key={card.id}
                 id={`card-item-${card.id}`}
-                className="rounded-2xl border border-white/10 bg-white/5 p-5 flex flex-col sm:flex-row sm:items-start gap-4"
+                className="rounded-2xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-start gap-4"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border
                       ${card.source === "quiz_mistake"
-                        ? "bg-orange-900/30 border-orange-500/30 text-orange-400"
-                        : "bg-violet-900/30 border-violet-500/30 text-violet-400"}`}>
+                        ? "bg-review/10 border-review/30 text-review"
+                        : "bg-primary/10 border-primary/30 text-primary"}`}>
                       {sourceLabel[card.source] ?? card.source}
                     </span>
                     {card.subject_name && (
-                      <span className="text-[10px] text-white/30">{card.subject_name}</span>
+                      <span className="text-[10px] text-muted-foreground">{card.subject_name}</span>
                     )}
                     {card.sub_block_name && (
-                      <span className="text-[10px] text-white/30"> / {card.sub_block_name}</span>
+                      <span className="text-[10px] text-muted-foreground"> / {card.sub_block_name}</span>
                     )}
                     {card.topic_name && (
-                      <span className="text-[10px] text-white/30"> / {card.topic_name}</span>
+                      <span className="text-[10px] text-muted-foreground"> / {card.topic_name}</span>
                     )}
                   </div>
-                  <p className="text-white text-sm font-medium leading-snug line-clamp-2">{card.front}</p>
-                  <p className="text-white/50 text-sm mt-1 line-clamp-1">{card.back}</p>
+                  <p className="text-foreground text-sm font-medium leading-snug line-clamp-2">{card.front}</p>
+                  <p className="text-muted-foreground text-sm mt-1 line-clamp-1">{card.back}</p>
                   {card.progress && (
-                    <p className="text-[10px] text-white/25 mt-1">
+                    <p className="text-[10px] text-muted-foreground/70 mt-1">
                       Due: {new Date(card.progress.due_date).toLocaleDateString()}
                       {" · "}{card.progress.repetitions} reviews
                     </p>
@@ -219,7 +226,7 @@ function ManageFlashcardsContent() {
                   <button
                     id={`edit-card-${card.id}`}
                     onClick={() => openEdit(card)}
-                    className="p-2 rounded-xl bg-white/5 hover:bg-white/15 text-white/50 hover:text-white transition-colors"
+                    className="p-2 rounded-xl bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     aria-label="Edit card"
                   >
                     <Pencil className="w-4 h-4" />
@@ -228,13 +235,13 @@ function ManageFlashcardsContent() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleDelete(card.id)}
-                        className="px-3 py-1.5 text-xs rounded-lg bg-red-600 hover:bg-red-500 text-white transition-colors"
+                        className="px-3 py-1.5 text-xs rounded-lg bg-destructive text-foreground transition-colors"
                       >
                         Confirm
                       </button>
                       <button
                         onClick={() => setDeleteConfirmId(null)}
-                        className="px-3 py-1.5 text-xs rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                        className="px-3 py-1.5 text-xs rounded-lg bg-muted hover:bg-muted text-foreground transition-colors"
                       >
                         Cancel
                       </button>
@@ -243,7 +250,7 @@ function ManageFlashcardsContent() {
                     <button
                       id={`delete-card-${card.id}`}
                       onClick={() => setDeleteConfirmId(card.id)}
-                      className="p-2 rounded-xl bg-white/5 hover:bg-red-900/30 text-white/50 hover:text-red-400 transition-colors"
+                      className="p-2 rounded-xl bg-card hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                       aria-label="Delete card"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -260,12 +267,12 @@ function ManageFlashcardsContent() {
       {editCard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditCard(null)} />
-          <div className="relative bg-[#0f1729] border border-white/10 rounded-2xl p-6 w-full max-w-lg mx-4 shadow-2xl">
-            <h2 className="text-lg font-semibold text-white mb-4">Edit Flashcard</h2>
+          <div className="relative bg-card border border-border rounded-2xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Edit Flashcard</h2>
             <div className="flex flex-col gap-4">
               <div className="space-y-3">
                 <div>
-                  <Label className="text-[11px] font-medium uppercase tracking-widest text-white/50">Subject</Label>
+                  <Label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">Subject</Label>
                   <div className="mt-1.5 grid grid-cols-3 gap-2">
                     {curriculum.map((subj) => (
                       <button
@@ -274,13 +281,13 @@ function ManageFlashcardsContent() {
                         onClick={() => {
                           setSelectedSubject(subj.id);
                           setSelectedBlock(null);
+                          setSelectedSubBlock(null);
                           setSelectedTopic(null);
-                          setSelectedSection(null);
                         }}
                         className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
                           selectedSubject === subj.id
-                            ? "border-violet-500 bg-violet-500/20 text-violet-300"
-                            : "border-white/10 bg-white/5 hover:border-violet-500/50"
+                            ? "border-primary bg-primary/12 text-primary"
+                            : "border-border bg-card hover:border-primary/45"
                         }`}
                       >
                         {subj.title}
@@ -291,7 +298,7 @@ function ManageFlashcardsContent() {
 
                 {selectedSubject && blocks.length > 0 && (
                   <div>
-                    <Label className="text-[11px] font-medium uppercase tracking-widest text-white/50">Block</Label>
+                    <Label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">Block</Label>
                     <div className="mt-1.5 grid grid-cols-2 gap-2">
                       {blocks.map((blk) => (
                         <button
@@ -299,13 +306,13 @@ function ManageFlashcardsContent() {
                           type="button"
                           onClick={() => {
                             setSelectedBlock(blk.id);
+                            setSelectedSubBlock(null);
                             setSelectedTopic(null);
-                            setSelectedSection(null);
                           }}
                           className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
                             selectedBlock === blk.id
-                              ? "border-violet-500 bg-violet-500/20 text-violet-300"
-                              : "border-white/10 bg-white/5 hover:border-violet-500/50"
+                              ? "border-primary bg-primary/12 text-primary"
+                              : "border-border bg-card hover:border-primary/45"
                           }`}
                         >
                           {blk.title}
@@ -315,9 +322,38 @@ function ManageFlashcardsContent() {
                   </div>
                 )}
 
+                {selectedBlock && subBlocks.length > 0 && (
+                  <div>
+                    <Label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+                      Sub-block <span className="text-[9px] opacity-60">(Optional)</span>
+                    </Label>
+                    <div className="mt-1.5 grid grid-cols-2 gap-2">
+                      {subBlocks.map((sb) => (
+                        <button
+                          key={sb.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSubBlock(
+                              selectedSubBlock === String(sb.id) ? null : String(sb.id),
+                            );
+                            setSelectedTopic(null);
+                          }}
+                          className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
+                            selectedSubBlock === String(sb.id)
+                              ? "border-primary bg-primary/12 text-primary"
+                              : "border-border bg-card hover:border-primary/45"
+                          }`}
+                        >
+                          {sb.title}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {selectedBlock && topics.length > 0 && (
                   <div>
-                    <Label className="text-[11px] font-medium uppercase tracking-widest text-white/50">
+                    <Label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
                       Topic <span className="text-[9px] opacity-60">(Optional)</span>
                     </Label>
                     <div className="mt-1.5 grid grid-cols-2 gap-2">
@@ -325,14 +361,17 @@ function ManageFlashcardsContent() {
                         <button
                           key={topicItem.id}
                           type="button"
-                          onClick={() => {
-                            setSelectedTopic(topicItem.id);
-                            setSelectedSection(null);
-                          }}
+                          onClick={() =>
+                            setSelectedTopic(
+                              selectedTopic === String(topicItem.id)
+                                ? null
+                                : String(topicItem.id),
+                            )
+                          }
                           className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
-                            selectedTopic === topicItem.id
-                              ? "border-violet-500 bg-violet-500/20 text-violet-300"
-                              : "border-white/10 bg-white/5 hover:border-violet-500/50"
+                            selectedTopic === String(topicItem.id)
+                              ? "border-primary bg-primary/12 text-primary"
+                              : "border-border bg-card hover:border-primary/45"
                           }`}
                         >
                           {topicItem.title}
@@ -341,60 +380,36 @@ function ManageFlashcardsContent() {
                     </div>
                   </div>
                 )}
-
-                {selectedTopic && sections.length > 0 && (
-                  <div>
-                    <Label className="text-[11px] font-medium uppercase tracking-widest text-white/50">
-                      Section <span className="text-[9px] opacity-60">(Optional)</span>
-                    </Label>
-                    <div className="mt-1.5 grid grid-cols-2 gap-2">
-                      {sections.map((sec) => (
-                        <button
-                          key={sec.id}
-                          type="button"
-                          onClick={() => setSelectedSection(sec.id)}
-                          className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
-                            selectedSection === sec.id
-                              ? "border-violet-500 bg-violet-500/20 text-violet-300"
-                              : "border-white/10 bg-white/5 hover:border-violet-500/50"
-                          }`}
-                        >
-                          {sec.title}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div>
-                <label className="text-white/60 text-sm block mb-1">Front</label>
+                <label className="text-muted-foreground text-sm block mb-1">Front</label>
                 <textarea
                   value={editFront}
                   onChange={(e) => setEditFront(e.target.value)}
-                  className="w-full min-h-[70px] bg-white/5 border border-white/10 rounded-xl text-white text-sm p-3 resize-none outline-none focus:border-violet-500/50"
+                  className="w-full min-h-[70px] bg-card border border-border rounded-xl text-foreground text-sm p-3 resize-none outline-none focus:border-primary/50"
                 />
               </div>
               <div>
-                <label className="text-white/60 text-sm block mb-1">Back</label>
+                <label className="text-muted-foreground text-sm block mb-1">Back</label>
                 <textarea
                   value={editBack}
                   onChange={(e) => setEditBack(e.target.value)}
-                  className="w-full min-h-[70px] bg-white/5 border border-white/10 rounded-xl text-white text-sm p-3 resize-none outline-none focus:border-violet-500/50"
+                  className="w-full min-h-[70px] bg-card border border-border rounded-xl text-foreground text-sm p-3 resize-none outline-none focus:border-primary/50"
                 />
               </div>
               <div>
-                <label className="text-white/60 text-sm block mb-1">Explanation</label>
+                <label className="text-muted-foreground text-sm block mb-1">Explanation</label>
                 <textarea
                   value={editExplanation}
                   onChange={(e) => setEditExplanation(e.target.value)}
-                  className="w-full min-h-[50px] bg-white/5 border border-white/10 rounded-xl text-white text-sm p-3 resize-none outline-none focus:border-violet-500/50"
+                  className="w-full min-h-[50px] bg-card border border-border rounded-xl text-foreground text-sm p-3 resize-none outline-none focus:border-primary/50"
                 />
               </div>
               <div className="flex gap-3 justify-end pt-1">
                 <button
                   onClick={() => setEditCard(null)}
-                  className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
+                  className="px-4 py-2 rounded-xl bg-muted hover:bg-muted text-foreground text-sm transition-colors"
                 >
                   Cancel
                 </button>
@@ -402,7 +417,7 @@ function ManageFlashcardsContent() {
                   id="save-edit-card"
                   disabled={editLoading}
                   onClick={saveEdit}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white text-sm font-medium transition-all disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-foreground text-sm font-medium transition-all disabled:opacity-50"
                 >
                   {editLoading ? "Saving..." : "Save Changes"}
                 </button>
@@ -417,7 +432,7 @@ function ManageFlashcardsContent() {
 
 export default function ManageFlashcardsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#080d1a] flex items-center justify-center"><div className="w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" /></div>}>
       <ManageFlashcardsContent />
     </Suspense>
   );

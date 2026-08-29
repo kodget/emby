@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.25,
+    "y0": 0.0,
+    "x1": 0.75,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker visible."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a dry bone specimen held in a hand, likely the hyoid bone, but there is no question paper, station number, or marker to define it as an exam station.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": true,
+  "review_reason": "Image contains a specimen but lacks question paper and markers, so it is not a valid exam station.",
+  "quality_flags": [
+    "No question paper",
+    "No marker"
+  ],
+  "_source": {
+    "id": "531f02c14cde",
+    "file": "531f02c14cde.jpeg",
+    "width": 768,
+    "height": 619,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 33,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

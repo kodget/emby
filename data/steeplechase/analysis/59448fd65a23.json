@@ -1,0 +1,62 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "ulna",
+  "specimen_bbox": {
+    "x0": 0.13000000000000003,
+    "y0": 0.042,
+    "x1": 0.601,
+    "y1": 0.872
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Side the bone (Be specific)\nWhat structure is related to the area painted green.\nWhat structure is related to the area painted red.",
+  "station_number": 5,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No clear pin, arrow, thread, tag, or paint marker is visible on the specimen; only the colored paint areas on the bone and the written prompt are seen."
+  },
+  "structure": null,
+  "main_question": "Identify the bone and the structures related to the painted areas.",
+  "main_answer": "Ulna; the green-painted area and red-painted area likely indicate two specific landmarks, but they are not clearly identifiable from the photograph alone.",
+  "main_explanation": "The specimen is an isolated long bone with a proximal trochlear notch/olecranon region and a distal styloid region, consistent with the ulna. However, the exact green and red painted areas are not clearly marked enough to identify the requested related structures with confidence.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which bone articulates with the trochlear notch of the ulna at the elbow?",
+    "options": [
+      "Radius",
+      "Humerus",
+      "Scaphoid",
+      "Capitate"
+    ],
+    "correct_index": 1,
+    "explanation": "The trochlear notch of the ulna articulates with the trochlea of the humerus to form the elbow joint."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The ulna is the medial bone of the forearm in anatomical position.",
+    "answer": true,
+    "explanation": "In anatomical position, the ulna lies medially and the radius laterally."
+  },
+  "confidence": 0.91,
+  "needs_review": true,
+  "review_reason": "The bone appears to be an ulna, but the exact structures related to the painted green and red areas are not identifiable with confidence because the paint areas are not clearly visible or specific enough.",
+  "quality_flags": [
+    "question paper partly obscures specimen",
+    "no clear marker visible",
+    "painted areas are ambiguous"
+  ],
+  "_source": {
+    "id": "59448fd65a23",
+    "file": "59448fd65a23.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 6,
+    "model": "gpt-5.4-mini"
+  }
+}

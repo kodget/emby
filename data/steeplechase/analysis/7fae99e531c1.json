@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "RADIOGRAPH",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.15,
+    "x1": 0.65,
+    "y1": 0.5
+  },
+  "question_paper_present": true,
+  "transcribed_question": "What is the diagnosis of this condition",
+  "station_number": 51,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker is visible on the radiograph."
+  },
+  "structure": null,
+  "main_question": "What is the diagnosis of this condition?",
+  "main_answer": null,
+  "main_explanation": "The radiograph is a low-resolution printout showing a patient's torso and arm. While there appears to be a radiopaque object (possibly a brace or external device) and a band on the arm, the image quality is too poor to definitively identify the anatomical structures or the specific pathology being tested.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The image is a low-quality photograph of a printed radiograph. The anatomical details are obscured by glare and low resolution, making it impossible to identify the specific condition or anatomical region with confidence.",
+  "quality_flags": [
+    "blurry",
+    "low_resolution",
+    "glare",
+    "poor_lighting"
+  ],
+  "_source": {
+    "id": "7fae99e531c1",
+    "file": "7fae99e531c1.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 68,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

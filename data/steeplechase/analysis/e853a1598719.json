@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.78,
+    "y1": 0.98
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.3,
+    "y": 0.3,
+    "description": "A green-headed dressmaker pin is inserted into the posterior thoracic/upper abdominal region; additional blue and yellow markers are also visible but their targets are not clearly identifiable."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a posterior thoraco-abdominal prosection with multiple coloured pins, but the dissection is disorganised, the orientation is unclear, and no legible question paper is present. The specific structure indicated by the primary (green) pin cannot be confidently identified from the image alone, so the structure and main answer are left null rather than guessed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.35,
+  "needs_review": true,
+  "review_reason": "No legible question paper is visible, the prosection is messy and the body orientation is unclear, and the target of the green pin (posterior mediastinum vs rib head vs azygos region vs posterior abdominal wall) cannot be determined with confidence. A plausible guess would risk students revising from an incorrect label.",
+  "quality_flags": [
+    "no legible question paper visible",
+    "poor lighting and low contrast",
+    "disorganised prosection with multiple ambiguous pins",
+    "unclear body orientation",
+    "specimen partially out of frame in some panels"
+  ],
+  "_source": {
+    "id": "e853a1598719",
+    "file": "e853a1598719.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 14,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

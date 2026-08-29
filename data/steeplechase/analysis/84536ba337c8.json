@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "NEUROANATOMY",
+  "specimen_label": "B",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.22,
+    "x1": 0.98,
+    "y1": 0.58
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "probe",
+    "x": 0.85,
+    "y": 0.38,
+    "description": "A metal probe pointing at a structure on the right lateral aspect of the brain section"
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the probe.",
+  "main_answer": null,
+  "main_explanation": "The probe points to a region on the lateral surface of a brain section, but the exact structure cannot be confidently identified from this image alone without a question paper or clearer orientation markers.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.35,
+  "needs_review": true,
+  "review_reason": "The exact structure indicated by the probe cannot be confidently identified. The image is a composite of multiple views, and there is no question paper to clarify what is being asked. The dark central region may represent pathology or normal deep gray matter, but orientation is unclear.",
+  "quality_flags": [
+    "composite image with multiple views stitched together",
+    "no question paper visible",
+    "marker target structure ambiguous",
+    "image orientation unclear"
+  ],
+  "_source": {
+    "id": "84536ba337c8",
+    "file": "84536ba337c8.jpeg",
+    "width": 582,
+    "height": 436,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 4,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

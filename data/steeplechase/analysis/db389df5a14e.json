@@ -1,0 +1,56 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.05,
+    "x1": 1.0,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) IDENTIFY THE 2 structures tied?\nB) What is the nerve supply to the structure T...",
+  "station_number": 39,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.78,
+    "y": 0.25,
+    "description": "A brown dried string/thread tied around two structures"
+  },
+  "structure": null,
+  "main_question": "Identify the two structures tied.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.1,
+  "needs_review": true,
+  "review_reason": "The specimen is extremely dried, poorly preserved, and degraded, making it impossible to confidently identify the anatomical region, the specific specimen, or the two structures tied by the brown string.",
+  "quality_flags": [
+    "specimen_poor_quality",
+    "marker_ambiguous"
+  ],
+  "_source": {
+    "id": "db389df5a14e",
+    "file": "db389df5a14e.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 50,
+    "model": "gemini-3.5-flash"
+  }
+}

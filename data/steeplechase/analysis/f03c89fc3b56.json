@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.45
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.55,
+    "y": 0.45,
+    "description": "A blue-headed pin is visible in the upper panel, pointing to a structure in the dissection field, but the specific structure cannot be confidently identified."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a composite of multiple low-resolution views of a cadaveric dissection. A blue pin is present in the top panel, but the surrounding anatomy is too indistinct and the orientation is too ambiguous to confidently identify the marked structure. No question paper or station number is visible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The image is a multi-panel composite with poor resolution and ambiguous orientation. The blue pin in the top panel marks a structure that cannot be confidently identified. There is no question paper, no station number, and insufficient anatomical context to determine the region or the specific structure being tested. A clearer, single-view photograph with a legible question is needed.",
+  "quality_flags": [
+    "low_resolution",
+    "ambiguous_orientation",
+    "composite_multi_panel",
+    "no_question_paper",
+    "marker_structure_unidentifiable",
+    "poor_lighting"
+  ],
+  "_source": {
+    "id": "f03c89fc3b56",
+    "file": "f03c89fc3b56.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 86,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

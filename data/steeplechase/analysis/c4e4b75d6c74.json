@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Femur",
+  "specimen_bbox": {
+    "x0": 0.55,
+    "y0": 0.13,
+    "x1": 0.85,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": "52\nName the area indicated by the pin.",
+  "station_number": 52,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, or other marker is visible on the bone specimen in the photograph, although the question paper refers to an area indicated by a pin."
+  },
+  "structure": null,
+  "main_question": "Name the area indicated by the pin.",
+  "main_answer": null,
+  "main_explanation": "The specific area on the femur cannot be identified because the pin or marker mentioned in the question is not visible in the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The question asks to identify a specific area indicated by a pin, but no pin or marker is visible on the femur in the photograph. The image is also a composite of multiple views, making it difficult to determine the exact orientation and features of the bone.",
+  "quality_flags": [
+    "marker_missing",
+    "composite_image",
+    "poor_lighting"
+  ],
+  "_source": {
+    "id": "c4e4b75d6c74",
+    "file": "c4e4b75d6c74.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 69,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.55,
+    "y": 0.25,
+    "description": "Green plastic pin head or clip placed on a muscle belly."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specific anatomical structure indicated by the green marker cannot be confidently identified from the image alone due to lack of orientation, landmarks, and context.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.1,
+  "needs_review": true,
+  "review_reason": "Unable to identify the specific anatomical structure. The image lacks clear landmarks, orientation, and accompanying question paper to determine the station's focus. The green marker is present but its target is ambiguous.",
+  "quality_flags": [
+    "No question paper visible",
+    "No station number visible",
+    "Poor lighting and focus",
+    "Unclear anatomical landmarks",
+    "Composite image or cropped view makes orientation difficult"
+  ],
+  "_source": {
+    "id": "a61b12c130a7",
+    "file": "a61b12c130a7.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 83,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

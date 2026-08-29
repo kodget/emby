@@ -1,0 +1,60 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Spleen",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.1,
+    "x1": 0.55,
+    "y1": 0.45
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A. What is the weight of the organ? 7 Oz\nB. What rib level does it correspond with? 9th, 10th, 11th ribs\nC. What is the structure painted blue? Gastrosplenic Ligament",
+  "station_number": 28,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.2,
+    "y": 0.28,
+    "description": "Blue paint applied to a ligamentous structure at the hilum of the organ."
+  },
+  "structure": "Gastrosplenic ligament",
+  "main_question": "Identify the structure painted blue.",
+  "main_answer": "Gastrosplenic ligament",
+  "main_explanation": "The blue paint highlights the gastrosplenic ligament, which connects the greater curvature of the stomach to the spleen. It is part of the greater omentum and contains the short gastric vessels.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is contained within the gastrosplenic ligament?",
+    "options": [
+      "Short gastric vessels",
+      "Splenic artery",
+      "Left gastroepiploic vessels",
+      "Pancreatic branches of the splenic artery"
+    ],
+    "correct_index": 0,
+    "explanation": "The gastrosplenic ligament contains the short gastric vessels. The splenic artery and its pancreatic branches are located in the splenorenal ligament (lienorenal ligament), while the left gastroepiploic vessels are found in the gastrocolic ligament."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The spleen typically lies opposite the 9th, 10th, and 11th ribs.",
+    "answer": true,
+    "explanation": "The spleen is located in the left hypochondrium and typically extends from the 9th to the 11th ribs."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of three views"
+  ],
+  "_source": {
+    "id": "e4bc9cab1d35",
+    "file": "e4bc9cab1d35.jpeg",
+    "width": 1500,
+    "height": 2516,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 33,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

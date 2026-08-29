@@ -1,0 +1,63 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Thoracic skeleton (rib cage, sternum, thoracic vertebrae)",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.0,
+    "x1": 0.82,
+    "y1": 0.43
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.48,
+    "y": 0.13,
+    "description": "Yellow paper tag with blue letter 'B' attached to the sternum, with a blue painted line tracing the sternum; a separate red 'A' tag is present lower near the lumbar/sacral region."
+  },
+  "structure": "Sternum (body of sternum)",
+  "main_question": "Identify the structure indicated by the tag labelled B.",
+  "main_answer": "Sternum (body of the sternum)",
+  "main_explanation": "The tag B and the blue painted line lie on the flat midline bone of the anterior thoracic wall, the sternum, which articulates with the costal cartilages of the ribs and forms the anterior boundary of the thorax.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "The sternum is formed by the fusion of which embryonic/developmental components?",
+    "options": [
+      "Manubrium, body and xiphoid process",
+      "Clavicle, scapula and manubrium",
+      "Costal cartilages and xiphoid process only",
+      "Manubrium and the first rib only"
+    ],
+    "correct_index": 0,
+    "explanation": "The sternum develops from the manubrium, the body (formed by fusion of sternebrae) and the xiphoid process, which ossify and fuse to form the adult sternum."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The sternum articulates with the costal cartilages of all twelve ribs.",
+    "answer": false,
+    "explanation": "Only the first seven ribs (true ribs) articulate directly with the sternum via their own costal cartilages; ribs 8-10 join indirectly and ribs 11-12 are floating."
+  },
+  "confidence": 0.6,
+  "needs_review": true,
+  "review_reason": "The image is a multi-panel composite of the same specimen rather than a single clean station photo, and no legible handwritten question paper is present; the 'A' tag location is ambiguous. The 'B' marker on the sternum is clear, but the overall station layout should be verified.",
+  "quality_flags": [
+    "multi-panel composite image",
+    "no legible question paper",
+    "second marker (A) ambiguous",
+    "specimen partly cut off in lower panels"
+  ],
+  "_source": {
+    "id": "f1c0bed01716",
+    "file": "f1c0bed01716.jpeg",
+    "width": 570,
+    "height": 724,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 46,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

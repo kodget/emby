@@ -1,5 +1,6 @@
+import Image from "next/image";
+import { LOGO_MARK } from "@/lib/brand";
 import Link from "next/link";
-import { Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function LandingNav() {
@@ -11,9 +12,15 @@ export function LandingNav() {
           className="flex items-center gap-2"
           aria-label="Emby home"
         >
-          <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Stethoscope className="size-4" aria-hidden="true" />
-          </span>
+          <Image
+            src={LOGO_MARK}
+            alt=""
+            width={32}
+            height={32}
+            priority
+            className="size-8 select-none"
+            draggable={false}
+          />
           <span className="flex flex-col leading-none">
             <span className="font-serif text-lg">Emby</span>
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground">

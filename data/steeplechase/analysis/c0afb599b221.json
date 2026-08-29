@@ -1,0 +1,62 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Cadaveric prosection of lower leg and foot",
+  "specimen_bbox": {
+    "x0": 0.25,
+    "y0": 0.05,
+    "x1": 0.55,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) IDENTIFY THE TIED STRUCTURE B B) INJURY TO THE TIED STRUCTURE C IS CALLED?",
+  "station_number": 28,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.45,
+    "y": 0.4,
+    "description": "Blue thread tied around a tendon on the anterior aspect of the ankle."
+  },
+  "structure": "Extensor digitorum longus tendon",
+  "main_question": "Identify the structure indicated by the blue thread.",
+  "main_answer": "Extensor digitorum longus tendon",
+  "main_explanation": "The blue thread indicates a tendon on the anterior aspect of the ankle, lateral to the tibia, which is part of the anterior compartment of the leg. This tendon typically divides into four slips to insert into the lateral four toes, characteristic of the extensor digitorum longus tendon.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which nerve innervates the muscle associated with this tendon?",
+    "options": [
+      "Tibial nerve",
+      "Common fibular nerve",
+      "Deep fibular nerve",
+      "Superficial fibular nerve"
+    ],
+    "correct_index": 2,
+    "explanation": "The extensor digitorum longus muscle, located in the anterior compartment of the leg, is innervated by the deep fibular nerve (a branch of the common fibular nerve)."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The extensor digitorum longus muscle originates from the lateral condyle of the tibia and the anterior surface of the fibula.",
+    "answer": true,
+    "explanation": "The extensor digitorum longus originates from the lateral condyle of the tibia, the upper three-quarters of the anterior surface of the fibula, and the interosseous membrane."
+  },
+  "confidence": 0.9,
+  "needs_review": true,
+  "review_reason": "The handwritten question is ambiguous. Part A asks to identify 'THE TIED STRUCTURE B', while Part B asks about 'INJURY TO THE TIED STRUCTURE C'. Only one structure is tied (Structure B). It is unclear if 'Structure C' is a typo for 'B' or refers to an unmarked structure. The second question is also open-ended and not suitable for a standard exam format without further context.",
+  "quality_flags": [
+    "Poor lighting",
+    "Specimen not fully clear",
+    "Marker slightly ambiguous"
+  ],
+  "_source": {
+    "id": "c0afb599b221",
+    "file": "c0afb599b221.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 34,
+    "model": "gemini-2.5-flash"
+  }
+}

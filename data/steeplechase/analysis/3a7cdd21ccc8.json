@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Kidney (cut surface)",
+  "specimen_bbox": {
+    "x0": 0.18,
+    "y0": 0.05,
+    "x1": 0.58,
+    "y1": 0.28
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) Identify the area painted green?\nb) Identify the structure pinned\n6 (mc)\na) Renal papilla\nb) Renal pyramid",
+  "station_number": 35,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.32,
+    "y": 0.18,
+    "description": "Green paint marking a specific area on the cut surface of the kidney."
+  },
+  "structure": "Renal papilla",
+  "main_question": "Identify the area painted green.",
+  "main_answer": "Renal papilla",
+  "main_explanation": "The green paint highlights the apex of a renal pyramid, which projects into the minor calyx and is known as the renal papilla.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located in the renal sinus?",
+    "options": [
+      "Renal pyramids",
+      "Renal columns",
+      "Renal pelvis",
+      "Renal cortex"
+    ],
+    "correct_index": 2,
+    "explanation": "The renal sinus is the space within the kidney occupied by the renal pelvis, calyces, blood vessels, and nerves. The pyramids, columns, and cortex are part of the renal parenchyma."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "3a7cdd21ccc8",
+    "file": "3a7cdd21ccc8.jpeg",
+    "width": 1348,
+    "height": 2220,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 41,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

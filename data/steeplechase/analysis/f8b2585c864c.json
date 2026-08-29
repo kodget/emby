@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Vertebra (likely L5)",
+  "specimen_bbox": {
+    "x0": 0.25,
+    "y0": 0.08,
+    "x1": 0.6,
+    "y1": 0.32
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) Identify the prominence marked blue\nb) What muscle is attached to the area marked B?\nc) The body of the 5th Vertebrae is thus type is the Largest T/F",
+  "station_number": 6,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.55,
+    "y": 0.15,
+    "description": "Blue paint mark on the transverse process"
+  },
+  "structure": "Transverse process",
+  "main_question": "Identify the prominence marked blue.",
+  "main_answer": "Transverse process",
+  "main_explanation": "The blue paint is applied to the lateral projection of the vertebral arch, which is the transverse process. In lumbar vertebrae, this is a slender, pointed process.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which muscle is attached to the tip of the transverse process of the lumbar vertebrae?",
+    "options": [
+      "Psoas major",
+      "Quadratus lumborum",
+      "Iliacus",
+      "Erector spinae"
+    ],
+    "correct_index": 1,
+    "explanation": "The quadratus lumborum muscle attaches to the tips of the lumbar transverse processes and the iliac crest."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The body of the 5th lumbar vertebra is the largest in the vertebral column.",
+    "answer": true,
+    "explanation": "Lumbar vertebral bodies increase in size from L1 to L5 to support increasing weight, making L5 the largest."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is held by a hand"
+  ],
+  "_source": {
+    "id": "f8b2585c864c",
+    "file": "f8b2585c864c.jpeg",
+    "width": 768,
+    "height": 576,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 6,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

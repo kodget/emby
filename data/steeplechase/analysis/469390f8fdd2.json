@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "46\n(A) Identify the structure bearing the green pin\n(B) What is the arterial supply to the structure bearing the blue pin",
+  "station_number": 46,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker is visible in the image; the question paper references pins that are not shown."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only a question paper and the dissection bench/floor. The anatomical specimen and the pins referenced in the question are not visible, making it impossible to identify the structure or answer the question.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The anatomical specimen is not visible in the frame. The image only captures the question paper and the surrounding environment (bench, floor, foot).",
+  "quality_flags": [
+    "specimen_out_of_frame",
+    "no_anatomical_structure_visible"
+  ],
+  "_source": {
+    "id": "469390f8fdd2",
+    "file": "469390f8fdd2.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 14,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

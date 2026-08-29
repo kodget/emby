@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Mandible",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.25,
+    "x1": 0.85,
+    "y1": 0.85
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.05,
+    "y": 0.4,
+    "description": "Green paint on the condylar process of the mandible"
+  },
+  "structure": "Condylar process of the mandible",
+  "main_question": "Identify the structure indicated by the green paint.",
+  "main_answer": "Condylar process of the mandible",
+  "main_explanation": "The green paint highlights the condylar process, which articulates with the mandibular fossa of the temporal bone to form the temporomandibular joint.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": true,
+  "review_reason": "No question paper is visible in the image, so it is unclear if this is a formal exam station or just a specimen photo. The image also appears to be a composite or collage of multiple views.",
+  "quality_flags": [
+    "No question paper visible",
+    "Image appears to be a composite of multiple views",
+    "Low resolution"
+  ],
+  "_source": {
+    "id": "bcf71e43de35",
+    "file": "bcf71e43de35.jpeg",
+    "width": 417,
+    "height": 555,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 1,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

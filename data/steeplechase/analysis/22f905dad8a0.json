@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Preserved stomach",
+  "specimen_bbox": {
+    "x0": 0.25,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.45
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What is the structure labelled A.\nB) What is the length of its root?",
+  "station_number": 19,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No physical marker (pin, arrow, or tag) is visible on the specimen in the photograph, although the question paper refers to a 'structure labelled A'."
+  },
+  "structure": "Gastrosplenic ligament",
+  "main_question": "What is the structure labelled A?",
+  "main_answer": "Gastrosplenic ligament",
+  "main_explanation": "The specimen is a preserved stomach with its greater curvature and associated omentum. The question asks for the identification of a specific structure (A) and the length of its 'root'. In this anatomical context, the 'root of the spleen' is a standard term, and the gastrosplenic ligament is the primary structure connecting the stomach to the spleen and containing the splenic vessels.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following vessels is typically found within the gastrosplenic ligament?",
+    "options": [
+      "Left gastric artery",
+      "Short gastric arteries",
+      "Right gastroepiploic artery",
+      "Splenic vein"
+    ],
+    "correct_index": 1,
+    "explanation": "The gastrosplenic ligament contains the short gastric arteries and the left gastroepiploic artery. The splenic vein runs in the splenorenal ligament, and the left gastric artery is in the lesser omentum."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.4,
+  "needs_review": true,
+  "review_reason": "The specific structure 'A' is not physically marked on the specimen in the image, making it impossible to confirm the intended target with certainty. The identification of the gastrosplenic ligament is an inference based on the question text ('length of its root') and the visible anatomy.",
+  "quality_flags": [
+    "Marker not visible on specimen",
+    "Specimen is partially out of frame"
+  ],
+  "_source": {
+    "id": "22f905dad8a0",
+    "file": "22f905dad8a0.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 30,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

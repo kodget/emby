@@ -1,0 +1,57 @@
+{
+  "is_station": true,
+  "station_kind": "HISTOLOGY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "histology slide field",
+  "specimen_bbox": {
+    "x0": 0.371,
+    "y0": 0.203,
+    "x1": 0.647,
+    "y1": 0.652
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Identify the pointed area\nB) Where can it be found",
+  "station_number": 1,
+  "marker": {
+    "present": true,
+    "type": "probe",
+    "x": 0.587,
+    "y": 0.429,
+    "description": "Black pointer/probe entering from the right and indicating the central pale-staining area in the microscope field."
+  },
+  "structure": null,
+  "main_question": "Identify the pointed area.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.34,
+  "needs_review": true,
+  "review_reason": "The image shows a blurred histology field, but the tissue type and the pointed structure cannot be identified confidently from the available detail. The handwritten question is legible, but anatomy would be speculative.",
+  "quality_flags": [
+    "blurred",
+    "marker ambiguous",
+    "specimen partially obscured by paper"
+  ],
+  "_source": {
+    "id": "be57c7e58004",
+    "file": "be57c7e58004.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 1,
+    "model": "gpt-5.4-mini"
+  }
+}

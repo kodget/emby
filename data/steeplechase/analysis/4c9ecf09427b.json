@@ -1,0 +1,57 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Dehydrated distal limb specimen",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.05,
+    "x1": 1.0,
+    "y1": 0.37
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify the structure tied A\nIdentify the structure tied B",
+  "station_number": 41,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.11,
+    "y": 0.51,
+    "description": "Paper tags labeled A and B tied with thread to structures on the specimen"
+  },
+  "structure": null,
+  "main_question": "Identify the structures tied at A and B.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.1,
+  "needs_review": true,
+  "review_reason": "The specimen is extremely dehydrated, mummified, and poorly preserved, making it impossible to confidently identify whether it is a hand or foot, let alone the specific nerves, vessels, or tendons marked by tags A and B.",
+  "quality_flags": [
+    "specimen_poor_quality",
+    "marker_ambiguous",
+    "hands_in_frame"
+  ],
+  "_source": {
+    "id": "4c9ecf09427b",
+    "file": "4c9ecf09427b.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 56,
+    "model": "gemini-3.5-flash"
+  }
+}

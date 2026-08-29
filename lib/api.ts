@@ -8,6 +8,10 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  // Without this, a slow or unreachable backend leaves every request pending forever,
+  // so loading skeletons never resolve and the app looks frozen rather than degraded.
+  // Long AI calls pass their own larger timeout at the call site.
+  timeout: 20000,
 });
 
 // Add auth token to requests (exclude public auth endpoints)
@@ -1640,6 +1644,58 @@ export const challengeApi = {
   }
 };
 
+export interface BattleLookup {
+  code: string;
+  title: string;
+  status: string;
+  total_questions: number;
+  seconds_per_question: number;
+  participants: number;
+  host_name: string;
+}
+
+export interface BattleJoin {
+  battle_id: number;
+  code: string;
+  title: string;
+  status: string;
+  total_questions: number;
+  seconds_per_question: number;
+  host: boolean;
+  newly_joined: boolean;
+  your_score: number;
+}
+
+export interface BattleQuestion {
+  index: number;
+  total: number;
+  question: string;
+  options: string[];
+  seconds: number;
+}
+
+export interface BattleAnswerResult {
+  index: number;
+  correct: boolean;
+  correct_index: number | null;
+  explanation: string;
+  points: number;
+  score: number;
+}
+
+export interface BattleStanding {
+  rank: number;
+  user_id: number;
+  name: string;
+  score: number;
+  answered: number;
+  correct: number;
+  accuracy: number | null;
+  is_host: boolean;
+}
+
+
+
 export const battleApi = {
   getBattles: async (): Promise<any[]> => {
     const response = await api.get("/api/battles/");
@@ -1660,7 +1716,288 @@ export const battleApi = {
   endBattle: async (id: number): Promise<any> => {
     const response = await api.post(`/api/battles/${id}/end/`);
     return response.data;
-  }
+  },
+
+  // --- code-based join and server-scored play (learning app) ---------------------
+
+  /** Check a code before committing to join. */
+  lookup: async (code: string): Promise<BattleLookup> =>
+    (await api.get(`/api/learning/battles/lookup/${encodeURIComponent(code)}/`)).data,
+
+  join: async (code: string): Promise<BattleJoin> =>
+    (await api.post("/api/learning/battles/join/", { code })).data,
+
+  getQuestion: async (battleId: number, index: number): Promise<BattleQuestion> =>
+    (await api.get(`/api/learning/battles/${battleId}/question/${index}/`)).data,
+
+  answer: async (
+    battleId: number,
+    payload: { index: number; selected_index: number | null; seconds_taken: number },
+  ): Promise<BattleAnswerResult> =>
+    (await api.post(`/api/learning/battles/${battleId}/answer/`, payload)).data,
+
+  leaderboard: async (battleId: number): Promise<{ leaderboard: BattleStanding[] }> =>
+    (await api.get(`/api/learning/battles/${battleId}/leaderboard/`)).data,
+
+  finish: async (battleId: number) =>
+    (await api.post(`/api/learning/battles/${battleId}/finish/`)).data as {
+      your_rank: number | null;
+      your_score: number;
+      answered: number;
+      correct: number;
+      accuracy: number | null;
+      participants: number;
+      leaderboard: BattleStanding[];
+    },
+};
+
+// ==================== LEARNING API ====================
+// Cross-cutting systems: image-spot practice, AI credits, weak areas, XP,
+// notifications and the cached dashboard message. Mounted at /api/learning/.
+
+export type PracticeMode = "STEEPLECHASE" | "HISTOLOGY";
+
+export interface PracticeEntitlement {
+  is_premium: boolean;
+  max_stations: number;
+  rounds_used: number;
+  rounds_limit: number | null;
+  rounds_remaining: number | null;
+  stations_available: number;
+}
+
+export interface PracticeSection {
+  code: string;
+  label: string;
+  count: number;
+}
+
+export interface PracticeOptions {
+  mode: PracticeMode;
+  seconds_per_station: number;
+  sections: PracticeSection[];
+  entitlement: PracticeEntitlement;
+}
+
+/** A station as the student sees it — deliberately carries no answer data. */
+export interface PracticeStation {
+  id: string;
+  index: number;
+  total: number;
+  seconds: number;
+  image_url: string;
+  section: string;
+  marker: { present: boolean; type: string; x: number | null; y: number | null };
+  main: { question: string };
+  supporting?: { question: string; options: string[] };
+  true_false?: { statement: string };
+}
+
+/** Returned only after an answer is submitted. */
+export interface PracticeReveal {
+  station_id: string;
+  main: { correct: boolean; answer: string | null; explanation: string };
+  supporting: { correct: boolean | null; correct_index: number | null; explanation: string } | null;
+  true_false: { correct: boolean | null; answer: boolean | null; explanation: string } | null;
+  structure: string;
+  timed_out: boolean;
+}
+
+export interface PracticeResults {
+  session_id: string;
+  mode: PracticeMode;
+  total_stations: number;
+  answered: number;
+  accuracy_percent: number;
+  main_correct: number;
+  supporting_correct: number;
+  true_false_correct: number;
+  timed_out: number;
+  average_seconds: number;
+  section_breakdown: Record<string, { attempted: number; correct: number; accuracy: number }>;
+  is_premium: boolean;
+  upgrade_hint?: string;
+  weak_sections?: string[];
+  stations?: Array<{
+    station_id: string;
+    image_url: string;
+    section: string;
+    question: string;
+    your_answer: string;
+    correct_answer: string | null;
+    main_correct: boolean | null;
+    explanation: string;
+    structure: string;
+    seconds_taken: number;
+    timed_out: boolean;
+  }>;
+}
+
+export const practiceApi = {
+  getOptions: async (mode: PracticeMode): Promise<PracticeOptions> => {
+    const res = await api.get("/api/learning/practice/options/", { params: { mode } });
+    return res.data;
+  },
+
+  start: async (
+    mode: PracticeMode,
+    sections: string[],
+    count: number,
+  ): Promise<{
+    session_id: string;
+    mode: PracticeMode;
+    total_stations: number;
+    seconds_per_station: number;
+    station: PracticeStation;
+    entitlement: PracticeEntitlement;
+  }> => {
+    const res = await api.post("/api/learning/practice/start/", { mode, sections, count });
+    return res.data;
+  },
+
+  getStation: async (sessionId: string, index: number): Promise<PracticeStation> => {
+    const res = await api.get(`/api/learning/practice/${sessionId}/station/${index}/`);
+    return res.data;
+  },
+
+  answer: async (
+    sessionId: string,
+    payload: {
+      station_id: string;
+      main_answer?: string;
+      supporting_choice?: number | null;
+      true_false_answer?: boolean | null;
+      seconds_taken?: number;
+      timed_out?: boolean;
+    },
+  ): Promise<PracticeReveal> => {
+    const res = await api.post(`/api/learning/practice/${sessionId}/answer/`, payload);
+    return res.data;
+  },
+
+  complete: async (sessionId: string): Promise<PracticeResults> => {
+    const res = await api.post(`/api/learning/practice/${sessionId}/complete/`);
+    return res.data;
+  },
+
+  getResults: async (sessionId: string): Promise<PracticeResults> => {
+    const res = await api.get(`/api/learning/practice/${sessionId}/results/`);
+    return res.data;
+  },
+
+  getHistory: async (mode: PracticeMode) => {
+    const res = await api.get("/api/learning/practice/history/", { params: { mode } });
+    return res.data as Array<{
+      session_id: string;
+      completed_at: string;
+      total_stations: number;
+      accuracy_percent: number;
+      sections: string[];
+    }>;
+  },
+};
+
+export interface CreditBalance {
+  allocated: number;
+  used: number;
+  remaining: number;
+  tier: string;
+  period_ends: string;
+  costs: Record<string, number>;
+}
+
+export const learningApi = {
+  getCredits: async (): Promise<CreditBalance> => {
+    const res = await api.get("/api/learning/credits/");
+    return res.data;
+  },
+
+  getCreditHistory: async () => (await api.get("/api/learning/credits/history/")).data,
+
+  getWeakAreas: async (scope = "TOPIC", limit = 5) =>
+    (await api.get("/api/learning/weak-areas/", { params: { scope, limit } })).data,
+
+  getXp: async (days = 30) =>
+    (await api.get("/api/learning/xp/", { params: { days } })).data,
+
+  getDashboardMessage: async (refresh = false) =>
+    (await api.get("/api/learning/dashboard/message/", {
+      params: refresh ? { refresh: "true" } : {},
+    })).data as { headline: string; body: string; cached: boolean },
+
+  getDashboardSnapshot: async () =>
+    (await api.get("/api/learning/dashboard/snapshot/")).data,
+
+  getNotifications: async (unreadOnly = false) =>
+    (await api.get("/api/learning/notifications/", {
+      params: unreadOnly ? { unread: "true" } : {},
+    })).data,
+
+  markNotificationsRead: async (id?: string) =>
+    (await api.post("/api/learning/notifications/read/", id ? { id } : {})).data,
+};
+
+export interface AnalyticsReport {
+  generated_at: string;
+  window_days: number;
+  is_premium: boolean;
+  include_detail: boolean;
+  overview: {
+    has_data: boolean;
+    attempted: number;
+    correct: number;
+    incorrect: number;
+    accuracy: number | null;
+    sessions: number;
+    study_minutes: number;
+  };
+  improvement: {
+    direction: "up" | "down" | "flat" | "insufficient_data";
+    earlier_accuracy: number | null;
+    recent_accuracy: number | null;
+    change: number | null;
+    note?: string;
+  };
+  consistency: {
+    active_days: number;
+    window_days: number;
+    active_rate: number;
+    current_streak: number;
+    longest_streak: number;
+    total_minutes: number;
+    average_minutes_per_active_day: number;
+  };
+  daily_activity: Array<{ date: string; minutes: number; sessions: number }>;
+  by_assessment: Array<{
+    activity: string;
+    label: string;
+    sessions: number;
+    attempted: number;
+    correct: number;
+    accuracy: number | null;
+    minutes: number;
+  }>;
+  practice: Record<string, {
+    rounds: number;
+    stations: number;
+    average_accuracy: number | null;
+    timed_out: number;
+  }>;
+  topics?: {
+    weakest: Array<{ label: string; attempted: number; correct: number; accuracy: number | null; mastery: number; priority: number }>;
+    strongest: Array<{ label: string; attempted: number; correct: number; accuracy: number | null; mastery: number }>;
+    tracked_nodes: number;
+  };
+  question_bank?: {
+    total: number; seen: number; unseen: number; answered: number; missed: number; percent_seen: number;
+  };
+}
+
+export const analyticsApi = {
+  getReport: async (days = 30): Promise<AnalyticsReport> => {
+    const res = await api.get("/api/learning/analytics/", { params: { days } });
+    return res.data;
+  },
 };
 
 export default api;

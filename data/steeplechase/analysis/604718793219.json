@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Kidney prosection",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.45,
+    "y1": 0.52
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Identify the structure Pinned \"Green\" Renal Papillae\nB) Identify the structure Pinned \"Blue\" Renal Pelvis\nC) The Right and the Left Kidney Lie on the Same Vertebral Level? T/F False",
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.24,
+    "y": 0.05,
+    "description": "Green-headed pin indicating the renal papillae"
+  },
+  "structure": "Renal papillae",
+  "main_question": "Identify the structure indicated by the green pin.",
+  "main_answer": "Renal papillae",
+  "main_explanation": "The green pin points to the apices of the renal pyramids, which project into the minor calyces. These are known as the renal papillae.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures drains directly into the renal pelvis?",
+    "options": [
+      "Major calyces",
+      "Renal pyramids",
+      "Renal columns",
+      "Cortex"
+    ],
+    "correct_index": 0,
+    "explanation": "The major calyces (formed by the union of minor calyces) converge to form the renal pelvis, which then continues as the ureter."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The right and left kidneys lie on the same vertebral level.",
+    "answer": false,
+    "explanation": "The right kidney is typically positioned slightly lower than the left kidney due to the presence of the liver in the right upper quadrant."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "604718793219",
+    "file": "604718793219.jpeg",
+    "width": 1688,
+    "height": 1984,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 1,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Thoracic vertebrae and ribs",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.75,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker (pin, arrow, or tag) is visible indicating a particular anatomical structure for examination."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a dry bone specimen of the upper thoracic spine and ribs, but lacks the necessary components of an exam station such as a question paper or a specific marker.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "Image is a collage of three views of a skeletal specimen but does not contain a question paper or specific marker to constitute a valid exam station.",
+  "quality_flags": [
+    "No question paper present",
+    "No specific marker present",
+    "Image is a collage of multiple views"
+  ],
+  "_source": {
+    "id": "2c9405f397be",
+    "file": "2c9405f397be.jpeg",
+    "width": 1948,
+    "height": 2598,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 35,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

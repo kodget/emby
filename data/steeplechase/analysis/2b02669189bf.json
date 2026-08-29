@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.08,
+    "y0": 0.2,
+    "x1": 0.82,
+    "y1": 0.44
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.72,
+    "y": 0.24,
+    "description": "Red paint mark on the rounded distal end of the bone"
+  },
+  "structure": null,
+  "main_question": "Identify the bone shown and the landmark indicated by the red mark.",
+  "main_answer": null,
+  "main_explanation": "The specimen is a slender, gently curved long bone with a broad flattened proximal end and a rounded distal end, consistent with a metatarsal or metacarpal, but the exact bone and the precise landmark at the red mark cannot be confirmed from the image alone.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is visible, and the bone cannot be confidently identified (metatarsal vs metacarpal vs other). The red paint mark location is clear but the intended landmark is uncertain.",
+  "quality_flags": [
+    "no question paper visible",
+    "no station number visible",
+    "bone identification uncertain",
+    "image appears to be a stacked set of crops with the specimen only in the top panel"
+  ],
+  "_source": {
+    "id": "2b02669189bf",
+    "file": "2b02669189bf.jpeg",
+    "width": 768,
+    "height": 455,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 32,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

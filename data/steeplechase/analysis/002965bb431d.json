@@ -1,0 +1,60 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Specimen B",
+  "specimen_bbox": {
+    "x0": 0.25,
+    "y0": 0.05,
+    "x1": 0.95,
+    "y1": 0.65
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.65,
+    "y": 0.55,
+    "description": "A green-headed pin attached to a paper tag labeled 'B' is inserted into a tubular structure inferior to the main organ mass."
+  },
+  "structure": "Ureter",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Ureter",
+  "main_explanation": "The specimen is a gross prosection of a kidney with the renal pelvis and ureter. The pin is inserted into the ureter, the muscular tube that transports urine from the kidney to the bladder.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following describes the blood supply to the structure indicated by the pin?",
+    "options": [
+      "It is supplied primarily by the renal artery.",
+      "It is supplied by branches of the gonadal, iliac, and superior vesical arteries.",
+      "It is supplied by the inferior mesenteric artery.",
+      "It is supplied by the internal pudendal artery."
+    ],
+    "correct_index": 1,
+    "explanation": "The ureter receives its blood supply from multiple sources along its course, including the gonadal (testicular/ovarian) artery, the common or external iliac artery, and the superior vesical artery."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The structure indicated by the pin is a hollow muscular tube that transports urine to the urinary bladder.",
+    "answer": true,
+    "explanation": "The ureter is a pair of muscular tubes that carry urine from the kidneys to the urinary bladder."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "No question paper visible in the frame"
+  ],
+  "_source": {
+    "id": "002965bb431d",
+    "file": "002965bb431d.jpeg",
+    "width": 1114,
+    "height": 1112,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 8,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

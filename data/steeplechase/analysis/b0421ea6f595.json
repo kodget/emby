@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PERINEUM",
+  "specimen_label": "Penis",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.0,
+    "x1": 0.55,
+    "y1": 0.45
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A Identify the structure pinned blue\nB Identify the structure pinned green\nC What animal has bone in the penis",
+  "station_number": 1,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.51,
+    "y": 0.45,
+    "description": "Green-headed pin"
+  },
+  "structure": "Corpus spongiosum",
+  "main_question": "Identify the structure pinned green.",
+  "main_answer": "Corpus spongiosum",
+  "main_explanation": "The green pin indicates the ventral aspect of the penis, which corresponds to the corpus spongiosum. This erectile tissue surrounds the penile urethra.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is contained within the corpus spongiosum?",
+    "options": [
+      "Dorsal vein of the penis",
+      "Deep artery of the penis",
+      "Penile urethra",
+      "Dorsal nerve of the penis"
+    ],
+    "correct_index": 2,
+    "explanation": "The corpus spongiosum surrounds the penile urethra. The dorsal vein, deep artery, and dorsal nerve are located in the dorsal aspect, associated with the corpora cavernosa."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The human penis contains a bone (baculum).",
+    "answer": false,
+    "explanation": "Unlike many other mammals (such as the dog or cat), the human penis does not contain a bone; it is composed of erectile tissue."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "b0421ea6f595",
+    "file": "b0421ea6f595.jpeg",
+    "width": 780,
+    "height": 1040,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 9,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

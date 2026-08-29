@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.78
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.52,
+    "y": 0.27,
+    "description": "Green-headed dressmaker pin with a length of thread/string attached, placed in the mid-abdominal region of the prosection."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows an abdominal cadaveric prosection with a green pin and thread, but the specific structure being indicated cannot be confidently identified from the photograph. No question paper is present to clarify the intended target.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specific anatomical structure indicated by the green pin cannot be confidently identified. The dissection appears to be of the abdominal/pelvic region, but the pin target is ambiguous without a question paper or clearer orientation. The image quality is moderate and the field of view is crowded with multiple structures.",
+  "quality_flags": [
+    "No question paper visible",
+    "No station number visible",
+    "Marker target structure ambiguous",
+    "Multiple structures in field making identification difficult",
+    "Image appears to be a composite or multi-panel photo"
+  ],
+  "_source": {
+    "id": "ca2ad7a44b91",
+    "file": "ca2ad7a44b91.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 93,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

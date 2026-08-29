@@ -1,0 +1,60 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.0,
+    "y1": 0.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A What day does the Caudal Neuropore close\nB How many Somites are formed at the end of week 4",
+  "station_number": 46,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "What day does the caudal neuropore close?",
+  "main_answer": "Day 28",
+  "main_explanation": "The caudal (posterior) neuropore typically closes at approximately day 28 of embryonic development (about 3 days after the cranial neuropore closes on day 25).",
+  "supporting_question": {
+    "enabled": true,
+    "question": "How many pairs of somites are typically present in a human embryo at the end of the fourth week (day 28)?",
+    "options": [
+      "4 to 12 pairs",
+      "20 to 21 pairs",
+      "28 to 30 pairs",
+      "42 to 44 pairs"
+    ],
+    "correct_index": 2,
+    "explanation": "By the end of the fourth week of development (day 28), approximately 28 to 30 pairs of somites have formed along the neuraxis of the embryo."
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 1.0,
+  "needs_review": true,
+  "review_reason": "The photograph contains only the handwritten question paper taped to a wooden board; there is no anatomical specimen visible in the image.",
+  "quality_flags": [
+    "no_specimen"
+  ],
+  "_source": {
+    "id": "11ed88426733",
+    "file": "11ed88426733.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 61,
+    "model": "gemini-3.5-flash"
+  }
+}

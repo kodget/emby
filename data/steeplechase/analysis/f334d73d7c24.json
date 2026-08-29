@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "48\n(A) Identify the pinned part of dural sheath\n(B) What venous sinus exist here",
+  "station_number": 48,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph only shows the question paper and the surrounding bench/wall. The anatomical specimen (likely a dural sheath prosection) is not visible in the image, making it impossible to identify the structure or answer the question.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image is a close-up of the question paper only. The anatomical specimen is completely out of frame, so the station cannot be evaluated or used for study.",
+  "quality_flags": [
+    "Specimen out of frame",
+    "Only question paper visible"
+  ],
+  "_source": {
+    "id": "f334d73d7c24",
+    "file": "f334d73d7c24.jpeg",
+    "width": 606,
+    "height": 455,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 15,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

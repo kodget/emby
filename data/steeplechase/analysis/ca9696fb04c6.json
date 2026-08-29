@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.1,
+    "x1": 0.98,
+    "y1": 0.78
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.55,
+    "y": 0.45,
+    "description": "A small white paper tag with a red letter 'A' is placed on the prosection; a second tag with a blue letter 'B' is at the top. No legible question text is present."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a cadaveric prosection with lettered paper tags (A and B) but no legible question and no clear orientation. The anatomical region and the specific structure indicated by the tags cannot be confidently identified from the image, so no definitive question or answer can be supplied.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "Image is dark, low-resolution and appears to be a composite of multiple crops. The prosection's orientation and region are unclear, the tags carry only letters (A, B) with no legible question, and the marked structure cannot be confidently identified. A clearer, single, well-lit photograph with a legible question is required before this can be used as an exam station.",
+  "quality_flags": [
+    "very dark",
+    "low resolution",
+    "composite of multiple crops",
+    "no legible question paper",
+    "marker ambiguous (lettered tags only)",
+    "specimen orientation unclear"
+  ],
+  "_source": {
+    "id": "ca9696fb04c6",
+    "file": "ca9696fb04c6.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 57,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

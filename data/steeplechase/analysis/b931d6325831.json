@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Brain",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.1,
+    "x1": 0.85,
+    "y1": 0.65
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify the area indicated by the pin. A. ... B. ...",
+  "station_number": 55,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.5,
+    "y": 0.15,
+    "description": "A pin with a white flag is inserted into the superior aspect of the brain, likely indicating the longitudinal fissure or a specific gyrus."
+  },
+  "structure": "Longitudinal fissure",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Longitudinal fissure",
+  "main_explanation": "The pin is inserted into the deep midline groove that separates the two cerebral hemispheres, which is the longitudinal fissure.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located within the longitudinal fissure?",
+    "options": [
+      "Falx cerebri",
+      "Tentorium cerebelli",
+      "Falciform ligament",
+      "Arachnoid granulations"
+    ],
+    "correct_index": 0,
+    "explanation": "The falx cerebri is a sickle-shaped fold of the dura mater that descends vertically in the median plane between the two cerebral hemispheres, occupying the longitudinal fissure."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Question paper is partially obscured by the hand",
+    "Image is a composite of multiple views"
+  ],
+  "_source": {
+    "id": "b931d6325831",
+    "file": "b931d6325831.jpeg",
+    "width": 606,
+    "height": 455,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 21,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

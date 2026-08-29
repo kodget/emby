@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No standard exam markers (pins, arrows, tags) are visible. There are painted lines on the bone, but without a question paper, their specific intent is unclear."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a dry bone specimen (likely the sacrum) with painted markings, but it lacks the essential components of an exam station: a question paper and a clear, standardized marker.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "Image is a collection of informal photos of a specimen, not a formal exam station setup.",
+  "quality_flags": [
+    "Not a single photograph",
+    "No question paper present",
+    "No station number"
+  ],
+  "_source": {
+    "id": "cf7c87e0fcbc",
+    "file": "cf7c87e0fcbc.jpeg",
+    "width": 547,
+    "height": 524,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 4,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

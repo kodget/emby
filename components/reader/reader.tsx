@@ -4,7 +4,7 @@
  * Reader — Three-panel IDE layout
  *
  * ┌──────────────────┬──────────────────────────────┐
- * │  📄 SLIDE PANEL  │  🤖 AI CHAT / 📚 RESOURCES  │
+ * │  SLIDE PANEL  │  AI CHAT / RESOURCES  │
  * └──────────────────┴──────────────────────────────┘
  *
  * ARCHITECTURE RULES (from system design spec):

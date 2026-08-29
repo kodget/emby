@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Thoracic vertebra",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.15,
+    "x1": 0.75,
+    "y1": 0.65
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify this vertebra",
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker (pin, arrow, or thread) is visible on the bone."
+  },
+  "structure": "Thoracic vertebra",
+  "main_question": "Identify this vertebra.",
+  "main_answer": "Thoracic vertebra",
+  "main_explanation": "The specimen is an isolated vertebra. It is identified as a thoracic vertebra based on the presence of costal facets on the body (for articulation with ribs) and the characteristic long, downward-sloping spinous process.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following features is characteristic of the spinous process of a typical thoracic vertebra?",
+    "options": [
+      "It is short and bifid",
+      "It is long and slopes steeply downwards",
+      "It is massive and projects horizontally",
+      "It is small and points directly posteriorly"
+    ],
+    "correct_index": 1,
+    "explanation": "Thoracic spinous processes are characteristically long and point downwards, often overlapping the vertebra below. Cervical processes are often bifid, lumbar processes are massive and horizontal, and sacral processes are fused."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The vertebral foramen of a typical thoracic vertebra is circular in shape.",
+    "answer": true,
+    "explanation": "The vertebral foramen of a thoracic vertebra is typically circular, which is a distinguishing feature compared to the triangular foramen of cervical vertebrae and the kidney-shaped foramen of lumbar vertebrae."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is partially obscured by the question paper in the main view"
+  ],
+  "_source": {
+    "id": "deed9ff6dd23",
+    "file": "deed9ff6dd23.jpeg",
+    "width": 814,
+    "height": 808,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 13,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

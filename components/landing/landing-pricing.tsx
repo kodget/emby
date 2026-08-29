@@ -1,21 +1,27 @@
+import { MONTHLY_PRICE_LABEL, YEARLY_PRICE_LABEL, formatNaira, yearlySavings } from "@/lib/pricing";
 import Link from "next/link";
 import { Check } from "lucide-react";
 
+// Every line below maps to behaviour that is actually implemented and enforced
+// server-side. Claims for features Emby does not have (an offline PDF reader, a free
+// trial) were removed rather than left as aspirations.
 const freePerks = [
-  "Your class materials",
-  "Daily study plan (30 min)",
-  "1 quiz + 1 flashcard deck / day",
+  "Your class slides and materials",
+  "Spaced-repetition flashcards",
+  "10 MCQs per quiz",
+  "5 Steeplechase and 5 Histology rounds a month",
+  "A monthly allowance of AI credits",
   "Community Q&A (read-only)",
 ];
 
 const proPerks = [
   "Everything in Free",
-  "Unlimited AI tutor explanations",
-  "All past questions + steeplechase",
-  "Spaced-repetition flashcards",
-  "Post & answer in community",
-  "Weekly analytics report",
-  "Offline PDF reader",
+  "Unlimited Steeplechase and Histology rounds",
+  "The full question bank, up to 100 per quiz",
+  "Theory questions marked by AI, with feedback",
+  "A far larger AI credit allowance",
+  "Weak-area analysis and revision suggestions",
+  "Post, like and comment in the community",
 ];
 
 export function LandingPricing() {
@@ -77,13 +83,13 @@ export function LandingPricing() {
                 Pro · Exam Ready
               </p>
               <p className="mt-2 font-serif text-4xl">
-                ₦1,499{" "}
+                {MONTHLY_PRICE_LABEL}{" "}
                 <span className="text-base text-primary-foreground/80">
                   / month
                 </span>
               </p>
               <p className="mt-2 text-sm text-primary-foreground/80">
-                or ₦15,000 / year · save 17%
+                {`or ${YEARLY_PRICE_LABEL} / year · save ${formatNaira(yearlySavings())}`}
               </p>
             </header>
             <ul className="mt-6 space-y-2.5 text-sm">
@@ -101,7 +107,7 @@ export function LandingPricing() {
               href="/signup"
               className="mt-auto inline-flex h-11 items-center justify-center rounded-full bg-background text-foreground px-5 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
             >
-              Go Pro · 7-day free trial
+              Go Pro
             </Link>
           </article>
         </div>

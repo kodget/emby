@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Hyoid bone",
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.45,
+    "y1": 0.82
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Identify Area painted blue\nB) What does it articulate with.\nC) What type of joint is formed by the area painted Red?",
+  "station_number": 38,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.35,
+    "y": 0.08,
+    "description": "Red paint on the superior aspect of the bone"
+  },
+  "structure": "Greater cornu of the hyoid bone",
+  "main_question": "Identify the bone shown in the photograph.",
+  "main_answer": "Hyoid bone",
+  "main_explanation": "The specimen is a U-shaped bone located in the anterior neck. It is the only bone in the body that does not articulate with any other bone. The shape, consisting of a body and two pairs of cornua (horns), is characteristic of the hyoid bone.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures attaches to the greater cornu of the hyoid bone?",
+    "options": [
+      "Stylohyoid ligament",
+      "Stylohyoid muscle",
+      "Digastric muscle",
+      "Mylohyoid muscle"
+    ],
+    "correct_index": 0,
+    "explanation": "The stylohyoid ligament attaches the styloid process of the temporal bone to the greater cornu of the hyoid bone. The stylohyoid muscle attaches to the body, while the digastric and mylohyoid muscles attach to the lesser cornu."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The hyoid bone is the only bone in the human body that does not articulate with another bone.",
+    "answer": true,
+    "explanation": "The hyoid bone is suspended in the neck by muscles and ligaments and does not form a joint with any other bone."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "11aecb7727ea",
+    "file": "11aecb7727ea.jpeg",
+    "width": 768,
+    "height": 667,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 35,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

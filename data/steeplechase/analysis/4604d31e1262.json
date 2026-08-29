@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Liver and gallbladder",
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.05,
+    "x1": 0.98,
+    "y1": 0.95
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.27,
+    "y": 0.33,
+    "description": "A green-headed pin is inserted into the surface of the liver."
+  },
+  "structure": "Liver",
+  "main_question": "Identify the organ indicated by the green pin.",
+  "main_answer": "Liver",
+  "main_explanation": "The specimen shows the liver with the gallbladder and biliary tree. The pin is located on the large, reddish-brown organ which is the liver.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located in the gallbladder fossa on the visceral surface of the liver?",
+    "options": [
+      "Gallbladder",
+      "Stomach",
+      "Duodenum",
+      "Pancreas"
+    ],
+    "correct_index": 0,
+    "explanation": "The gallbladder is situated in a depression (fossa) on the inferior (visceral) surface of the right lobe of the liver."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "No question paper visible",
+    "Image is a composite of multiple views"
+  ],
+  "_source": {
+    "id": "4604d31e1262",
+    "file": "4604d31e1262.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 114,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

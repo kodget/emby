@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Sagittal section of brain",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.1,
+    "x1": 0.98,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.38,
+    "y": 0.28,
+    "description": "Blue-headed pin inserted into the superior surface of the corpus callosum."
+  },
+  "structure": "Corpus callosum",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Corpus callosum",
+  "main_explanation": "The pin is located in the large, C-shaped band of white matter that connects the left and right cerebral hemispheres, situated superior to the lateral ventricles.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located immediately inferior to the structure indicated by the pin?",
+    "options": [
+      "Lateral ventricle",
+      "Third ventricle",
+      "Cerebral aqueduct",
+      "Fourth ventricle"
+    ],
+    "correct_index": 0,
+    "explanation": "The corpus callosum forms the roof of the lateral ventricles. The third ventricle is located inferior to the thalamus, which is medial to the lateral ventricles."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "78bf62ba0993",
+    "file": "78bf62ba0993.jpeg",
+    "width": 2233,
+    "height": 1678,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 16,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

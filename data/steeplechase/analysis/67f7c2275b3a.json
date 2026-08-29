@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.78,
+    "y1": 0.95
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": 39,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.27,
+    "y": 0.22,
+    "description": "Blue-headed pin inserted into a structure in the upper portion of the prosection; a green-headed pin is also visible lower down"
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a dark, low-resolution composite of multiple views of a cadaveric pelvic/perineal prosection. Pins (blue and green) mark structures, but the specific anatomical structures cannot be confidently identified from the image quality and orientation. The paper shows station number 39 but no legible question text.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.25,
+  "needs_review": true,
+  "review_reason": "The image is a multi-panel composite that is dark and low-resolution. The specific structures marked by the blue and green pins cannot be confidently identified. The orientation of the prosection is unclear, and no legible question text is visible on the paper (only the number 39). A reviewer with access to the original high-resolution images and knowledge of the station layout is needed to identify the marked structures.",
+  "quality_flags": [
+    "low_resolution",
+    "dark_image",
+    "composite_multi_panel",
+    "marker_structure_unclear",
+    "no_legible_question_text",
+    "orientation_unclear"
+  ],
+  "_source": {
+    "id": "67f7c2275b3a",
+    "file": "67f7c2275b3a.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 99,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

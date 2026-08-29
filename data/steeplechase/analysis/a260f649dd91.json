@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Hyoid bone",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.02,
+    "x1": 0.42,
+    "y1": 0.35
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(A) SPECIFICALLY IDENTIFY THIS SPECIMEN (B) WHAT STRUCTURES ARTICULATE WITH THE AREA SHADED BLUE",
+  "station_number": 51,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, or visible blue shading is apparent in the provided image, though the question text references an area shaded blue."
+  },
+  "structure": "Hyoid bone",
+  "main_question": "Specifically identify this specimen.",
+  "main_answer": "Hyoid bone",
+  "main_explanation": "The specimen is a U-shaped bone located in the anterior neck, consisting of a body, a greater cornu (horn), and a lesser cornu. It is the only bone in the body that does not articulate with another bone.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is attached to the hyoid bone via the stylohyoid ligament?",
+    "options": [
+      "Mandible",
+      "Styloid process of the temporal bone",
+      "Cricoid cartilage",
+      "Thyroid cartilage"
+    ],
+    "correct_index": 1,
+    "explanation": "The stylohyoid ligament connects the styloid process of the temporal bone to the lesser cornu of the hyoid bone."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The hyoid bone is the only bone in the human body that does not articulate with another bone.",
+    "answer": true,
+    "explanation": "The hyoid bone is suspended in the neck by muscles and ligaments and does not form a joint with any other bone."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is small relative to the frame",
+    "Question paper is partially cut off in the original image"
+  ],
+  "_source": {
+    "id": "a260f649dd91",
+    "file": "a260f649dd91.jpeg",
+    "width": 699,
+    "height": 524,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 5,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     # Local apps
     "accounts",
     "curriculum",
+    "learning",
     "pastquestions",
     "payments",
 ]
@@ -348,6 +349,22 @@ DEFAULT_FROM_EMAIL = os.getenv(
 # Third-party integration keys
 # ---------------------------------------------------------------------------
 
+# --- LLM (OpenAI-compatible; defaults to Groq + open-weight gpt-oss-120b) ---------
+# Any OpenAI-compatible endpoint works: Groq, Cerebras, OpenRouter, Together, local vLLM.
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")
+LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-oss-120b")
+LLM_FALLBACK_MODEL = os.getenv("LLM_FALLBACK_MODEL", "qwen/qwen3.8-27b")
+LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "90"))
+
+# Optional additional providers for automatic failover when a free tier is exhausted.
+for _slot in (1, 2, 3):
+    for _suffix in ("BASE_URL", "API_KEY", "MODEL", "FALLBACK_MODEL"):
+        _name = f"LLM_BACKUP_{_slot}_{_suffix}"
+        globals()[_name] = os.getenv(_name, "")
+
+# Legacy Gemini key — retained only so existing deployments keep booting. The AI layer
+# now runs through curriculum.llm; Gemini is no longer called.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 

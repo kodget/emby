@@ -1,193 +1,139 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { motion } from "framer-motion"
-import { AlertCircle, ArrowRight, Loader2 } from "lucide-react"
-import { curriculumApi, progressApi } from "@/lib/api"
+/**
+ * What to revise next.
+ *
+ * The previous version tried to infer weak topics in the browser by looping over every
+ * block and guessing which slide belonged to which topic — its own comment said
+ * "you may need to adjust this logic". It now reads the weak-area engine, which derives
+ * mastery from actual answers across quizzes, Steeplechase, Histology and battles.
+ *
+ * Each row shows a mastery bar so the card carries information at a glance rather than
+ * being a list of names.
+ */
 
-type WeakTopic = {
-  id: string
-  name: string
-  block_name: string
-  progress_percentage: number
-  slides_count: number
-}
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+
+import { Axo } from "@/components/brand/axo";
+import { Icon3D } from "@/components/brand/icon-3d";
+import { learningApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+type Area = {
+  label: string;
+  attempted: number;
+  correct: number;
+  mastery: number;
+  priority: number;
+};
 
 export function WeakTopics() {
-  const [topics, setTopics] = useState<WeakTopic[]>([])
-  const [loading, setLoading] = useState(true)
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [hasData, setHasData] = useState(false);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
-    const fetchWeakTopics = async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        // Get all blocks with topics
-        const blocks = await curriculumApi.getBlocks()
-        const userProgress = await progressApi.getProgress()
-        
-        // Create a map of slide progress by topic
-        const topicProgressMap = new Map<string, { total: number; completed: number; slides: number }>()
-        
-        // Calculate progress per topic
-        blocks.forEach(block => {
-          block.topics.forEach(topic => {
-            if (!topicProgressMap.has(topic.id)) {
-              topicProgressMap.set(topic.id, { total: 0, completed: 0, slides: 0 })
-            }
-          })
-        })
-        
-        // Count slides per topic from progress
-        userProgress.forEach(progress => {
-          // Find which topic this slide belongs to
-          blocks.forEach(block => {
-            block.topics.forEach(topic => {
-              // Assuming slide belongs to topic if it matches (you may need to adjust this logic)
-              const topicData = topicProgressMap.get(topic.id)
-              if (topicData) {
-                topicData.slides++
-                topicData.total += progress.total_pages
-                topicData.completed += progress.current_page
-              }
-            })
-          })
-        })
-        
-        // Find topics with low progress (below 70%)
-        const weakTopics: WeakTopic[] = []
-        blocks.forEach(block => {
-          block.topics.forEach(topic => {
-            const data = topicProgressMap.get(topic.id)
-            if (data && data.total > 0) {
-              const percentage = Math.round((data.completed / data.total) * 100)
-              if (percentage < 70) {
-                weakTopics.push({
-                  id: topic.id,
-                  name: topic.name,
-                  block_name: block.name,
-                  progress_percentage: percentage,
-                  slides_count: data.slides,
-                })
-              }
-            }
-          })
-        })
-        
-        // Sort by lowest progress first and take top 3
-        weakTopics.sort((a, b) => a.progress_percentage - b.progress_percentage)
-        setTopics(weakTopics.slice(0, 3))
-      } catch (error) {
-        console.error('Failed to fetch weak topics:', error)
-      } finally {
-        setLoading(false)
+        // Sub-block is the level students actually revise at.
+        const data = await learningApi.getWeakAreas("SUB_BLOCK", 4);
+        if (cancelled) return;
+        setAreas(data.weakest ?? []);
+        setHasData(Boolean(data.has_data));
+        setState("ready");
+      } catch {
+        if (!cancelled) setState("error");
       }
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-    fetchWeakTopics()
-  }, [])
-
-  if (loading) {
+  if (state === "loading") {
     return (
-      <section
-        aria-labelledby="weak-topics-heading"
-        className="rounded-2xl border border-border bg-card p-5"
-      >
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+      <section className="card-3d p-4" aria-busy="true">
+        <div className="skeleton h-4 w-32" />
+        <div className="skeleton mt-4 h-3 w-full" />
+        <div className="skeleton mt-2 h-3 w-4/5" />
       </section>
-    )
+    );
   }
 
-  if (topics.length === 0) {
-    return (
-      <section
-        aria-labelledby="weak-topics-heading"
-        className="rounded-2xl border border-border bg-card p-5"
-      >
-        <header className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span
-              className="flex size-7 items-center justify-center rounded-lg bg-weakness/15 text-weakness"
-              aria-hidden="true"
-            >
-              <AlertCircle className="size-4" />
-            </span>
-            <h2
-              id="weak-topics-heading"
-              className="font-serif text-base font-semibold tracking-tight"
-            >
-              Needs a little love
-            </h2>
-          </div>
-        </header>
-        <p className="mt-4 text-sm text-muted-foreground text-center py-4">
-          Great job! No weak topics found. Keep up the good work!
-        </p>
-      </section>
-    )
-  }
+  if (state === "error") return null;
 
   return (
-    <section
-      aria-labelledby="weak-topics-heading"
-      className="rounded-2xl border border-border bg-card p-5"
-    >
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span
-            className="flex size-7 items-center justify-center rounded-lg bg-weakness/15 text-weakness"
-            aria-hidden="true"
-          >
-            <AlertCircle className="size-4" />
-          </span>
-          <h2
-            id="weak-topics-heading"
-            className="font-serif text-base font-semibold tracking-tight"
-          >
-            Needs a little love
-          </h2>
+    <section className="card-3d flex flex-col p-4">
+      <div className="flex items-start gap-3">
+        <Icon3D name="target" size="sm" />
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-[15px] leading-tight">What to revise</h2>
+          <p className="text-[11px] text-muted-foreground">Weakest first</p>
         </div>
-        <Link
-          href="/curriculum"
-          className="text-xs text-muted-foreground hover:text-foreground"
-        >
-          View all
-        </Link>
-      </header>
-
-      <p className="mt-1 text-xs text-muted-foreground">
-        Below 70% progress. A few minutes here today pays off fastest.
-      </p>
-
-      <ul className="mt-4 space-y-2">
-        {topics.map((t, i) => (
-          <motion.li
-            key={t.id}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07 }}
+        {areas.length > 0 && (
+          <Link
+            href="/analytics"
+            className="press shrink-0 rounded-full bg-secondary px-3 py-1 text-[11px] font-medium text-muted-foreground"
           >
-            <Link
-              href={`/curriculum?topic=${t.id}`}
-              className="group flex items-center gap-3 rounded-xl border border-border bg-background/40 p-3 transition-all duration-150 hover:border-weakness/40 hover:bg-weakness/5 hover:-translate-y-0.5 hover:shadow-md hover:shadow-weakness/10"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {t.name}
+            All
+          </Link>
+        )}
+      </div>
+
+      {areas.length === 0 ? (
+        <div className="flex items-center gap-3 py-3">
+          <Axo pose="sleeping" size="sm" />
+          <p className="text-[13px] leading-snug text-muted-foreground">
+            {hasData
+              ? "Not enough answers in any one topic yet to call it weak."
+              : "Answer a few questions and your weak topics will show up here."}
+          </p>
+        </div>
+      ) : (
+        <ul className="mt-3 space-y-2.5">
+          {areas.map((area, i) => {
+            const pct = Math.round(area.mastery * 100);
+            const tone =
+              area.mastery < 0.4 ? "weakness" : area.mastery < 0.7 ? "review" : "mastery";
+            return (
+              <li key={area.label}>
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="min-w-0 flex-1 truncate text-[13px]">{area.label}</span>
+                  <span
+                    className={cn(
+                      "shrink-0 font-mono text-[11px] tabular",
+                      tone === "weakness" && "text-weakness",
+                      tone === "review" && "text-review",
+                      tone === "mastery" && "text-mastery",
+                    )}
+                  >
+                    {pct}%
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary">
+                  <motion.div
+                    className={cn(
+                      "h-full rounded-full",
+                      tone === "weakness" && "bg-weakness",
+                      tone === "review" && "bg-review",
+                      tone === "mastery" && "bg-mastery",
+                    )}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.max(4, pct)}%` }}
+                    transition={{ delay: i * 0.07, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                </div>
+                <p className="mt-0.5 text-[10px] text-muted-foreground tabular">
+                  {area.correct}/{area.attempted} correct
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {t.block_name} · {t.slides_count} slides
-                </p>
-              </div>
-              <span className="font-mono text-sm font-semibold tabular-nums text-weakness">
-                {t.progress_percentage}%
-              </span>
-              <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-weakness" />
-            </Link>
-          </motion.li>
-        ))}
-      </ul>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
-  )
+  );
 }

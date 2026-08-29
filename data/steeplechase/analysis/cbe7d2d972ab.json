@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.05,
+    "x1": 0.95,
+    "y1": 0.65
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.45,
+    "y": 0.52,
+    "description": "A green-headed pin attached to a paper tag on the surface of the organ."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specific structure indicated by the pin cannot be confidently identified from the image alone due to the lack of a clear question and the ambiguity of the specimen's orientation and identity.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specimen is likely a brain (inferior view) but is not definitively identifiable. The question paper is illegible, and the marker's target structure is unclear without context. The image is a composite of multiple crops.",
+  "quality_flags": [
+    "illegible_question_paper",
+    "ambiguous_marker_target",
+    "composite_image"
+  ],
+  "_source": {
+    "id": "cbe7d2d972ab",
+    "file": "cbe7d2d972ab.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 55,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

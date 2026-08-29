@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.98,
+    "y1": 0.55
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.2,
+    "y": 0.27,
+    "description": "Teal-headed dressmaker pin pointing into the wall of a hollow bony opening on the left of the prosection."
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": null,
+  "main_explanation": "The pin marks the wall of a funnel-shaped bony opening in a pelvic prosection, but the orientation and surrounding landmarks are too ambiguous to name the structure (e.g. obturator foramen, acetabulum, or pelvic inlet) with confidence.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is visible, and the prosection is messy with ambiguous orientation. The pinned bony opening could be the obturator foramen, acetabulum, or pelvic inlet, but cannot be confirmed from the image alone.",
+  "quality_flags": [
+    "no question paper visible",
+    "no station number visible",
+    "messy dissection with poor landmark definition",
+    "ambiguous orientation of specimen",
+    "marker target not clearly identifiable"
+  ],
+  "_source": {
+    "id": "e6642223d025",
+    "file": "e6642223d025.jpeg",
+    "width": 1633,
+    "height": 901,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 24,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "femur",
+  "specimen_bbox": {
+    "x0": 0.01,
+    "y0": 0.26,
+    "x1": 0.81,
+    "y1": 0.78
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Side this Bone (please be specific)\nB) What muscles insert on the painted area? Red Yellow Green\nC) What is their common name?",
+  "station_number": 4,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "A) Side this Bone (please be specific)\nB) What muscles insert on the painted area? Red Yellow Green\nC) What is their common name?",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": true,
+    "question": "What is the main blood supply to the femoral shaft in an adult?",
+    "options": [
+      "Profunda femoris artery",
+      "Femoral artery directly",
+      "Popliteal artery",
+      "Obturator artery"
+    ],
+    "correct_index": 0,
+    "explanation": "The nutrient supply to the femoral shaft is chiefly via branches of the profunda femoris artery, especially the medial and lateral circumflex femoral system and the nutrient artery to the shaft."
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.89,
+  "needs_review": true,
+  "review_reason": "No marker or painted area is clearly visible, so the specific side and muscle insertions cannot be confirmed from the photograph alone.",
+  "quality_flags": [
+    "marker_ambiguous",
+    "painted_area_not_visible"
+  ],
+  "_source": {
+    "id": "74af96683a55",
+    "file": "74af96683a55.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 5,
+    "model": "gpt-5.4-mini"
+  }
+}

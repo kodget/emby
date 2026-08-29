@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.72,
+    "y1": 0.78
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.42,
+    "y": 0.38,
+    "description": "Green-headed dressmaker pin inserted into the deep posterior neck / upper back region, target structure not clearly identifiable."
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the green pin.",
+  "main_answer": null,
+  "main_explanation": "The pin is placed in the posterior neck / upper thoracic region near the spinous processes and deep cervical musculature, but the exact target (nerve, muscle, or vertebral element) cannot be confidently determined from the image, and no question paper is visible to confirm the intended structure.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No legible question paper is present, the orientation of the prosection is unclear, and the structure indicated by the green pin cannot be confidently identified (could be a deep cervical muscle, a dorsal ramus of a spinal nerve, the accessory nerve, or a vertebral structure). A plausible guess would risk misleading students, so the structure is left null.",
+  "quality_flags": [
+    "no legible question paper",
+    "marker target ambiguous",
+    "specimen orientation unclear",
+    "composite of multiple cropped views",
+    "poor lighting in lower panels"
+  ],
+  "_source": {
+    "id": "9ec483b4f7ac",
+    "file": "9ec483b4f7ac.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 67,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

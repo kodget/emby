@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.48,
+    "y": 0.28,
+    "description": "Green-headed pin inserted into the pelvic floor region."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specific structure indicated by the pin cannot be confidently identified from the image alone without a question or clearer landmarks.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "Cannot confidently identify the specific structure marked by the green pin in the pelvic prosection. No question paper is visible to provide context.",
+  "quality_flags": [
+    "No question paper visible",
+    "Ambiguous marker location"
+  ],
+  "_source": {
+    "id": "c701451eaafd",
+    "file": "c701451eaafd.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 90,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

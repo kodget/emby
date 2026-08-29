@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "Scapula",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.15,
+    "x1": 0.45,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": "1) SIDE THE BONE (Please be specific) 2) HOW MANY OSSIFICATION CENTRES DOES IT HAVE ? 13",
+  "station_number": 13,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "1) Side the bone (Please be specific) 2) How many ossification centres does it have?",
+  "main_answer": "Right scapula. The scapula typically develops from 1 primary ossification center and 6-7 secondary ossification centers, totaling 7-8 centers.",
+  "main_explanation": "The specimen is a scapula, identified by its triangular shape, prominent spine, acromion, and coracoid process. To side the bone, the glenoid cavity (for articulation with the humerus) is always lateral, and the spine is posterior. In this anterior view, the glenoid cavity is on the right side of the bone, indicating it is a right scapula. The scapula has one primary ossification center for the body and several secondary centers for the coracoid process, acromion, vertebral border, inferior angle, and glenoid cavity, typically summing to 7 or more distinct centers.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following muscles attaches to the coracoid process of the scapula?",
+    "options": [
+      "Supraspinatus",
+      "Pectoralis minor",
+      "Teres major",
+      "Latissimus dorsi"
+    ],
+    "correct_index": 1,
+    "explanation": "The pectoralis minor muscle attaches to the coracoid process of the scapula. Other muscles attaching here include the coracobrachialis and the short head of the biceps brachii."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The scapula articulates directly with the sternum.",
+    "answer": false,
+    "explanation": "The scapula articulates with the clavicle at the acromioclavicular joint and with the humerus at the glenohumeral joint. It does not directly articulate with the sternum."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "dark_image",
+    "grainy_image"
+  ],
+  "_source": {
+    "id": "8bfbd81a6611",
+    "file": "8bfbd81a6611.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 17,
+    "model": "gemini-2.5-flash"
+  }
+}

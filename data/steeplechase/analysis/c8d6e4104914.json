@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "HISTOLOGY",
+  "histology_topic": "RESPIRATORY",
+  "region": "THORAX",
+  "specimen_label": "Labeled diagram of a bronchus",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.05,
+    "x1": 0.55,
+    "y1": 0.45
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(a) Identify the Structures labelled A B C D E",
+  "station_number": 48,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No physical marker (pin or probe) is present; the specimen is a printed diagram with handwritten labels A-E."
+  },
+  "structure": "Bronchus",
+  "main_question": "Identify the structures labelled A, B, C, D, and E on the diagram of the bronchus.",
+  "main_answer": null,
+  "main_explanation": "The image shows a schematic cross-section of a bronchus with labels A through E. Without a provided key or legend, the specific anatomical structures corresponding to each letter cannot be definitively identified.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is a defining characteristic of a bronchus that distinguishes it from a bronchiole?",
+    "options": [
+      "Presence of ciliated pseudostratified columnar epithelium",
+      "Presence of cartilage plates",
+      "Presence of goblet cells",
+      "Presence of smooth muscle"
+    ],
+    "correct_index": 1,
+    "explanation": "Bronchioles are defined by the absence of cartilage and glands. The presence of cartilage plates is a key feature of bronchi."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is a printed diagram rather than a physical slide or tissue section",
+    "Image appears to be a composite or collage of multiple views"
+  ],
+  "_source": {
+    "id": "c8d6e4104914",
+    "file": "c8d6e4104914.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 63,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

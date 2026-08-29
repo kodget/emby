@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Kidney",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.0,
+    "x1": 0.55,
+    "y1": 0.28
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A> How many pyramids are in the kidney? B> Identify the structure pinned.",
+  "station_number": 12,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.35,
+    "y": 0.05,
+    "description": "A green-headed pin is inserted into the upper pole of the kidney specimen."
+  },
+  "structure": "Renal pelvis",
+  "main_question": "Identify the structure pinned.",
+  "main_answer": "Renal pelvis",
+  "main_explanation": "The pin is located in the central concavity of the kidney (the hilum), where the renal pelvis is situated. The renal pelvis is the funnel-shaped proximal part of the ureter that collects urine from the calyces.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures drains directly into the renal pelvis?",
+    "options": [
+      "Renal artery",
+      "Major calyces",
+      "Renal vein",
+      "Ureter"
+    ],
+    "correct_index": 1,
+    "explanation": "The renal pelvis is formed by the convergence of the major calyces, which in turn are formed by the convergence of minor calyces. The ureter drains from the renal pelvis, not into it."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "very_dark",
+    "specimen_partially_out_of_frame"
+  ],
+  "_source": {
+    "id": "1ef8c4be10b6",
+    "file": "1ef8c4be10b6.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 133,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

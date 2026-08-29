@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) IDENTIFY THE PROBED SPACE? b) Embryonic origin of the pinned structure?",
+  "station_number": 9,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker visible on a specimen because no specimen is present."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image contains only the question paper and station number. The anatomical specimen required to answer the question is not visible in the frame.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 1.0,
+  "needs_review": true,
+  "review_reason": "The photograph shows only the question paper and station number. The anatomical specimen is not visible, making it impossible to verify the station or create a valid exam item.",
+  "quality_flags": [
+    "Specimen not visible",
+    "Photo of question paper only"
+  ],
+  "_source": {
+    "id": "9182011fcbbd",
+    "file": "9182011fcbbd.jpeg",
+    "width": 1580,
+    "height": 1052,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 12,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

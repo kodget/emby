@@ -1,0 +1,56 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "dissected limb specimen",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.15,
+    "x1": 1.0,
+    "y1": 0.66
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) IDENTIFY THE STRUCTURE PINNED BLUE\nb) What is the Nerve Supply of the Structure Pinned Blue\nc) IDENTIFY THE STRUCTURE TIED",
+  "station_number": 43,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.13,
+    "y": 0.36,
+    "description": "blue pin in a muscle on the left side of the specimen"
+  },
+  "structure": null,
+  "main_question": "Identify the structure pinned blue.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specimen is highly dried and lacks clear distinguishing landmarks to confidently identify the specific muscle pinned blue or the structure tied on the right. It appears to be a limb dissection (possibly thigh or arm), but the exact region and structures are ambiguous.",
+  "quality_flags": [
+    "blurred",
+    "specimen_obscured"
+  ],
+  "_source": {
+    "id": "e0424d802563",
+    "file": "e0424d802563.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 58,
+    "model": "gemini-3.5-flash"
+  }
+}

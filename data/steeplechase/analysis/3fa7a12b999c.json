@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "dissected upper limb",
+  "specimen_bbox": {
+    "x0": 0.14,
+    "y0": 0.31,
+    "x1": 1.0,
+    "y1": 0.68
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Identify the pinned structure?\nB) Identify the Neurovascular structures tied?",
+  "station_number": 30,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.22,
+    "y": 0.47,
+    "description": "A blue pin is inserted into the shoulder region, and a thread is tied around a structure in the axilla."
+  },
+  "structure": null,
+  "main_question": "Identify the pinned structure (A) and the tied neurovascular structure (B).",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which cord of the brachial plexus gives rise to the musculocutaneous nerve?",
+    "options": [
+      "Lateral cord",
+      "Medial cord",
+      "Posterior cord",
+      "Anterior cord"
+    ],
+    "correct_index": 0,
+    "explanation": "The musculocutaneous nerve arises from the lateral cord of the brachial plexus (C5-C7)."
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.4,
+  "needs_review": true,
+  "review_reason": "The specimen is heavily dried and degraded, making precise identification of the pinned shoulder structure and the tied axillary neurovascular structure highly ambiguous.",
+  "quality_flags": [
+    "specimen_degraded",
+    "marker_ambiguous"
+  ],
+  "_source": {
+    "id": "3fa7a12b999c",
+    "file": "3fa7a12b999c.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 38,
+    "model": "gemini-3.5-flash"
+  }
+}

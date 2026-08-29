@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Tongue",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.15,
+    "x1": 0.75,
+    "y1": 0.65
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": 30,
+  "marker": {
+    "present": true,
+    "type": "probe",
+    "x": 0.2,
+    "y": 0.35,
+    "description": "A metal probe or forceps is pointing to the anterior tip of the tongue."
+  },
+  "structure": "Tongue",
+  "main_question": "Identify the specimen shown.",
+  "main_answer": "Tongue",
+  "main_explanation": "The specimen is a gross anatomical section of a human tongue, showing the characteristic folds and papillae on the dorsal surface.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which muscle is primarily responsible for the protrusion of the tongue?",
+    "options": [
+      "Genioglossus",
+      "Hyoglossus",
+      "Styloglossus",
+      "Palatoglossus"
+    ],
+    "correct_index": 0,
+    "explanation": "The genioglossus muscle, when contracted, pulls the tongue forward and downward, resulting in protrusion."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is partially out of frame in the main view"
+  ],
+  "_source": {
+    "id": "e07c397ab76f",
+    "file": "e07c397ab76f.jpeg",
+    "width": 515,
+    "height": 686,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 10,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

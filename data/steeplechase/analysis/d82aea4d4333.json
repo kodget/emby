@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.18,
+    "y0": 0.27,
+    "x1": 0.68,
+    "y1": 0.58
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag, or paint mark is visible on the specimen in any frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "No question paper, station number, or marker is present, and the preserved tissue specimen cannot be confidently identified from the image. The image also appears to be a multi-panel composite rather than a single station photograph.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "No question paper, station number, or marker is visible. The specimen is a preserved tissue mass in a bowl but its exact identity (e.g. sectioned brain, preserved organ, or muscle) and orientation cannot be confirmed. The image is a multi-frame composite, which is atypical for a single OSPE station photo.",
+  "quality_flags": [
+    "no_question_paper",
+    "no_marker",
+    "multi_panel_composite_image",
+    "specimen_identity_uncertain",
+    "person_foot_in_frame"
+  ],
+  "_source": {
+    "id": "d82aea4d4333",
+    "file": "d82aea4d4333.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 2,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

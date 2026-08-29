@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Stomach",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.0,
+    "x1": 0.55,
+    "y1": 0.35
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) What is the length of the Organ? b) All parts of the Organ above are Mucosa in the Pylorus <T/F> a) 6 metre b) False (1st part of duodenum)",
+  "station_number": 30,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker (pin, arrow, or tag) is visible on the specimen."
+  },
+  "structure": "Stomach",
+  "main_question": "What is the length of the Organ?",
+  "main_answer": "6 metre",
+  "main_explanation": "The specimen is a stomach. The question asks for the length of the organ, and the provided answer on the paper is 6 metres. This is likely a trick question or refers to the entire alimentary canal, as the stomach itself is approximately 25 cm long.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is NOT a part of the stomach?",
+    "options": [
+      "Fundus",
+      "Body",
+      "Pylorus",
+      "Duodenum"
+    ],
+    "correct_index": 3,
+    "explanation": "The fundus, body, and pylorus are all parts of the stomach. The duodenum is the first part of the small intestine, which follows the stomach."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The first part of the duodenum is composed of mucosa.",
+    "answer": false,
+    "explanation": "The first part of the duodenum is a distinct anatomical region of the small intestine, not a part of the stomach. While it contains mucosa, the statement implies it is a part of the stomach's mucosa, which is incorrect."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is partially out of frame in the top-left view",
+    "Question paper is taped to the bench, not directly on the specimen"
+  ],
+  "_source": {
+    "id": "64220eeb0420",
+    "file": "64220eeb0420.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 35,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

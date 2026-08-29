@@ -1,0 +1,60 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Rib (isolated dry bone)",
+  "specimen_bbox": {
+    "x0": 0.04,
+    "y0": 0.01,
+    "x1": 0.82,
+    "y1": 0.49
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.36,
+    "y": 0.4,
+    "description": "Blue paint mark on the inferior surface of the rib shaft; intended target unclear (possibly the angle or a landmark)."
+  },
+  "structure": "Rib",
+  "main_question": "Identify the bone shown.",
+  "main_answer": "Rib",
+  "main_explanation": "The specimen is a single curved, flattened bone with a broad medial (sternal) end and a narrower lateral end, characteristic of a rib. The blue paint marks a point on the shaft, most likely the angle of the rib, though the exact target cannot be confirmed without the question paper.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "The angle of the rib is clinically important because it is a common site of which of the following?",
+    "options": [
+      "Fracture due to its change in curvature and relative weakness",
+      "Attachment of the xiphoid process",
+      "Origin of the intercostal muscles only",
+      "Formation of the costal cartilage"
+    ],
+    "correct_index": 0,
+    "explanation": "The angle of the rib is a frequent site of fracture because the change in curvature creates a mechanical weak point, especially in blunt chest trauma."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.55,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is visible, so the intended question is unknown. The blue paint mark's target (angle vs. other landmark) is ambiguous. The bone is confidently a rib, but the marked structure and exam question cannot be verified.",
+  "quality_flags": [
+    "No question paper visible in frame",
+    "No station number visible",
+    "Painted marker target ambiguous",
+    "Large empty white area in lower half of image"
+  ],
+  "_source": {
+    "id": "405ebc4edb6f",
+    "file": "405ebc4edb6f.jpeg",
+    "width": 768,
+    "height": 410,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 3,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

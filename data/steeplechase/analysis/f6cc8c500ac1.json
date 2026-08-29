@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.45
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag, or painted mark is visible indicating a specific structure."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a cadaveric prosection but contains no question paper, no station number, and no marker identifying a specific structure. Without these elements it cannot be used as a self-contained exam station, and the anatomical region cannot be confidently determined from the image alone.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "No question paper, no station number, and no marker are present. The anatomical region and the structure of interest cannot be confidently identified from the image. The lower portion of the image is blank white space, suggesting a cropping or capture error.",
+  "quality_flags": [
+    "No question paper visible",
+    "No station number visible",
+    "No marker indicating a specific structure",
+    "Lower half of image is blank white space",
+    "Anatomical region uncertain"
+  ],
+  "_source": {
+    "id": "f6cc8c500ac1",
+    "file": "f6cc8c500ac1.jpeg",
+    "width": 1904,
+    "height": 857,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 39,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

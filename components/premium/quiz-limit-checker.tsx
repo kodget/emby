@@ -1,5 +1,6 @@
 "use client";
 
+import { MONTHLY_PRICE_LABEL, YEARLY_PRICE_LABEL, formatNaira, yearlySavings } from "@/lib/pricing";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isPremium } from "@/lib/guards";
@@ -152,7 +153,7 @@ export function QuizLimitChecker({ children }: { children: React.ReactNode }) {
               </button>
 
               <p className="text-center text-sm text-muted-foreground mt-4">
-                Starting from ₦1,499/month
+                Starting from {MONTHLY_PRICE_LABEL}/month
               </p>
             </div>
           </div>

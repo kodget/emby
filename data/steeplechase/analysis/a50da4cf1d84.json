@@ -1,0 +1,62 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "Humerus",
+  "specimen_bbox": {
+    "x0": 0.04,
+    "y0": 0.08,
+    "x1": 0.96,
+    "y1": 0.58
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) WHAT PASSES THROUGH THE AREA PAINTED PINK B) WHAT PASSES THROUGH THE AREA PAINTED GREEN",
+  "station_number": 10,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.45,
+    "y": 0.45,
+    "description": "Faint pink paint on the posterior shaft of the humerus."
+  },
+  "structure": "Radial groove (spiral groove)",
+  "main_question": "What passes through the area painted pink?",
+  "main_answer": "Radial nerve and profunda brachii artery",
+  "main_explanation": "The pink paint indicates the radial groove (spiral groove) on the posterior aspect of the humeral shaft.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following is a common clinical sign of radial nerve injury at the level of the radial groove?",
+    "options": [
+      "A) Wrist drop",
+      "B) Claw hand",
+      "C) Ape hand",
+      "D) Winged scapula"
+    ],
+    "correct_index": 0,
+    "explanation": "Injury to the radial nerve in the radial groove often results in paralysis of the extensors of the wrist and fingers, leading to a characteristic 'wrist drop'."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The radial nerve is a terminal branch of the posterior cord of the brachial plexus.",
+    "answer": true,
+    "explanation": "The radial nerve originates from the posterior cord of the brachial plexus, receiving fibers from C5-T1."
+  },
+  "confidence": 0.7,
+  "needs_review": true,
+  "review_reason": "The image contains two questions (A and B) referring to two painted areas (pink and green). The schema only supports a single marked structure and main question. I have addressed question A, which refers to the pink mark on the humeral shaft, interpreted as the radial groove. The green painted area (for question B) is extremely faint and its exact location and anatomical significance are unclear, making it difficult to formulate a reliable question or answer for it.",
+  "quality_flags": [
+    "marker ambiguous",
+    "multiple questions for a single station",
+    "faint marker"
+  ],
+  "_source": {
+    "id": "a50da4cf1d84",
+    "file": "a50da4cf1d84.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 13,
+    "model": "gemini-2.5-flash"
+  }
+}

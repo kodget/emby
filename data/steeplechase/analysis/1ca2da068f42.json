@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "6. IDENTIFY THE AREA PINNED 7. IDENTIFY THE AREA PINNED",
+  "station_number": 37,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only the question paper and the station number card. The anatomical specimen that the questions refer to is not visible in the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 1.0,
+  "needs_review": true,
+  "review_reason": "The image contains only the question paper and station number; the anatomical specimen is completely missing from the frame, making it impossible to create a valid exam station.",
+  "quality_flags": [
+    "Specimen not visible",
+    "Only question paper shown"
+  ],
+  "_source": {
+    "id": "1ca2da068f42",
+    "file": "1ca2da068f42.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 109,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -10,44 +10,36 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { paymentApi, authApi } from '@/lib/api';
+import { MONTHLY, YEARLY, formatNaira, yearlySavings } from '@/lib/pricing';
 import { useToast } from '@/hooks/use-toast';
 
+// Only the plans the server actually sells. The 3- and 6-month options listed here
+// previously had no counterpart in the backend catalogue, so checkout could not honour
+// them. Prices come from lib/pricing.
 const subscriptionPlans = [
   {
-    months: 1,
-    price: 1499,
+    months: MONTHLY.months,
+    price: MONTHLY.amountNaira,
     label: '1 Month',
     savings: null,
   },
   {
-    months: 3,
-    price: 4497,
-    label: '3 Months',
-    savings: null,
-  },
-  {
-    months: 6,
-    price: 8994,
-    label: '6 Months',
-    savings: null,
-  },
-  {
-    months: 12,
-    price: 15000,
+    months: YEARLY.months,
+    price: YEARLY.amountNaira,
     label: '12 Months',
-    savings: 'Save 17%',
+    savings: `Save ${formatNaira(yearlySavings())}`,
   },
 ];
 
+// Every line here maps to something that is actually implemented.
 const premiumFeatures = [
-  'Unlimited course materials access',
-  'Unlimited AI tutor queries',
-  'Advanced progress analytics',
-  'Custom study plans',
-  'Offline access to materials',
-  'Priority customer support',
-  'Ad-free experience',
-  'Early access to new features',
+  'Unlimited Steeplechase and Histology rounds',
+  'Full question bank, not just the free sample',
+  'Theory questions with AI marking and feedback',
+  'A far larger monthly AI credit allowance',
+  'Detailed performance and weak-area analysis',
+  'Unlimited study plan items',
+  'Full community posting, likes and comments',
 ];
 
 export default function PaymentPage() {

@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.18,
+    "y0": 0.18,
+    "x1": 1.0,
+    "y1": 0.78
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.36,
+    "y": 0.46,
+    "description": "Two dressmaker pins (green-headed and blue-headed) placed on the facial bones/soft tissue of a cadaveric head prosection; the green pin is on the zygomatic/infraorbital region and the blue pin on the adjacent maxillary/zygomatic area."
+  },
+  "structure": null,
+  "main_question": "Identify the bony structures indicated by the pins on this facial prosection.",
+  "main_answer": null,
+  "main_explanation": "The prosection shows the lateral face with the orbit, zygomatic bone and maxilla. The pins mark structures in the zygomatic/maxillary region, but the oblique angle and lack of a legible question paper make the exact intended landmark uncertain.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.4,
+  "needs_review": true,
+  "review_reason": "The exact structures marked by the green and blue pins cannot be confidently identified from this oblique, partially out-of-focus view, and no legible handwritten question paper is present in the frame. The specimen orientation (left vs right side) is also unclear.",
+  "quality_flags": [
+    "oblique viewing angle",
+    "no legible question paper visible",
+    "marker target ambiguous",
+    "specimen partially out of frame at right edge"
+  ],
+  "_source": {
+    "id": "b7abcf9a0ba4",
+    "file": "b7abcf9a0ba4.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 14,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

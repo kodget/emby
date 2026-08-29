@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull",
+  "specimen_bbox": {
+    "x0": 0.26,
+    "y0": 0.24,
+    "x1": 0.72,
+    "y1": 0.58
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) The foramen to B) Identify the process through the bone",
+  "station_number": 38,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.33,
+    "y": 0.52,
+    "description": "Blue-headed pin indicating a foramen on the lateral aspect of the skull base"
+  },
+  "structure": "Foramen ovale",
+  "main_question": "Identify the foramen indicated by the blue pin.",
+  "main_answer": "Foramen ovale",
+  "main_explanation": "The pin is located in the posterior part of the middle cranial fossa, anterior to the foramen spinosum and posterior to the foramen rotundum. This position corresponds to the foramen ovale, which transmits the mandibular division of the trigeminal nerve (V3).",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures passes through the foramen indicated by the pin?",
+    "options": [
+      "Maxillary nerve (V2)",
+      "Mandibular nerve (V3)",
+      "Facial nerve (CN VII)",
+      "Glossopharyngeal nerve (CN IX)"
+    ],
+    "correct_index": 1,
+    "explanation": "The foramen ovale transmits the mandibular nerve (V3), the accessory meningeal artery, and the lesser petrosal nerve. The maxillary nerve (V2) passes through the foramen rotundum, which is located more anteriorly."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The foramen indicated by the pin is located in the greater wing of the sphenoid bone.",
+    "answer": true,
+    "explanation": "The foramen ovale is a large opening in the greater wing of the sphenoid bone."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is partially obscured by the question paper in the main view"
+  ],
+  "_source": {
+    "id": "0cb432ff7d28",
+    "file": "0cb432ff7d28.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 5,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

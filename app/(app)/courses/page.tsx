@@ -297,6 +297,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   BookOpen,
+  ChevronRight,
   FileText,
   Loader2,
   Brain,
@@ -559,24 +560,23 @@ export default function CoursesPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="mb-2 font-serif text-4xl font-bold">My Courses</h1>
-
-        <p className="text-muted-foreground">
-          Click on any course to view materials and start reading
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
+      <header className="mb-4">
+        <h1 className="font-display text-2xl tracking-tight sm:text-3xl">My courses</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {courseCards.length} course{courseCards.length === 1 ? "" : "s"} available to read.
         </p>
-      </div>
+      </header>
 
-      {/* Filter Buttons */}
-      <div className="mb-8 flex flex-wrap gap-2">
+      {/* Filters. The per-subject pills used to carry their own saturated gradient
+          (orange, fuchsia, violet), so the page never matched the rest of the app. */}
+      <div className="mb-4 flex flex-wrap gap-1.5">
         <button
           onClick={() => setSelectedSubject("all")}
-          className={`rounded-full px-4 py-2 font-medium transition-all ${
+          className={`press rounded-full px-3.5 py-1.5 text-sm transition-colors ${
             selectedSubject === "all"
-              ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg"
-              : "border border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+              ? "bg-primary text-primary-foreground"
+              : "border border-border bg-card text-muted-foreground hover:border-primary/45"
           }`}
         >
           All Courses ({courseCards.length})
@@ -596,13 +596,12 @@ export default function CoursesPage() {
             <button
               key={subject.id}
               onClick={() => setSelectedSubject(subject.id)}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 font-medium transition-all ${
+              className={`press flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm transition-colors ${
                 selectedSubject === subject.id
-                  ? `bg-gradient-to-r ${theme.color} text-white shadow-lg`
-                  : `border ${theme.border} bg-card ${theme.text} hover:${theme.bgLight}`
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border bg-card text-muted-foreground hover:border-primary/45"
               }`}
             >
-              <BookOpen className="size-4" />
               {subject.name} ({count})
             </button>
           );
@@ -621,73 +620,44 @@ export default function CoursesPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        /* These were half-screen cards on a phone: two filled the viewport, and each
+           carried one real word. The hierarchy was also inverted — every card shouted
+           "Block 1" while the name that actually distinguishes it (Upper Limb, Thorax)
+           sat underneath as small grey text. Rows now lead with the distinguishing
+           name, demote subject and block to a meta line, and drop the "Click to view
+           materials" filler that said the same nothing on every card. */
+        <div className="grid gap-2.5 md:grid-cols-2">
           {filteredCards.map((card) => {
             const theme = subjectThemes[card.subject.id];
 
             if (!theme) return null;
 
             const BlockIcon = getBlockIcon(card.block.name);
+            const title = card.section?.name || card.topic?.name || card.block.name;
+            const meta = [card.subject.name, card.block.name]
+              .filter(Boolean)
+              .join(" · ");
 
             return (
               <Link
                 key={card.id}
                 href={card.path}
-                className={`group rounded-2xl ${theme.bgDark} p-5 transition-all hover:shadow-xl`}
+                className="press card-3d card-3d-hover group flex items-center gap-3 p-3.5"
               >
-                {/* Icon & Header */}
-                <div className="mb-4 flex items-start gap-3">
-                  <div
-                    className={`flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${theme.color} text-white shadow-md transition-transform group-hover:scale-110`}
-                  >
-                    <BlockIcon className="size-6" />
-                  </div>
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <BlockIcon className="size-5" />
+                </span>
 
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className={`mb-1 flex items-center gap-1.5 text-xs font-semibold ${theme.text}`}
-                    >
-                      <BookOpen className="size-3" />
-                      {card.subject.name}
-                    </div>
-
-                    <h3 className="font-serif text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
-                      {card.block.name}
-                    </h3>
-                  </div>
-                </div>
-
-                {/* Details */}
-                <div className="mb-4 space-y-2 text-sm">
-                  {card.topic && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <div className={`size-1.5 rounded-full ${theme.text}`} />
-                      <span>{card.topic.name}</span>
-                    </div>
-                  )}
-
-                  {card.section && (
-                    <div
-                      className={`flex items-center gap-2 font-medium ${theme.text}`}
-                    >
-                      <FileText className="size-4" />
-                      <span>{card.section.name}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer */}
-                <div className="flex items-center justify-between border-t border-border/50 pt-3 text-xs">
-                  <span className="text-muted-foreground">
-                    Click to view materials
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-display text-[15px] leading-tight">
+                    {title}
                   </span>
-
-                  <span
-                    className={`font-bold ${theme.text} transition-transform group-hover:translate-x-1`}
-                  >
-                    →
+                  <span className="block truncate text-[12px] text-muted-foreground">
+                    {meta}
                   </span>
-                </div>
+                </span>
+
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </Link>
             );
           })}

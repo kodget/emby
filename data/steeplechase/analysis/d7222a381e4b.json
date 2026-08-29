@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.3,
+    "y0": 0.08,
+    "x1": 0.78,
+    "y1": 0.52
+  },
+  "question_paper_present": true,
+  "transcribed_question": "The pinned structure",
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.68,
+    "y": 0.45,
+    "description": "A green-headed pin is inserted into the posterior aspect of the bone specimen."
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": null,
+  "main_explanation": "The specimen appears to be a section of a long bone with a large, flat articular surface (possibly a patella or a distal femoral condyle), but the specific anatomical landmark indicated by the pin cannot be definitively identified from the image orientation and resolution.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specific bone and the anatomical landmark indicated by the pin are not clearly identifiable. The image is a composite or contains multiple views, and the specimen orientation is ambiguous.",
+  "quality_flags": [
+    "composite_image",
+    "low_resolution",
+    "ambiguous_specimen_orientation"
+  ],
+  "_source": {
+    "id": "d7222a381e4b",
+    "file": "d7222a381e4b.jpeg",
+    "width": 562,
+    "height": 456,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 16,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

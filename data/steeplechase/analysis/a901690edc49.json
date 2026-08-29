@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.36,
+    "x1": 0.62,
+    "y1": 0.72
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.5,
+    "y": 0.53,
+    "description": "Blue-headed dressmaker pin inserted into the specimen near the ear/neck region; a second green-headed pin is also visible."
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": null,
+  "main_explanation": "The image shows a preserved head/neck prosection with the external ear (pinna) visible and one or more coloured pins marking a structure in the adjacent region. The exact structure indicated by the pin cannot be confidently identified from the available views, so the answer is left null pending review.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No question paper or station number is visible. The specimen is a head/neck prosection but the orientation is unclear and the structure marked by the pin cannot be confidently identified from the cropped, low-quality composite image. The specimen is also partly out of frame in several panels.",
+  "quality_flags": [
+    "specimen partly out of frame",
+    "no question paper visible",
+    "no station number visible",
+    "low image quality / composite of multiple crops",
+    "marker structure ambiguous"
+  ],
+  "_source": {
+    "id": "a901690edc49",
+    "file": "a901690edc49.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 51,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "Cadaveric forearm and hand prosection",
+  "specimen_bbox": {
+    "x0": 0.03,
+    "y0": 0.0,
+    "x1": 0.95,
+    "y1": 0.6
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(A) Identify the Pinned Structure (Green)\n(B) Identify the Structures tied A",
+  "station_number": 22,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.3,
+    "y": 0.3,
+    "description": "Green pin"
+  },
+  "structure": "Tendon of flexor carpi radialis",
+  "main_question": "Identify the structure indicated by the green pin.",
+  "main_answer": "Tendon of flexor carpi radialis",
+  "main_explanation": "The green pin indicates the tendon of the flexor carpi radialis muscle. This tendon is located on the anterior aspect of the distal forearm, slightly radial to the midline, and inserts primarily into the base of the second metacarpal.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following statements about the flexor carpi radialis tendon is true?",
+    "options": [
+      "It is typically innervated by the ulnar nerve.",
+      "It passes through the carpal tunnel.",
+      "It inserts primarily into the base of the second and third metacarpals.",
+      "It originates from the lateral epicondyle of the humerus."
+    ],
+    "correct_index": 2,
+    "explanation": "The flexor carpi radialis is innervated by the median nerve, not the ulnar nerve. It passes through its own fibrous sheath lateral to the carpal tunnel, not through the carpal tunnel itself. It originates from the medial epicondyle of the humerus, not the lateral. Its primary insertion is into the base of the second and often the third metacarpals."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The flexor carpi radialis tendon passes through the carpal tunnel.",
+    "answer": false,
+    "explanation": "The flexor carpi radialis tendon passes through a separate compartment formed by the flexor retinaculum, lateral to the carpal tunnel, and runs in a groove on the trapezium. It does not pass through the carpal tunnel itself."
+  },
+  "confidence": 0.7,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "specimen_condition_poor",
+    "question_paper_illegible_partially"
+  ],
+  "_source": {
+    "id": "c9a6f8dcfbd4",
+    "file": "c9a6f8dcfbd4.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 27,
+    "model": "gemini-2.5-flash"
+  }
+}

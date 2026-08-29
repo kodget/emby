@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.18,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.62
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": 40,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.52,
+    "y": 0.42,
+    "description": "Two coloured-headed dressmaker pins (blue and green) are placed in the prosection; the green pin appears to mark a specific structure, but the exact target is not confidently identifiable."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The prosection appears to be a pelvic or lower abdominal region, but the orientation and the specific structures indicated by the pins cannot be confidently identified from the photograph. The handwritten question on the paper is not legible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The anatomical region and the specific structures marked by the pins cannot be confidently identified from the photograph. The handwritten question on the paper is illegible, and the orientation of the prosection is unclear. A null answer is preferred over a guess.",
+  "quality_flags": [
+    "question paper text illegible",
+    "marked structure ambiguous",
+    "specimen orientation unclear",
+    "poor framing - specimen partially out of context"
+  ],
+  "_source": {
+    "id": "76737c3f5ad1",
+    "file": "76737c3f5ad1.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 7,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

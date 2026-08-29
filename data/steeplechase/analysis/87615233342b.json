@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.1,
+    "x1": 0.6,
+    "y1": 0.32
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag, or painted mark indicating a specific structure is visible. There are red and black painted areas on the specimen, but no clear marker pointing to a named anatomical feature."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a curved, pale, elongated structure (possibly a bone or a preserved organ/tendon) held by a hand on a wooden bench, with red and black paint marks. However, there is no legible question paper, no station number, and no clear marker (pin/arrow/thread) indicating which structure is being tested. The identity of the specimen is uncertain, so no reliable exam question can be constructed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "Specimen identity is unclear (could be a bone, a preserved organ, or a model). No legible question paper or station number is visible. The red and black paint marks do not correspond to a standard marker type, and it is impossible to determine which structure is being tested. A plausible guess would be a serious error.",
+  "quality_flags": [
+    "no legible question paper",
+    "no station number visible",
+    "specimen identity uncertain",
+    "marker ambiguous (painted marks only, no pin/arrow/thread)",
+    "hand partially obscures the specimen"
+  ],
+  "_source": {
+    "id": "87615233342b",
+    "file": "87615233342b.jpeg",
+    "width": 768,
+    "height": 404,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 36,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

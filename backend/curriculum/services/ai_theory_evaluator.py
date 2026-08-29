@@ -1,81 +1,62 @@
 """
 AI Theory Evaluator Service
 
-Evaluates theory question answers using Google Gemini AI.
-Provides structured feedback and scoring based on marking rubrics.
+Scores theory answers against a marking rubric and returns structured feedback.
+Runs on an OpenAI-compatible open-weight model via curriculum.llm (Groq by default),
+with automatic model and provider failover. Google Gemini is no longer used.
 """
 
-import os
 import json
 import logging
 from typing import Dict, Any, Optional
 
+from .. import llm
+
 logger = logging.getLogger(__name__)
 
 
-class Gemini429Exception(Exception):
-    """Raised when Gemini API returns 429 rate limit error."""
-    pass
+class RateLimitExceeded(Exception):
+    """Raised when every configured LLM provider is rate-limited."""
+
+
+# Historical name kept so the Celery retry paths in tasks.py keep working unchanged.
+Gemini429Exception = RateLimitExceeded
 
 
 def _get_api_key():
-    """Get Gemini API key from settings or environment."""
-    try:
-        from django.conf import settings
-        key = getattr(settings, "GEMINI_API_KEY", "") or ""
-    except Exception:
-        key = ""
-    return key or os.getenv("GEMINI_API_KEY", "")
+    """Deprecated shim; see curriculum.llm."""
+    return llm.api_key()
 
 
-def _get_client():
-    """Initialize Gemini client."""
-    api_key = _get_api_key()
-    if not api_key:
-        raise RuntimeError(
-            "GEMINI_API_KEY is not configured. Add it to your .env file."
-        )
-    from google import genai
-    return genai.Client(api_key=api_key)
+def _strip_json_fences(text) -> str:
+    """Remove markdown code fences the model sometimes wraps JSON in."""
+    return llm.strip_fences(text)
 
 
-def _strip_json_fences(text):
-    """Remove markdown code fences from JSON responses."""
-    text = (text or "").strip()
-    if text.startswith("```"):
-        lines = text.split("\n")
-        lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        text = "\n".join(lines)
-    return text.strip()
-
-
-def _generate(parts, model="gemini-3.6-flash"):
+def _generate(parts: list, model=None) -> str:
     """
-    Call Gemini API with text parts.
-    Raises Gemini429Exception on rate limit errors.
-    """
-    client = _get_client()
-    from google.genai import types
-    
-    try:
-        content_parts = []
-        for part in parts:
-            if isinstance(part, str):
-                content_parts.append(types.Part.from_text(text=part))
+    Run a completion against the configured open-weight model.
 
-        response = client.models.generate_content(
+    Keeps the original `parts` list signature so every call site is unchanged.
+    Raises RateLimitExceeded (aliased as Gemini429Exception for the existing Celery
+    retry logic in tasks.py) when every provider in the chain is rate-limited.
+    """
+    prompt = "\n\n".join(p for p in parts if isinstance(p, str) and p).strip()
+    if not prompt:
+        raise llm.LLMError("Refusing to call the model with an empty prompt.")
+
+    try:
+        return llm.chat(
+            [{"role": "user", "content": prompt}],
             model=model,
-            contents=content_parts,
+            temperature=0.5,
+            max_tokens=4096,
         )
-        return response.text or ""
-    
-    except Exception as e:
-        error_str = str(e).lower()
-        if "429" in error_str or "quota" in error_str or "rate limit" in error_str:
-            logger.warning(f"Gemini 429 rate limit hit: {e}")
-            raise Gemini429Exception(f"Rate limit exceeded: {e}")
+    except llm.LLMError as e:
+        text = str(e).lower()
+        if "429" in text or "rate limit" in text or "quota" in text:
+            logger.warning("LLM rate limited across all providers: %s", e)
+            raise RateLimitExceeded(str(e)) from e
         raise
 
 

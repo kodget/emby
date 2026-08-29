@@ -1,0 +1,64 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "dry bone specimen",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.18,
+    "x1": 0.73,
+    "y1": 0.73
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Specifically identify the specimen\nB) Name from the lateral and medial parts that leads to?\nC) Conspicuous absence of the specimen is called?",
+  "station_number": 6,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "Specifically identify the specimen.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which bone is classically associated with a shaft fracture known as a fracture of the 'nightstick' type?",
+    "options": [
+      "Ulna",
+      "Radius",
+      "Humerus",
+      "Clavicle"
+    ],
+    "correct_index": 0,
+    "explanation": "A direct blow to the exposed subcutaneous border of the ulna can produce a nightstick fracture."
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.24,
+  "needs_review": true,
+  "review_reason": "The specimen is blurred and partly obscured by a hand; the exact bone cannot be identified confidently. No clear marker indicates a specific structure, and the handwritten question is only partially legible.",
+  "quality_flags": [
+    "blurred",
+    "specimen partly obscured by hand",
+    "question paper obscures part of specimen",
+    "marker ambiguous",
+    "handwritten question partly illegible"
+  ],
+  "_source": {
+    "id": "1a9a34fe87ae",
+    "file": "1a9a34fe87ae.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 7,
+    "model": "gpt-5.4-mini"
+  }
+}

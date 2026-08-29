@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.28,
+    "y0": 0.24,
+    "x1": 1.0,
+    "y1": 0.62
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.55,
+    "y": 0.33,
+    "description": "Green-headed dressmaker pin inserted into the prosection, but the exact structure it indicates is not identifiable from the image."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The prosection is visible and a pin marks a structure, but the orientation, region, and the specific structure indicated by the pin cannot be confidently determined from the photograph. No question paper is present to provide context.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The anatomical region and the specific structure indicated by the pin cannot be confidently identified. The image is a close-up of a preserved prosection without clear landmarks, no question paper, and no station number. The pin's target is ambiguous.",
+  "quality_flags": [
+    "no question paper visible",
+    "no station number visible",
+    "structure indicated by pin is ambiguous",
+    "orientation of prosection unclear",
+    "specimen partially out of frame"
+  ],
+  "_source": {
+    "id": "fb49f5d1a7e4",
+    "file": "fb49f5d1a7e4.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 9,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

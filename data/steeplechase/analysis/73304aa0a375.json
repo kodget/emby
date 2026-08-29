@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "bone fragment",
+  "specimen_bbox": {
+    "x0": 0.34,
+    "y0": 0.24,
+    "x1": 0.56,
+    "y1": 0.41
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(A) Identify this bone (Be Specific)\n(B) What structure is related to the area painted red?",
+  "station_number": 15,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.49,
+    "y": 0.35,
+    "description": "Red painted area on the bone fragment"
+  },
+  "structure": null,
+  "main_question": "What structure is related to the area painted red?",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The bone fragment is poorly preserved, blurry, and partially obscured by the hand. It is not possible to confidently identify the specific bone or the exact anatomical feature marked by the red paint.",
+  "quality_flags": [
+    "blurred",
+    "specimen mostly out of frame",
+    "marker ambiguous",
+    "poor preservation"
+  ],
+  "_source": {
+    "id": "73304aa0a375",
+    "file": "73304aa0a375.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 20,
+    "model": "gemini-2.5-flash"
+  }
+}

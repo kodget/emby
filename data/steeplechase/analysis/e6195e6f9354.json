@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Preserved (mummified) human head and upper neck prosection",
+  "specimen_bbox": {
+    "x0": 0.25,
+    "y0": 0.13,
+    "x1": 0.72,
+    "y1": 0.72
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.36,
+    "y": 0.2,
+    "description": "Green-headed dressmaker pin in the forehead region; a second blue-headed pin is present near the chin/mandible."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a heavily desiccated preserved head. The pins appear to mark a forehead structure and a mandibular/chin structure, but the tissue is too degraded to identify the exact anatomical structure with confidence, and no question paper is present to clarify the intended target.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "Specimen is a desiccated/mummified head; the exact structures indicated by the green and blue pins cannot be confidently identified. No question paper or station number is visible. The image also appears to be a composite of multiple crops of the same specimen, which is atypical for a single exam station.",
+  "quality_flags": [
+    "Specimen heavily desiccated, limiting fine anatomical identification",
+    "No legible question paper or station number visible",
+    "Image appears to be a composite of multiple cropped views of the same specimen",
+    "Marker target structure ambiguous"
+  ],
+  "_source": {
+    "id": "e6195e6f9354",
+    "file": "e6195e6f9354.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 6,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

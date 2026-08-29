@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "23 (A) What structure bears the green pin? (B) What space bears the red pin?",
+  "station_number": 23,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only the question paper and the surrounding floor/bench. The anatomical specimen and the pins mentioned in the question are not visible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image does not contain the anatomical specimen or the markers (pins) referenced in the question paper. It is likely a mis-photographed station or the camera was pointed at the paper only.",
+  "quality_flags": [
+    "Specimen not visible",
+    "Marker not visible",
+    "Photo shows only question paper and floor"
+  ],
+  "_source": {
+    "id": "a38e2d0dd72b",
+    "file": "a38e2d0dd72b.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 10,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "dissected forearm and hand",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.0,
+    "x1": 0.61,
+    "y1": 0.57
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What is the insertion of the structure pinned GREEN\nB) IDENTIFY THE TIED STRUCTURE\nC) What is the origin of the Tied Structure",
+  "station_number": 42,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.42,
+    "y": 0.14,
+    "description": "Green pin in the proximal forearm muscle"
+  },
+  "structure": null,
+  "main_question": "What is the insertion of the structure pinned green?",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.5,
+  "needs_review": true,
+  "review_reason": "The specific muscles pinned (green pin) and tied (thread) cannot be confidently identified due to the angle of the photograph and the state of the dissection.",
+  "quality_flags": [
+    "ambiguous_marker"
+  ],
+  "_source": {
+    "id": "5fa59c8700a0",
+    "file": "5fa59c8700a0.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 57,
+    "model": "gemini-3.5-flash"
+  }
+}

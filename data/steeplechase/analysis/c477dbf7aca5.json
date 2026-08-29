@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull base and Temporomandibular Joint (TMJ)",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.58,
+    "y": 0.42,
+    "description": "Teal dot marking the temporal bone surface near the TMJ."
+  },
+  "structure": "Mandibular fossa (Glenoid fossa)",
+  "main_question": "Identify the bony structure indicated by the teal marker.",
+  "main_answer": "Mandibular fossa (Glenoid fossa) of the temporal bone",
+  "main_explanation": "The marker is located on the temporal bone, specifically in the depression that articulates with the mandibular condyle, known as the mandibular or glenoid fossa.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which nerve provides the primary sensory innervation to the temporomandibular joint?",
+    "options": [
+      "Auriculotemporal nerve",
+      "Masseteric nerve",
+      "Deep temporal nerves",
+      "Buccal nerve"
+    ],
+    "correct_index": 0,
+    "explanation": "The auriculotemporal nerve, a branch of the mandibular division of the trigeminal nerve (V3), provides the main sensory supply to the TMJ."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.85,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "No question paper visible",
+    "Marker is a small dot, potentially ambiguous without context"
+  ],
+  "_source": {
+    "id": "c477dbf7aca5",
+    "file": "c477dbf7aca5.jpeg",
+    "width": 1135,
+    "height": 1071,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 17,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

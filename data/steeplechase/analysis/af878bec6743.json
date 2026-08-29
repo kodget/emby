@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.2,
+    "y0": 0.05,
+    "x1": 0.5,
+    "y1": 0.4
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(a) what is this anomaly (b) what is the embryological basis",
+  "station_number": 3,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker present; the image is a diagram on paper."
+  },
+  "structure": null,
+  "main_question": "What is the anomaly depicted in the diagram?",
+  "main_answer": null,
+  "main_explanation": "The image shows a hand-drawn diagram of a limb with a bifurcated distal segment, but without a label or more context, the specific anomaly cannot be definitively identified (e.g., polydactyly, cleft hand, or a specific malformation).",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.4,
+  "needs_review": true,
+  "review_reason": "The image is a photograph of a paper with a hand-drawn diagram rather than a physical specimen, radiograph, or histology slide. The specific anatomical anomaly depicted is ambiguous without further context.",
+  "quality_flags": [
+    "Image is a photo of a paper drawing",
+    "Diagram is ambiguous"
+  ],
+  "_source": {
+    "id": "af878bec6743",
+    "file": "af878bec6743.jpeg",
+    "width": 3200,
+    "height": 2299,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 82,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

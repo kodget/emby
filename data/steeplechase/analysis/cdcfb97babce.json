@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Heart",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.4
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, or tag is visible in the image."
+  },
+  "structure": "Heart",
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a gross specimen of a heart, but there is no question paper or marker to indicate a specific exam question.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": true,
+  "review_reason": "Image is a collage of three views of a heart specimen without any question paper, station number, or specific marker. It does not meet the criteria for a complete exam station.",
+  "quality_flags": [
+    "No question paper present",
+    "No marker present",
+    "Image is a collage of multiple views"
+  ],
+  "_source": {
+    "id": "cdcfb97babce",
+    "file": "cdcfb97babce.jpeg",
+    "width": 1555,
+    "height": 656,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 21,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

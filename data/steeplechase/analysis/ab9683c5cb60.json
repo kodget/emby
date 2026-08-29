@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Inferior pubic ramus",
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.45,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(a) What is the name of the passage related to the area painted 'BLUE'?\n(c) What are the contents of the passage related to area painted 'BLUE'",
+  "station_number": 12,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.24,
+    "y": 0.48,
+    "description": "Blue paint applied to the inferior surface of the inferior pubic ramus, indicating the location of the obturator canal."
+  },
+  "structure": "Obturator canal",
+  "main_question": "What is the name of the passage related to the area painted 'BLUE'?",
+  "main_answer": "Obturator canal",
+  "main_explanation": "The blue paint is located on the inferior surface of the inferior pubic ramus, which forms the superior boundary of the obturator canal. The obturator canal is a passage that transmits the obturator nerve and vessels from the pelvis to the medial thigh.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures passes through the obturator canal?",
+    "options": [
+      "Obturator nerve and vessels",
+      "Femoral nerve and vessels",
+      "Inferior gluteal nerve and vessels",
+      "Lateral femoral cutaneous nerve"
+    ],
+    "correct_index": 0,
+    "explanation": "The obturator nerve and the obturator artery and vein pass through the obturator canal to enter the medial compartment of the thigh."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "ab9683c5cb60",
+    "file": "ab9683c5cb60.jpeg",
+    "width": 1316,
+    "height": 2328,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 16,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

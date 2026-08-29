@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Cadaveric prosection of pelvic region",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.05,
+    "x1": 0.35,
+    "y1": 0.4
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A - LUMEN OF THE LUMBAR DRAINAGE OF THIS AREA\nB - LUMEN OF PROOF SUPPLIED THE ARTERY (PRINCIPAL) BLUE\nC) IDENTIFY THE STRUCTURED (GREEN)\na) Para aortic lymph node\nb) Artery to the bulb of penis\nc) Tunica albuginea",
+  "station_number": 39,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.28,
+    "y": 0.1,
+    "description": "Two pins (blue and green/yellow) inserted into the specimen."
+  },
+  "structure": "Tunica albuginea",
+  "main_question": "Identify the structure indicated by the green pin.",
+  "main_answer": "Tunica albuginea",
+  "main_explanation": "The question paper lists 'Tunica albuginea' as option (c) for the structure indicated by the green pin. The specimen appears to be a section of the penis or scrotum.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What is the primary function of the tunica albuginea?",
+    "options": [
+      "To provide a pathway for the urethra",
+      "To provide structural support and maintain the shape of the organ",
+      "To produce spermatozoa",
+      "To secrete testosterone"
+    ],
+    "correct_index": 1,
+    "explanation": "The tunica albuginea is a dense fibrous capsule that surrounds the erectile tissue of the penis (or the testis), providing structural integrity and support."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is partially out of frame in the top-left",
+    "Handwritten text is slightly difficult to read in places"
+  ],
+  "_source": {
+    "id": "e89fc2d05dc2",
+    "file": "e89fc2d05dc2.jpeg",
+    "width": 2360,
+    "height": 1380,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 45,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

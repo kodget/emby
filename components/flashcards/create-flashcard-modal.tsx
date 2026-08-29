@@ -1,12 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, X } from "lucide-react";
-import { flashcardApi, type Flashcard } from "@/lib/api";
-import { loadCurriculum, type SubjectId, type BlockId, type TopicId, type Subject } from "@/lib/curriculum";
+/**
+ * Create a flashcard by hand.
+ *
+ * The categorisation here used to be wrong in a way that quietly corrupted data. The
+ * curriculum is Subject -> Block -> SubBlock -> Topic, and `loadCurriculum()` builds
+ * `block.subBlocks[]` (each carrying its own `topics[]`) alongside `block.topics[]` for
+ * topics that hang directly off a block. The old form ignored `subBlocks` entirely: it
+ * listed `block.topics`, labelled them "Topic", and then submitted the chosen id as
+ * `sub_block` — a Topic primary key written into a SubBlock foreign key. It then offered
+ * a "Section" picker reading `topic.sections`, a field that does not exist on any type or
+ * any API response, so it never rendered and the real `topic` field could never be set.
+ *
+ * This walks the actual hierarchy. Sub-block and topic are both optional, because a card
+ * filed at block level is better than one filed under the wrong parent.
+ */
+
+import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +27,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { flashcardApi, type Flashcard } from "@/lib/api";
+import {
+  loadCurriculum,
+  type BlockId,
+  type Subject,
+  type SubjectId,
+} from "@/lib/curriculum";
+import { cn } from "@/lib/utils";
 
 interface CreateFlashcardModalProps {
   onCreated?: (card: Flashcard) => void;
@@ -41,21 +64,26 @@ export function CreateFlashcardModal({
   const [curriculum, setCurriculum] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<SubjectId | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<BlockId | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<TopicId | null>(null);
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [selectedSubBlock, setSelectedSubBlock] = useState<string | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) {
-      loadCurriculum().then(setCurriculum).catch(console.error);
-    }
+    if (open) loadCurriculum().then(setCurriculum).catch(console.error);
   }, [open]);
 
-  const subject = selectedSubject ? curriculum.find((s) => s.id === selectedSubject) : null;
-  const blocks = subject?.blocks || [];
+  const subject = selectedSubject
+    ? curriculum.find((s) => s.id === selectedSubject)
+    : null;
+  const blocks = subject?.blocks ?? [];
   const block = selectedBlock ? blocks.find((b) => b.id === selectedBlock) : null;
-  const topics = block?.topics || [];
-  const topicObj = selectedTopic ? topics.find((t) => t.id === selectedTopic) : null;
-  const sections = topicObj?.sections || [];
+  const subBlocks = block?.subBlocks ?? [];
+  const subBlock = selectedSubBlock
+    ? subBlocks.find((sb) => String(sb.id) === selectedSubBlock)
+    : null;
+
+  // Topics live under the chosen sub-block; a block can also own topics directly, and
+  // those are the right list to show when no sub-block is selected.
+  const topics = subBlock ? subBlock.topics : (block?.topics ?? []);
 
   const reset = () => {
     setFront("");
@@ -64,8 +92,8 @@ export function CreateFlashcardModal({
     setError("");
     setSelectedSubject(null);
     setSelectedBlock(null);
+    setSelectedSubBlock(null);
     setSelectedTopic(null);
-    setSelectedSection(null);
   };
 
   const handleCreate = async () => {
@@ -82,195 +110,232 @@ export function CreateFlashcardModal({
         explanation: explanation.trim(),
         subject: selectedSubject || undefined,
         block: selectedBlock || undefined,
-        sub_block: selectedTopic ? Number(selectedTopic) : undefined,
-        topic: selectedSection ? Number(selectedSection) : undefined,
+        sub_block: selectedSubBlock ? Number(selectedSubBlock) : undefined,
+        topic: selectedTopic ? Number(selectedTopic) : undefined,
       });
       onCreated?.(card);
       reset();
       setOpen(false);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || "Failed to create flashcard.");
+      setError(e?.response?.data?.detail || "Could not create the card.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) reset();
+      }}
+    >
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button id="create-flashcard-btn" className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 border-0">
-            <Plus className="w-4 h-4" />
-            New Card
+          <Button id="create-flashcard-btn" className="press gap-2 rounded-full">
+            <Plus className="size-4" />
+            New card
           </Button>
         )}
       </DialogTrigger>
 
-      <DialogContent className="bg-[#0f1729] border border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-white">Create Flashcard</DialogTitle>
+          <DialogTitle className="font-display text-lg">Create a flashcard</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 mt-2">
-          {/* Categorization */}
-          <div className="space-y-3">
-            <div>
-              <Label className="text-[11px] font-medium uppercase tracking-widest text-white/50">Subject</Label>
-              <div className="mt-1.5 grid grid-cols-3 gap-2">
-                {curriculum.map((subj) => (
-                  <button
-                    key={subj.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedSubject(subj.id);
-                      setSelectedBlock(null);
-                      setSelectedTopic(null);
-                      setSelectedSection(null);
-                    }}
-                    className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
-                      selectedSubject === subj.id
-                        ? "border-violet-500 bg-violet-500/20 text-violet-300"
-                        : "border-white/10 bg-white/5 hover:border-violet-500/50"
-                    }`}
-                  >
-                    {subj.title}
-                  </button>
-                ))}
-              </div>
-            </div>
+        <div className="mt-1 flex flex-col gap-4">
+          <ChipGroup label="Subject">
+            {curriculum.map((subj) => (
+              <Chip
+                key={subj.id}
+                selected={selectedSubject === subj.id}
+                onClick={() => {
+                  setSelectedSubject(subj.id);
+                  setSelectedBlock(null);
+                  setSelectedSubBlock(null);
+                  setSelectedTopic(null);
+                }}
+              >
+                {subj.title}
+              </Chip>
+            ))}
+          </ChipGroup>
 
-            {selectedSubject && blocks.length > 0 && (
-              <div>
-                <Label className="text-[11px] font-medium uppercase tracking-widest text-white/50">Block</Label>
-                <div className="mt-1.5 grid grid-cols-2 gap-2">
-                  {blocks.map((blk) => (
-                    <button
-                      key={blk.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedBlock(blk.id);
-                        setSelectedTopic(null);
-                        setSelectedSection(null);
-                      }}
-                      className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
-                        selectedBlock === blk.id
-                          ? "border-violet-500 bg-violet-500/20 text-violet-300"
-                          : "border-white/10 bg-white/5 hover:border-violet-500/50"
-                      }`}
-                    >
-                      {blk.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+          {selectedSubject && blocks.length > 0 && (
+            <ChipGroup label="Block">
+              {blocks.map((blk) => (
+                <Chip
+                  key={blk.id}
+                  selected={selectedBlock === blk.id}
+                  onClick={() => {
+                    setSelectedBlock(blk.id);
+                    setSelectedSubBlock(null);
+                    setSelectedTopic(null);
+                  }}
+                >
+                  {blk.title}
+                </Chip>
+              ))}
+            </ChipGroup>
+          )}
 
-            {selectedBlock && topics.length > 0 && (
-              <div>
-                <Label className="text-[11px] font-medium uppercase tracking-widest text-white/50">
-                  Topic <span className="text-[9px] opacity-60">(Optional)</span>
-                </Label>
-                <div className="mt-1.5 grid grid-cols-2 gap-2">
-                  {topics.map((topic) => (
-                    <button
-                      key={topic.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedTopic(topic.id);
-                        setSelectedSection(null);
-                      }}
-                      className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
-                        selectedTopic === topic.id
-                          ? "border-violet-500 bg-violet-500/20 text-violet-300"
-                          : "border-white/10 bg-white/5 hover:border-violet-500/50"
-                      }`}
-                    >
-                      {topic.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+          {selectedBlock && subBlocks.length > 0 && (
+            <ChipGroup label="Sub-block" optional>
+              {subBlocks.map((sb) => (
+                <Chip
+                  key={sb.id}
+                  selected={selectedSubBlock === String(sb.id)}
+                  onClick={() => {
+                    setSelectedSubBlock(
+                      selectedSubBlock === String(sb.id) ? null : String(sb.id),
+                    );
+                    setSelectedTopic(null);
+                  }}
+                >
+                  {sb.title}
+                </Chip>
+              ))}
+            </ChipGroup>
+          )}
 
-            {selectedTopic && sections.length > 0 && (
-              <div>
-                <Label className="text-[11px] font-medium uppercase tracking-widest text-white/50">
-                  Section <span className="text-[9px] opacity-60">(Optional)</span>
-                </Label>
-                <div className="mt-1.5 grid grid-cols-2 gap-2">
-                  {sections.map((sec) => (
-                    <button
-                      key={sec.id}
-                      type="button"
-                      onClick={() => setSelectedSection(sec.id)}
-                      className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
-                        selectedSection === sec.id
-                          ? "border-violet-500 bg-violet-500/20 text-violet-300"
-                          : "border-white/10 bg-white/5 hover:border-violet-500/50"
-                      }`}
-                    >
-                      {sec.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          {selectedBlock && topics.length > 0 && (
+            <ChipGroup label="Topic" optional>
+              {topics.map((topic) => (
+                <Chip
+                  key={topic.id}
+                  selected={selectedTopic === String(topic.id)}
+                  onClick={() =>
+                    setSelectedTopic(
+                      selectedTopic === String(topic.id) ? null : String(topic.id),
+                    )
+                  }
+                >
+                  {topic.title}
+                </Chip>
+              ))}
+            </ChipGroup>
+          )}
 
-          <div className="mt-2">
-            <Label className="text-white/70 text-sm mb-1.5 block">Front (Question)</Label>
-            <Textarea
-              id="fc-front"
-              placeholder="Type the question or prompt..."
-              value={front}
-              onChange={(e) => setFront(e.target.value)}
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none min-h-[80px]"
-            />
-          </div>
+          <Field
+            id="fc-front"
+            label="Front (question)"
+            placeholder="Type the question or prompt…"
+            value={front}
+            onChange={setFront}
+            minHeight={80}
+          />
+          <Field
+            id="fc-back"
+            label="Back (answer)"
+            placeholder="Type the answer…"
+            value={back}
+            onChange={setBack}
+            minHeight={80}
+          />
+          <Field
+            id="fc-explanation"
+            label="Explanation (optional)"
+            placeholder="Add extra context…"
+            value={explanation}
+            onChange={setExplanation}
+            minHeight={60}
+          />
 
-          <div>
-            <Label className="text-white/70 text-sm mb-1.5 block">Back (Answer)</Label>
-            <Textarea
-              id="fc-back"
-              placeholder="Type the answer..."
-              value={back}
-              onChange={(e) => setBack(e.target.value)}
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none min-h-[80px]"
-            />
-          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <div>
-            <Label className="text-white/70 text-sm mb-1.5 block">Explanation (optional)</Label>
-            <Textarea
-              id="fc-explanation"
-              placeholder="Add extra context or explanation..."
-              value={explanation}
-              onChange={(e) => setExplanation(e.target.value)}
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none min-h-[60px]"
-            />
-          </div>
-
-          {error && <p className="text-red-400 text-sm">{error}</p>}
-
-          <div className="flex gap-3 justify-end pt-2">
-            <Button
-              variant="ghost"
-              onClick={() => setOpen(false)}
-              className="text-white/60 hover:text-white hover:bg-white/10"
-            >
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" onClick={() => setOpen(false)} className="rounded-full">
               Cancel
             </Button>
             <Button
               id="create-flashcard-submit"
               disabled={loading}
               onClick={handleCreate}
-              className="bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 border-0"
+              className="press rounded-full"
             >
-              {loading ? "Creating..." : "Create Card"}
+              {loading ? "Creating…" : "Create card"}
             </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ChipGroup({
+  label,
+  optional = false,
+  children,
+}: {
+  label: string;
+  optional?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <Label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+        {label}
+        {optional && <span className="ml-1 opacity-60">(optional)</span>}
+      </Label>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+function Chip({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        "press rounded-full border px-3 py-1.5 text-xs transition-colors",
+        selected
+          ? "border-primary bg-primary/12 text-primary"
+          : "border-border bg-card text-foreground hover:border-primary/45",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Field({
+  id,
+  label,
+  placeholder,
+  value,
+  onChange,
+  minHeight,
+}: {
+  id: string;
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+  minHeight: number;
+}) {
+  return (
+    <div>
+      <Label className="mb-1.5 block text-sm text-muted-foreground">{label}</Label>
+      <Textarea
+        id={id}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="resize-none"
+        style={{ minHeight }}
+      />
+    </div>
   );
 }

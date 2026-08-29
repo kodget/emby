@@ -1,0 +1,51 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker (pin, arrow, or tag) is visible indicating a structure for examination."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a low-resolution collage of four separate photographs showing a cadaveric prosection. While a pin with a green tag is visible in the top panels, the image lacks a question paper, a station number, and sufficient clarity to identify the specific anatomical structure being tested. It appears to be a raw source image rather than a prepared exam station.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image is a composite of four low-quality photos. It lacks the standard components of an exam station (question paper, clear station number) and the resolution is too poor to confidently identify the specific anatomical structure indicated by the pin in the top panels.",
+  "quality_flags": [
+    "low_resolution",
+    "composite_image",
+    "no_question_paper",
+    "poor_lighting"
+  ],
+  "_source": {
+    "id": "5188e56a5424",
+    "file": "5188e56a5424.jpeg",
+    "width": 502,
+    "height": 669,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 3,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

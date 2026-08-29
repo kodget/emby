@@ -1,0 +1,57 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Abdominal aorta and renal arteries",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific pin, arrow, or tag is visible indicating a single structure to identify."
+  },
+  "structure": "Abdominal aorta and renal arteries",
+  "main_question": "Identify the major arterial trunk shown in the center of the specimen.",
+  "main_answer": "Abdominal aorta",
+  "main_explanation": "The large red vessel running vertically in the midline, giving off the renal arteries to the kidneys, is the abdominal aorta.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located posterior to the left kidney in this region?",
+    "options": [
+      "Inferior vena cava",
+      "Left psoas major muscle",
+      "Right ureter",
+      "Right gonadal vein"
+    ],
+    "correct_index": 1,
+    "explanation": "The left psoas major muscle lies posterior to the left kidney. The inferior vena cava is to the right of the aorta, and the right ureter and gonadal vein are on the right side."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Multiple views of the same specimen are stitched together in the image."
+  ],
+  "_source": {
+    "id": "82cc1da203f2",
+    "file": "82cc1da203f2.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 37,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

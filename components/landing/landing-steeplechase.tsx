@@ -14,7 +14,7 @@ export function LandingSteeplechase() {
             <span className="italic"> finally practised properly.</span>
           </h2>
           <p className="mt-5 max-w-xl text-pretty text-primary-foreground/80">
-            45 seconds. Move to the next station. Real cadaveric photographs and histology slides curated from your
+            Thirty seconds a station, then you move on. Real cadaveric photographs and histology slides from your
             own department — not animated 3D models. Untimed for learning, timed for exam simulation.
           </p>
 
@@ -34,18 +34,14 @@ export function LandingSteeplechase() {
             </Link>
           </div>
 
-          <dl className="mt-12 grid max-w-md grid-cols-3 gap-6 border-t border-primary-foreground/15 pt-6 text-sm">
-            <div>
-              <dt className="text-primary-foreground/70">Stations</dt>
-              <dd className="mt-1 font-serif text-2xl">320</dd>
-            </div>
-            <div>
-              <dt className="text-primary-foreground/70">Real photos</dt>
-              <dd className="mt-1 font-serif text-2xl">100%</dd>
-            </div>
+          <dl className="mt-12 grid max-w-md grid-cols-2 gap-6 border-t border-primary-foreground/15 pt-6 text-sm">
             <div>
               <dt className="text-primary-foreground/70">Per station</dt>
-              <dd className="mt-1 font-serif text-2xl">45s</dd>
+              <dd className="mt-1 font-serif text-2xl">30 seconds</dd>
+            </div>
+            <div>
+              <dt className="text-primary-foreground/70">Specimens</dt>
+              <dd className="mt-1 font-serif text-2xl">Real photographs</dd>
             </div>
           </dl>
         </div>
@@ -55,13 +51,13 @@ export function LandingSteeplechase() {
           <div className="relative overflow-hidden rounded-3xl border border-primary-foreground/20 bg-background text-foreground shadow-2xl shadow-foreground/20">
             <div className="relative">
               <img
-                src="/placeholder.svg?height=400&width=640"
-                alt="Cadaveric dissection of the axilla with a numbered pin"
+                src="/landing/steeplechase-station.jpg"
+                alt="Cadaveric upper limb prosection with a pin marking a nerve"
                 className="h-64 w-full object-cover"
               />
               <div className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur">
                 <Timer className="size-3.5 text-accent" aria-hidden="true" />
-                <span>Station 2 / 20 · 00:38</span>
+                <span>Station 2 / 20 · 00:24</span>
               </div>
               <div className="absolute bottom-4 left-4 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground shadow-md">
                 Pin A
@@ -89,7 +85,7 @@ export function LandingSteeplechase() {
           {/* Floating timer progress */}
           <div className="absolute -bottom-5 left-6 right-6 rounded-full bg-background/95 p-1.5 shadow-lg backdrop-blur">
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div className="h-full w-[22%] rounded-full bg-accent transition-all" aria-hidden="true" />
+              <div className="h-full w-[80%] rounded-full bg-accent transition-all" aria-hidden="true" />
             </div>
           </div>
         </div>

@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Pelvis",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.65,
+    "y1": 0.65
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": 35,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.48,
+    "y": 0.33,
+    "description": "A small dark pin head is visible on the anterior surface of the pubic bone."
+  },
+  "structure": "Pubis",
+  "main_question": "Identify the bone indicated by the pin.",
+  "main_answer": "Pubis",
+  "main_explanation": "The pin is located on the anterior portion of the pelvic ring, specifically the body of the pubis, which forms the anterior part of the obturator foramen.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures articulates with the bone indicated by the pin to form the pubic symphysis?",
+    "options": [
+      "Ilium",
+      "Ischium",
+      "Contralateral pubis",
+      "Sacrum"
+    ],
+    "correct_index": 2,
+    "explanation": "The pubic symphysis is a cartilaginous joint that connects the right and left pubic bones at the midline of the anterior pelvis."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.85,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is partially out of frame in the main view"
+  ],
+  "_source": {
+    "id": "9a9f364532e0",
+    "file": "9a9f364532e0.jpeg",
+    "width": 1632,
+    "height": 1224,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 11,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

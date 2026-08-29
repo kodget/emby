@@ -1,0 +1,53 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.98,
+    "y1": 0.98
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.29,
+    "y": 0.24,
+    "description": "Green-headed dressmaker pin inserted into a muscle belly in the upper-left portion of the prosection."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows a cadaveric prosection with a green-headed pin, but the image is dark, low-resolution, and lacks any question paper, station number, or orientation cues. The specific structure indicated by the pin cannot be confidently identified from the visible tissue alone, so no main question or answer is provided.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "Cannot confidently identify the region or the specific structure marked by the green pin. The image is dark, low-resolution, and contains no question paper, station number, or anatomical landmarks that would allow reliable identification. A clearer, better-lit image with orientation context is required before this can be used as an exam station.",
+  "quality_flags": [
+    "very_dark",
+    "low_resolution",
+    "no_question_paper",
+    "no_station_number",
+    "marker_structure_ambiguous",
+    "poor_orientation_context"
+  ],
+  "_source": {
+    "id": "6c10c0555948",
+    "file": "6c10c0555948.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 104,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

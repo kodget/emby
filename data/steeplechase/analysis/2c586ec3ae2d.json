@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Pelvis",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.08,
+    "x1": 0.6,
+    "y1": 0.42
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a. What structures passes through the area painted Blue\nb. List the muscles and ligament attached to the area painted red.",
+  "station_number": 1,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.38,
+    "y": 0.25,
+    "description": "Blue paint outlining the obturator foramen and red paint on the ischial spine."
+  },
+  "structure": "Obturator foramen",
+  "main_question": "What structures passes through the area painted Blue",
+  "main_answer": "Obturator nerve, obturator artery, and obturator vein",
+  "main_explanation": "The blue paint outlines the obturator foramen. The obturator nerve, artery, and vein pass through the obturator canal, which is located on the superomedial rim of the obturator foramen.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located immediately posterior to the obturator foramen?",
+    "options": [
+      "Ischial spine",
+      "Pubic symphysis",
+      "Acetabulum",
+      "Sacral promontory"
+    ],
+    "correct_index": 0,
+    "explanation": "The ischial spine is a bony landmark located posterior to the obturator foramen. It is a key landmark for identifying the pudendal nerve and internal pudendal artery as they re-enter the pelvis through the greater sciatic foramen."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Dark lighting",
+    "Specimen partially obscured by shadow"
+  ],
+  "_source": {
+    "id": "2c586ec3ae2d",
+    "file": "2c586ec3ae2d.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 95,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

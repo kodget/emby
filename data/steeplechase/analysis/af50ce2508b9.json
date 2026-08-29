@@ -1,0 +1,51 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.25,
+    "y0": 0.02,
+    "x1": 0.65,
+    "y1": 0.72
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag, or paint mark is visible on the specimen."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a small, elongated bony structure on a wooden board, but it cannot be confidently identified as a specific named bone. There is no marker, question paper, or station number to indicate what is being tested.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The bony specimen cannot be confidently identified. It may be a small bone from the hand, foot, or another region, but the shape is ambiguous. There is no question paper, station number, or marker (pin, arrow, tag) visible to indicate which structure is being tested. The image also appears to contain multiple overlapping views, making interpretation difficult.",
+  "quality_flags": [
+    "no_question_paper",
+    "no_marker",
+    "specimen_identity_unclear",
+    "possible_composite_or_duplicate_view"
+  ],
+  "_source": {
+    "id": "af50ce2508b9",
+    "file": "af50ce2508b9.jpeg",
+    "width": 768,
+    "height": 651,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 2,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

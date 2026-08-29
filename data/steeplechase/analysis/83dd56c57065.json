@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.3,
+    "y0": 0.0,
+    "x1": 0.55,
+    "y1": 0.32
+  },
+  "question_paper_present": true,
+  "transcribed_question": "List the content of the area painted green. What structure attached to the area painted blue",
+  "station_number": 31,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "The question paper refers to painted areas (green and blue), but the specific painted specimen is not clearly visible or identifiable in the frame."
+  },
+  "structure": null,
+  "main_question": "List the content of the area painted green.",
+  "main_answer": null,
+  "main_explanation": "The specimen is not visible in the photograph, making it impossible to identify the contents of the painted area.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The anatomical specimen is not visible in the image. The photo only shows a question paper and a fragment of a yellow curved object (possibly a bone or model part) on a bench, but the actual prosection or structure being tested is missing.",
+  "quality_flags": [
+    "Specimen not visible",
+    "Photo shows only question paper and bench"
+  ],
+  "_source": {
+    "id": "83dd56c57065",
+    "file": "83dd56c57065.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 75,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull (inferior view)",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.12,
+    "x1": 0.45,
+    "y1": 0.72
+  },
+  "question_paper_present": true,
+  "transcribed_question": "12\nA) Identify the probed space\nB) The area pointed pink relates to what?",
+  "station_number": 12,
+  "marker": {
+    "present": true,
+    "type": "probe",
+    "x": 0.32,
+    "y": 0.48,
+    "description": "A blue probe is inserted into the foramen magnum."
+  },
+  "structure": "Foramen magnum",
+  "main_question": "Identify the probed space.",
+  "main_answer": "Foramen magnum",
+  "main_explanation": "The probe is inserted into the large central opening in the occipital bone, which is the foramen magnum. This opening allows the passage of the medulla oblongata, vertebral arteries, and spinal accessory nerves.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures passes through the foramen magnum?",
+    "options": [
+      "Mandibular nerve (CN V3)",
+      "Hypoglossal nerve (CN XII)",
+      "Vagus nerve (CN X)",
+      "Facial nerve (CN VII)"
+    ],
+    "correct_index": 1,
+    "explanation": "The hypoglossal nerve (CN XII) exits the skull through the hypoglossal canal, which is located adjacent to the foramen magnum. The other options exit through different foramina (foramen ovale, jugular foramen, and stylomastoid foramen respectively)."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a collage of multiple views",
+    "Specimen is partially out of frame in the main view"
+  ],
+  "_source": {
+    "id": "43c55d6789ce",
+    "file": "43c55d6789ce.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 1,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

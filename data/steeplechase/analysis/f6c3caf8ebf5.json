@@ -1,0 +1,53 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.13,
+    "y0": 0.24,
+    "x1": 0.83,
+    "y1": 0.73
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "A thin white thread/string lies across the top of the specimen but does not point to or label a specific structure; no pin, arrow, tag or paint mark is visible."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "No question paper, station number or specific marker is present, and the organ cannot be confidently identified from the visible cut surface, so no definite exam question can be constructed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specimen is a preserved organ with a cut hilum but its identity (kidney vs spleen vs other) is not certain from the image. There is no question paper, no station number, and no marker indicating a specific structure. The framing is poor with much empty bench and a possible duplicate/composite view, so it does not function as a clean steeplechase station.",
+  "quality_flags": [
+    "no question paper present",
+    "no station number visible",
+    "no clear marker on a specific structure",
+    "poor framing with large empty bench area",
+    "possible duplicate or composite view of the same specimen",
+    "organ identity uncertain"
+  ],
+  "_source": {
+    "id": "f6c3caf8ebf5",
+    "file": "f6c3caf8ebf5.jpeg",
+    "width": 662,
+    "height": 707,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 15,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

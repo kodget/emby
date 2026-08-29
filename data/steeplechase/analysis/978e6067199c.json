@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Small intestine",
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.08,
+    "x1": 0.65,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify the structure",
+  "station_number": 3,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker (pin, arrow, or thread) is visible on the specimen."
+  },
+  "structure": "Small intestine",
+  "main_question": "Identify the structure shown.",
+  "main_answer": "Small intestine",
+  "main_explanation": "The specimen is a coiled length of the small intestine, recognizable by its convoluted tubular shape and the presence of plicae circulares (valves of Kerckring) on the inner surface.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is a characteristic feature of the mucosal lining of the small intestine?",
+    "options": [
+      "Plicae circulares",
+      "Goblet cells only",
+      "Parietal cells",
+      "Central lacteal"
+    ],
+    "correct_index": 0,
+    "explanation": "Plicae circulares are permanent folds of the mucosa and submucosa that increase the surface area of the small intestine. While goblet cells and central lacteals are present, plicae circulares are the defining macroscopic/microscopic structural feature distinguishing it from the large intestine."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The specimen shown is the large intestine.",
+    "answer": false,
+    "explanation": "The specimen is the small intestine, which is longer and narrower than the large intestine and lacks haustra."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "978e6067199c",
+    "file": "978e6067199c.jpeg",
+    "width": 606,
+    "height": 455,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 21,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

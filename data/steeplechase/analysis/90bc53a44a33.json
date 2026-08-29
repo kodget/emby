@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker or question paper is visible in the image."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a collage of three separate photographs showing a cadaveric prosection (likely the posterior neck/upper thorax region) and close-ups of the bench surface. It lacks the standard components of an exam station, such as a question paper or a station number.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "The image is a composite of multiple photos and does not represent a single, coherent exam station.",
+  "quality_flags": [
+    "composite_image",
+    "no_question_paper",
+    "no_station_number"
+  ],
+  "_source": {
+    "id": "90bc53a44a33",
+    "file": "90bc53a44a33.jpeg",
+    "width": 2040,
+    "height": 1530,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 29,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

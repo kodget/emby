@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Lumbar plexus dissection",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.0,
+    "x1": 0.6,
+    "y1": 0.48
+  },
+  "question_paper_present": true,
+  "transcribed_question": "15\na) Identify the Vertebral level of the structure marked green\nb) Identify the structure marked red\nOptions:\na) L4\nb) Subcostal nerve\nc) L2, L3, L4",
+  "station_number": 15,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.3,
+    "y": 0.12,
+    "description": "Green-headed pin marking a nerve root in the lumbar plexus"
+  },
+  "structure": "Lumbar plexus nerve root",
+  "main_question": "Identify the vertebral level of the structure marked green.",
+  "main_answer": "L4",
+  "main_explanation": "The green pin marks a nerve root in the lumbar plexus. Based on the options provided on the station card, the correct vertebral level is L4.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following nerves is formed by the union of the L1 and L2 spinal nerves?",
+    "options": [
+      "Genitofemoral nerve",
+      "Iliohypogastric nerve",
+      "Lateral femoral cutaneous nerve",
+      "Obturator nerve"
+    ],
+    "correct_index": 0,
+    "explanation": "The genitofemoral nerve arises directly from the anterior rami of the L1 and L2 spinal nerves."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is a dried cadaveric prosection",
+    "Handwritten text is slightly difficult to read in the wide shot"
+  ],
+  "_source": {
+    "id": "546d19e39bec",
+    "file": "546d19e39bec.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 19,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

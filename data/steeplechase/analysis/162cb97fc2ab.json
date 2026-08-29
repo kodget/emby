@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(A) What is the structure pinned blue? (B) What is the embryonic origin?",
+  "station_number": 38,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only a question paper and a station number card. The anatomical specimen that the questions refer to is not visible in the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The anatomical specimen is missing from the frame; only the question paper is visible. The image is also very dark and appears to be a composite of multiple crops.",
+  "quality_flags": [
+    "specimen_missing",
+    "very_dark",
+    "composite_image"
+  ],
+  "_source": {
+    "id": "162cb97fc2ab",
+    "file": "162cb97fc2ab.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 107,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

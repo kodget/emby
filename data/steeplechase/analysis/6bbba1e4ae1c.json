@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "NEUROANATOMY",
+  "specimen_label": "Preserved human brain (lateral/medial view)",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.02,
+    "x1": 0.95,
+    "y1": 0.72
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.42,
+    "y": 0.38,
+    "description": "Small green/teal colored mark (tape or paint) on a midline diencephalic structure"
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the green marker.",
+  "main_answer": null,
+  "main_explanation": "The green marker is placed on a midline structure in the region of the diencephalon. The exact structure (e.g., thalamus, hypothalamus, pituitary gland, or optic chiasm) cannot be confidently identified from this single lateral-oblique view of a preserved brain without additional orientation cues or a legible question paper.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.4,
+  "needs_review": true,
+  "review_reason": "The exact structure marked by the green paint/tape cannot be confidently identified. The view is a lateral-oblique perspective of a preserved brain, and the marker sits in the midline diencephalic region, but without a legible question or clearer orientation it is impossible to distinguish between the thalamus, hypothalamus, pituitary, or optic chiasm. The handwritten question on the paper is not legible.",
+  "quality_flags": [
+    "Handwritten question paper is not legible",
+    "Marker location is ambiguous (midline diencephalic region, multiple candidate structures)",
+    "Specimen is a preserved (formalin-fixed) brain with limited orientation cues"
+  ],
+  "_source": {
+    "id": "6bbba1e4ae1c",
+    "file": "6bbba1e4ae1c.jpeg",
+    "width": 1949,
+    "height": 1462,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 9,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

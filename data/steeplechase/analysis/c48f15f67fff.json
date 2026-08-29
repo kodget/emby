@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Heart",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.0,
+    "x1": 0.45,
+    "y1": 0.3
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) Transverse Pericardial Sinus\nb) fossa ovalis\nc) septum primum",
+  "station_number": 38,
+  "marker": {
+    "present": true,
+    "type": "probe",
+    "x": 0.2,
+    "y": 0.08,
+    "description": "Blue probe or instrument inserted into the superior aspect of the heart"
+  },
+  "structure": "Transverse Pericardial Sinus",
+  "main_question": "Identify the structure indicated by the blue probe.",
+  "main_answer": "Transverse Pericardial Sinus",
+  "main_explanation": "The probe is inserted into the space behind the great vessels (aorta and pulmonary trunk) and in front of the superior vena cava, which is the transverse pericardial sinus.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located posterior to the transverse pericardial sinus?",
+    "options": [
+      "Aorta",
+      "Superior Vena Cava",
+      "Pulmonary Artery",
+      "Left Atrium"
+    ],
+    "correct_index": 1,
+    "explanation": "The transverse pericardial sinus is a space between the great vessels (aorta and pulmonary trunk) anteriorly and the superior vena cava posteriorly."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is partially out of frame in the main view"
+  ],
+  "_source": {
+    "id": "c48f15f67fff",
+    "file": "c48f15f67fff.jpeg",
+    "width": 1548,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 44,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

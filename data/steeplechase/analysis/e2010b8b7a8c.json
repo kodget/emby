@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Skull base (inferior view)",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.15,
+    "x1": 0.65,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify the structure pointed to",
+  "station_number": 3,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.18,
+    "y": 0.35,
+    "description": "Green-headed pin pointing to the lateral aspect of the skull base"
+  },
+  "structure": "Petrous part of the temporal bone",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Petrous part of the temporal bone",
+  "main_explanation": "The pin indicates the pyramidal, dense bone of the temporal bone that houses the organs of hearing and balance.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located within the petrous part of the temporal bone?",
+    "options": [
+      "Mandibular condyle",
+      "Ossicles of the middle ear",
+      "Sella turcica",
+      "Foramen magnum"
+    ],
+    "correct_index": 1,
+    "explanation": "The petrous part of the temporal bone contains the bony labyrinth and the tympanic cavity, which houses the ossicles (malleus, incus, and stapes)."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.85,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is partially obscured by pins and tags"
+  ],
+  "_source": {
+    "id": "e2010b8b7a8c",
+    "file": "e2010b8b7a8c.jpeg",
+    "width": 1114,
+    "height": 1208,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 19,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

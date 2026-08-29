@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "MODEL",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Anatomical model of female torso and lower limb (vasculature and musculature)",
+  "specimen_bbox": {
+    "x0": 0.2,
+    "y0": 0.0,
+    "x1": 0.6,
+    "y1": 0.95
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": 5,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific anatomical marker (pin, arrow, or tag) is visible on the model itself."
+  },
+  "structure": null,
+  "main_question": "Identify the anatomical structures visible in the lower limb of this model.",
+  "main_answer": "Muscles, arteries, veins, and nerves of the thigh and leg.",
+  "main_explanation": "The model displays a cross-section of the lower limb, revealing the arrangement of the musculature and the vascular and nervous structures within the compartments.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.6,
+  "needs_review": true,
+  "review_reason": "The handwritten question on the paper is illegible, and there is no specific marker on the model to indicate which structure is being tested. The station number is visible, but the specific query is unclear.",
+  "quality_flags": [
+    "illegible_question",
+    "no_marker"
+  ],
+  "_source": {
+    "id": "08c58ca49262",
+    "file": "08c58ca49262.jpeg",
+    "width": 2400,
+    "height": 3200,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 74,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

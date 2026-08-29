@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A. IDENTIFY THE STRUCTURES PINNED GREEN\nB. THIS ORGAN IS LINED BY SIMPLE COLUMNAR EPITHELIUM TRUE/FALSE\nC. WHAT IS THE LENGTH OF THE FOOT OF THE STAPLESHED PAPER? BLUE\na) Plica circularis\nb) True\nc) 15cm/ 6 Inches",
+  "station_number": 33,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only the question paper and station number. The anatomical specimen (likely a section of the small intestine, given the reference to 'Plica circularis' and 'columnar epithelium') is not visible in the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 1.0,
+  "needs_review": true,
+  "review_reason": "The image contains only the question paper and station number; the anatomical specimen is not visible, making it impossible to create a valid exam station.",
+  "quality_flags": [
+    "specimen_not_visible",
+    "question_paper_only"
+  ],
+  "_source": {
+    "id": "68741a285de5",
+    "file": "68741a285de5.jpeg",
+    "width": 1596,
+    "height": 1012,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 39,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

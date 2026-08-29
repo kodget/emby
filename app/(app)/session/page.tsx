@@ -126,21 +126,21 @@ function SessionContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080d1a] text-zinc-100 flex flex-col">
+    <div className="min-h-screen flex flex-col">
       {/* Dynamic Header */}
       {step < 4 && (
-        <header className="border-b border-white/5 bg-[#0b1326] px-6 py-4 flex items-center justify-between">
+        <header className="border-b border-border bg-card px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={exitSession}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-zinc-100 transition-colors"
+              className="p-2 rounded-xl bg-card hover:bg-muted text-zinc-400 hover:text-foreground transition-colors"
               aria-label="Exit Session"
             >
               <X className="size-4" />
             </button>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Active Study Session</p>
-              <h1 className="text-sm font-semibold text-zinc-200">
+              <h1 className="text-sm font-semibold text-foreground">
                 {step === 1 && "Step 1: Spaced Repetition Review"}
                 {step === 2 && "Step 2: Target Practice"}
                 {step === 3 && "Step 3: Reinforce Missed Concepts"}
@@ -149,7 +149,7 @@ function SessionContent() {
           </div>
           
           <div className="flex items-center gap-3 w-48 hidden sm:flex">
-            <Progress value={getProgressPercentage()} className="h-1.5 bg-white/5" />
+            <Progress value={getProgressPercentage()} className="h-1.5 bg-card" />
             <span className="text-[11px] font-semibold text-zinc-400 whitespace-nowrap">
               {getProgressPercentage()}% Complete
             </span>
@@ -168,7 +168,7 @@ function SessionContent() {
               exit={{ opacity: 0, y: -15 }}
               className="w-full max-w-3xl"
             >
-              <div className="rounded-3xl border border-white/5 bg-[#0b1326]/60 p-1">
+              <div className="rounded-3xl border border-border bg-card p-1">
                 <FlashcardStudy onComplete={() => setStep(2)} />
               </div>
             </motion.div>
@@ -182,9 +182,9 @@ function SessionContent() {
               exit={{ opacity: 0, y: -15 }}
               className="w-full max-w-lg text-center"
             >
-              <Card className="border-white/5 bg-[#0b1326]/60 text-zinc-200 p-6 md:p-8 rounded-3xl shadow-2xl">
+              <Card className="border-border bg-card text-foreground p-6 md:p-8 rounded-3xl shadow-2xl">
                 <CardContent className="space-y-6 pt-6">
-                  <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-400">
+                  <div className="w-16 h-16 rounded-full bg-mastery/10 border border-mastery/25 flex items-center justify-center mx-auto text-mastery">
                     <CheckCircle className="size-8" />
                   </div>
                   
@@ -195,12 +195,12 @@ function SessionContent() {
                     </p>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-left space-y-2">
+                  <div className="p-4 rounded-2xl bg-card border border-border text-left space-y-2">
                     <div className="flex items-center justify-between text-xs text-zinc-400">
                       <span>NEXT ACTIVITY</span>
-                      <span className="text-emerald-400 font-semibold uppercase tracking-wider">Practice Quiz</span>
+                      <span className="text-mastery font-semibold uppercase tracking-wider">Practice Quiz</span>
                     </div>
-                    <h3 className="font-semibold text-zinc-100 flex items-center gap-1.5">
+                    <h3 className="font-semibold text-foreground flex items-center gap-1.5">
                       <BookOpen className="size-4 text-primary" />
                       10 Questions focus: {weakTopic}
                     </h3>
@@ -264,14 +264,14 @@ function SessionContent() {
                     <p className="text-zinc-500 text-sm">Fetching incorrect answers...</p>
                   </div>
                 ) : error ? (
-                  <Card className="border-white/5 bg-[#0b1326]/60 text-zinc-200 p-6 rounded-2xl text-center">
+                  <Card className="border-border bg-card text-foreground p-6 rounded-2xl text-center">
                     <p className="text-rose-400 mb-4">{error}</p>
                     <Button onClick={() => loadMissedQuestions(quizId)} variant="outline">Retry</Button>
                   </Card>
                 ) : missedQuestions.length === 0 ? (
-                  <Card className="border-emerald-500/20 bg-emerald-500/5 text-zinc-200 p-8 rounded-3xl text-center space-y-3">
-                    <CheckCircle className="size-10 text-emerald-400 mx-auto" />
-                    <h3 className="font-bold text-zinc-100">Perfect Practice Run!</h3>
+                  <Card className="border-mastery/25 bg-mastery/8 text-foreground p-8 rounded-3xl text-center space-y-3">
+                    <CheckCircle className="size-10 text-mastery mx-auto" />
+                    <h3 className="font-bold text-foreground">Perfect Practice Run!</h3>
                     <p className="text-zinc-400 text-sm">
                       You answered 100% of the quiz questions correctly. No concepts to reinforce!
                     </p>
@@ -280,7 +280,7 @@ function SessionContent() {
                 ) : (
                   <div className="space-y-4">
                     {missedQuestions.map((q, idx) => (
-                      <Card key={q.id} className="border-white/5 bg-[#0b1326]/60 text-zinc-200 rounded-2xl">
+                      <Card key={q.id} className="border-border bg-card text-foreground rounded-2xl">
                         <CardHeader className="pb-3 flex flex-row items-start justify-between gap-4">
                           <div className="space-y-1">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">Question {idx + 1}</span>
@@ -289,7 +289,7 @@ function SessionContent() {
                         </CardHeader>
                         <CardContent className="space-y-3 text-sm">
                           <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
-                            <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/10 px-3 py-2 text-emerald-400">
+                            <div className="flex items-center gap-2 rounded-xl bg-mastery/10 border border-mastery/20 px-3 py-2 text-mastery">
                               <CheckCircle className="size-4 shrink-0" />
                               <span>Correct: {q.correct_option || q.correct_answer || "—"}</span>
                             </div>
@@ -300,8 +300,8 @@ function SessionContent() {
                           </div>
                           
                           {q.explanation && (
-                            <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-zinc-300 text-xs">
-                              <strong className="text-zinc-100 font-semibold block mb-1">Clinical Rationale:</strong>
+                            <div className="p-3 rounded-xl bg-card border border-border text-zinc-300 text-xs">
+                              <strong className="text-foreground font-semibold block mb-1">Clinical Rationale:</strong>
                               <p className="leading-relaxed">{q.explanation}</p>
                             </div>
                           )}
@@ -326,7 +326,7 @@ function SessionContent() {
               exit={{ opacity: 0 }}
               className="w-full max-w-md text-center"
             >
-              <Card className="border-white/5 bg-[#0b1326]/60 text-zinc-200 p-8 rounded-3xl shadow-2xl">
+              <Card className="border-border bg-card text-foreground p-8 rounded-3xl shadow-2xl">
                 <CardContent className="space-y-6 pt-6">
                   <div className="w-20 h-20 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto text-primary relative">
                     <Trophy className="size-10" />
@@ -340,18 +340,18 @@ function SessionContent() {
                     </p>
                   </div>
 
-                  <div className="divide-y divide-white/5 border-y border-white/5 py-4 text-left space-y-3">
+                  <div className="divide-y divide-white/5 border-y border-border py-4 text-left space-y-3">
                     <div className="flex items-center justify-between text-sm py-1">
                       <span className="text-zinc-400">Step 1: Spaced Repetition</span>
-                      <span className="text-zinc-200 font-medium">Completed</span>
+                      <span className="text-foreground font-medium">Completed</span>
                     </div>
                     <div className="flex items-center justify-between text-sm py-2">
                       <span className="text-zinc-400">Step 2: Weak-Area Quiz</span>
-                      <span className="text-zinc-200 font-medium">10 Questions answered</span>
+                      <span className="text-foreground font-medium">10 Questions answered</span>
                     </div>
                     <div className="flex items-center justify-between text-sm py-2">
                       <span className="text-zinc-400">Step 3: Mistakes Reviewed</span>
-                      <span className="text-zinc-200 font-medium">{missedQuestions.length} Concepts corrected</span>
+                      <span className="text-foreground font-medium">{missedQuestions.length} Concepts corrected</span>
                     </div>
                   </div>
 
@@ -360,7 +360,7 @@ function SessionContent() {
                       <Zap className="size-5 text-primary fill-current" />
                       <div className="text-left leading-tight">
                         <p className="text-[10px] uppercase font-bold text-primary">XP AWARDED</p>
-                        <p className="text-sm font-semibold text-zinc-200 mt-0.5">Maintain Streak</p>
+                        <p className="text-sm font-semibold text-foreground mt-0.5">Maintain Streak</p>
                       </div>
                     </div>
                     <span className="text-lg font-bold text-primary">+50 XP</span>
@@ -385,7 +385,7 @@ function SessionContent() {
 export default function SessionPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#080d1a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="size-8 animate-spin text-primary" />
       </div>
     }>

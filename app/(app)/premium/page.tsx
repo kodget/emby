@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { paymentApi } from '@/lib/api';
+import { MONTHLY, YEARLY, formatNaira, yearlySavings } from '@/lib/pricing';
 
 const features = [
   'Unlimited AI tutor prompts (vs 5/day free)',
@@ -19,22 +20,23 @@ const features = [
   'Full community engagement (post, like, comment)',
 ];
 
+// Prices come from lib/pricing, which mirrors the server's catalogue.
 const plans = [
   {
-    id: 'monthly',
+    id: MONTHLY.code,
     name: 'Monthly',
-    price: '₦1,499',
+    price: formatNaira(MONTHLY.amountNaira),
     period: '/month',
-    months: 1,
+    months: MONTHLY.months,
     description: 'Perfect for trying out premium features',
   },
   {
-    id: 'yearly',
+    id: YEARLY.code,
     name: 'Yearly',
-    price: '₦15,000',
+    price: formatNaira(YEARLY.amountNaira),
     period: '/year',
-    months: 12,
-    description: 'Save ₦2,988 compared to monthly',
+    months: YEARLY.months,
+    description: `Save ${formatNaira(yearlySavings())} compared to monthly`,
     badge: 'Best Value',
   },
 ];
@@ -43,7 +45,7 @@ export default function PremiumPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState('yearly');
+  const [selectedPlan, setSelectedPlan] = useState<string>(YEARLY.code);
 
   const handleSubscribe = async () => {
     setLoading(true);
@@ -68,19 +70,19 @@ export default function PremiumPage() {
   };
 
   return (
-    <div className="container max-w-6xl py-8">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       <div className="text-center mb-12">
         <div className="inline-flex items-center justify-center p-2 bg-primary/10 rounded-full mb-4">
           <Crown className="h-8 w-8 text-primary" />
         </div>
-        <h1 className="text-4xl font-bold mb-4">Upgrade to Premium</h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-4">Upgrade to Premium</h1>
+        <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto">
           Unlock unlimited access to all features and supercharge your medical studies
         </p>
       </div>
 
       {/* Features Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-12">
         {features.map((feature, index) => (
           <Card key={index} className="border-primary/20">
             <CardContent className="pt-6">
@@ -144,7 +146,7 @@ export default function PremiumPage() {
           size="lg"
           onClick={handleSubscribe}
           disabled={loading}
-          className="min-w-[200px]"
+          className="w-full sm:w-auto sm:min-w-[200px]"
         >
           {loading ? (
             <>

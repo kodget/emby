@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.78,
+    "y1": 1.0
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, thread, tag, paint mark or probe is visible indicating a specific structure."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a vertical strip of extreme close-up photographs of a cadaveric prosection (likely skull base / middle cranial fossa region) with a blue-painted area and a brown oval structure, but there is no question paper, no station number, and no marker identifying a specific structure. Without a marker or legible question, the intended structure cannot be confidently identified, so no main question can be constructed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "No question paper, no station number, and no marker (pin/arrow/thread/tag) are present. The photographs are extreme close-ups with no orienting landmarks, so the specific structure being tested cannot be confidently identified. A plausible guess would risk students revising from an incorrect label.",
+  "quality_flags": [
+    "no_question_paper",
+    "no_marker",
+    "extreme_close_up_no_landmarks",
+    "partial_blank_area_on_right_of_top_panel",
+    "multiple_cropped_views_stacked"
+  ],
+  "_source": {
+    "id": "1cf83cc0227c",
+    "file": "1cf83cc0227c.jpeg",
+    "width": 446,
+    "height": 594,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 19,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

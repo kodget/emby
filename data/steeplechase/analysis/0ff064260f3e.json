@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "dissected thigh showing femoral head",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.02,
+    "x1": 0.88,
+    "y1": 0.48
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Identify the structure tied\n\nWhat is the innervation of the structure pinned Green",
+  "station_number": 40,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.32,
+    "y": 0.18,
+    "description": "A thin thread tied around a structure in the upper-middle part of the thigh dissection"
+  },
+  "structure": null,
+  "main_question": "Identify the structure tied.",
+  "main_answer": null,
+  "main_explanation": "Due to the complexity of the dissection and lack of clear landmarks, the specific tied structure cannot be confidently identified.",
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specimen is a dissected thigh with a dislocated/isolated femoral head. A thread is tied around a structure (possibly a nerve or vessel), but the orientation (anterior vs posterior) and specific identity of the tied structure are highly ambiguous due to the dissection quality and lack of clear surrounding landmarks.",
+  "quality_flags": [
+    "marker_ambiguous"
+  ],
+  "_source": {
+    "id": "0ff064260f3e",
+    "file": "0ff064260f3e.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 53,
+    "model": "gemini-3.5-flash"
+  }
+}

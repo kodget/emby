@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Small intestine",
+  "specimen_bbox": {
+    "x0": 0.25,
+    "y0": 0.0,
+    "x1": 0.75,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) Identify the small bowel region\nb) Does ileum have more arterial arcades? True/False",
+  "station_number": 29,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.32,
+    "y": 0.18,
+    "description": "A green-headed pin is inserted into the mesentery of the small intestine."
+  },
+  "structure": "Mesentery of the small intestine",
+  "main_question": "Identify the small bowel region indicated by the pin.",
+  "main_answer": "Ileum",
+  "main_explanation": "The specimen shows the small intestine. The mesentery in this region appears thick and opaque with fewer, more complex arterial arcades, which are characteristic features of the ileum compared to the jejunum.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following features distinguishes the ileum from the jejunum?",
+    "options": [
+      "Thinner mesentery with fewer arterial arcades",
+      "Thicker mesentery with more arterial arcades",
+      "Presence of Peyer's patches is absent",
+      "Larger diameter of the bowel lumen"
+    ],
+    "correct_index": 1,
+    "explanation": "The ileum is characterized by a thicker, more opaque mesentery with a greater number of arterial arcades (longer vasa recta) compared to the jejunum. It also contains Peyer's patches and has a smaller diameter."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The ileum has more arterial arcades than the jejunum.",
+    "answer": true,
+    "explanation": "As the mesenteric vessels travel from the jejunum to the ileum, the arcades become more numerous and complex, and the vasa recta become longer."
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "9137e7459383",
+    "file": "9137e7459383.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 34,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

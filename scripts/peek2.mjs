@@ -1,0 +1,11 @@
+import { chromium } from "playwright";
+const [URL_, OUT, Y] = process.argv.slice(2);
+const P = {id:4,username:"demo",email:"demo@emby.app",first_name:"Ada",last_name:"Okoro",full_name:"Ada Okoro",name:"Ada Okoro",onboarding_completed:true,email_verified:true,class_role:"student",class_head_verified:false,subscription_tier:"premium",platform_role:"user"};
+const b = await chromium.launch();
+const c = await b.newContext({viewport:{width:430,height:930},isMobile:true,hasTouch:true,deviceScaleFactor:2});
+await c.addInitScript(([t,p])=>{try{sessionStorage.setItem("token",t);sessionStorage.setItem("refreshToken",t);sessionStorage.setItem("user",p);}catch{}},[process.env.EMBY_TOKEN||"demo",JSON.stringify(P)]);
+const pg = await c.newPage();
+await pg.goto(URL_, {waitUntil:"load"}); await pg.waitForTimeout(3000);
+await pg.evaluate(y=>window.scrollTo(0,Number(y)), Y||1400); await pg.waitForTimeout(800);
+await pg.screenshot({path: OUT});
+await b.close(); console.log("shot");

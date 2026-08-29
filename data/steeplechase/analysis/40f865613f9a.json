@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(A) Identify the tissue structure (B) What structure bears the green pin?",
+  "station_number": 25,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only a question paper and the surrounding floor/bench. The anatomical specimen that the question refers to is not visible in the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image does not contain the anatomical specimen; it only shows the question paper. The station cannot be used for study or assessment in this form.",
+  "quality_flags": [
+    "specimen_missing",
+    "only_question_paper_visible"
+  ],
+  "_source": {
+    "id": "40f865613f9a",
+    "file": "40f865613f9a.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 11,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

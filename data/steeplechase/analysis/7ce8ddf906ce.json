@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "Sagittal view of female pelvis with ectopic pregnancy in rectouterine pouch",
+  "specimen_bbox": {
+    "x0": 0.098,
+    "y0": 0.096,
+    "x1": 0.882,
+    "y1": 0.508
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What is your Diagnosis\nB) What is the commonest site of fertilization",
+  "station_number": 12,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "What is your diagnosis based on the provided diagram?",
+  "main_answer": "Ectopic pregnancy (specifically, in the rectouterine pouch/Pouch of Douglas).",
+  "main_explanation": "The diagram explicitly labels an 'Embryo developing in rectouterine pouch', which is a form of ectopic pregnancy.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What is the commonest site of fertilization?",
+    "options": [
+      "Uterus",
+      "Ovary",
+      "Ampulla of the uterine tube",
+      "Cervix"
+    ],
+    "correct_index": 2,
+    "explanation": "Fertilization most commonly occurs in the ampulla of the uterine (fallopian) tube."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The rectouterine pouch is also known as the Pouch of Douglas.",
+    "answer": true,
+    "explanation": "The rectouterine pouch is indeed synonymous with the Pouch of Douglas, a common site for fluid collection or ectopic pregnancies."
+  },
+  "confidence": 1.0,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [],
+  "_source": {
+    "id": "7ce8ddf906ce",
+    "file": "7ce8ddf906ce.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 16,
+    "model": "gemini-2.5-flash"
+  }
+}

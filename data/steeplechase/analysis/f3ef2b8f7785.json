@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 0.42
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.62,
+    "y": 0.4,
+    "description": "Blue-headed pin/probe inserted into a large bony opening on the right side of the inner calvarial surface; a separate pink painted mark lies on a bony ridge inferior to it."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen appears to be the internal surface of a skull cap (calvarium) with a large opening marked by a blue pin and a pink-painted ridge, but the orientation of the skull and the identity of the marked foramen/structure cannot be determined with confidence from the image. No legible question paper is present (only a partial number is visible).",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "Cannot confidently identify the skull orientation or the specific foramen/structure marked by the blue pin and pink paint; the image is a multi-panel composite with uneven lighting and no legible question text. Identification left null to avoid a plausible-but-wrong answer.",
+  "quality_flags": [
+    "multi-panel composite image (one overview plus three zoomed crops)",
+    "uneven lighting and glare on the bone surface",
+    "no legible handwritten question, only a partial number on the paper",
+    "skull orientation ambiguous, making foramen identification unreliable",
+    "marker (blue pin) sits in a large opening whose identity is unclear"
+  ],
+  "_source": {
+    "id": "f3ef2b8f7785",
+    "file": "f3ef2b8f7785.jpeg",
+    "width": 809,
+    "height": 607,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 1,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

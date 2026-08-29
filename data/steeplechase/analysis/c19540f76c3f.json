@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.6,
+    "y1": 0.85
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.37,
+    "y": 0.11,
+    "description": "Two coloured-headed dressmaker pins (green/teal and blue) inserted into the preserved soft-tissue specimen; the green pin is the most clearly visible marker."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a preserved soft-tissue sheet with two pins, but there is no question paper, no label, and no contextual clue to identify the organ, muscle, or region. The structure cannot be confidently named from the image alone, so the answer is left null rather than guessed.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specimen is a preserved soft-tissue sheet with two coloured pins, but there is no question paper, no station number, and no label. The tissue could be a flattened muscle, fascia, or part of a larger prosection, and the marked structures cannot be confidently identified. The image also appears to be a stacked/composite of multiple crops of the same specimen. A human reviewer should confirm the specimen identity and the intended question before this is used as an exam station.",
+  "quality_flags": [
+    "no question paper visible",
+    "no station number visible",
+    "specimen identity ambiguous",
+    "image appears to be a composite of multiple crops",
+    "marker structure not identifiable without context"
+  ],
+  "_source": {
+    "id": "c19540f76c3f",
+    "file": "c19540f76c3f.jpeg",
+    "width": 1116,
+    "height": 1833,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 14,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

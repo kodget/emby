@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.99,
+    "y1": 0.62
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.74,
+    "y": 0.18,
+    "description": "A green-headed pin with a small white paper tag bearing a handwritten character is inserted into the right side of the preserved specimen."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The specimen is a preserved cadaveric prosection showing a large rounded mass with a central opening, but no reliable landmarks are visible to determine the body region or the specific structure indicated by the pin. The tag letter is ambiguous and there is no legible question paper, so the structure cannot be confidently identified.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "Cannot confidently identify the anatomical region or the structure marked by the pin. The image is a composite of low-resolution crops of a preserved specimen with a central opening; no clear bony, muscular, or organ landmarks are visible, and the tag character is ambiguous. No legible question paper is present.",
+  "quality_flags": [
+    "low resolution / blurry",
+    "composite of multiple cropped views",
+    "no legible question paper",
+    "marker tag character ambiguous",
+    "specimen orientation and landmarks unclear"
+  ],
+  "_source": {
+    "id": "33c27b6371a7",
+    "file": "33c27b6371a7.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 62,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

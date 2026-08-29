@@ -1,0 +1,55 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Sagittal section of the brain",
+  "specimen_bbox": {
+    "x0": 0.1,
+    "y0": 0.08,
+    "x1": 0.95,
+    "y1": 0.75
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.35,
+    "y": 0.18,
+    "description": "A green-headed pin is inserted into the medial surface of the frontal lobe, likely indicating the cingulate gyrus or corpus callosum. A second blue pin is visible near the parietal lobe."
+  },
+  "structure": "Cingulate gyrus",
+  "main_question": "Identify the structure indicated by the green pin.",
+  "main_answer": "Cingulate gyrus",
+  "main_explanation": "The green pin is located on the medial surface of the cerebral hemisphere, superior to the corpus callosum. This anatomical position corresponds to the cingulate gyrus, a part of the limbic system.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located immediately inferior to the structure indicated by the green pin?",
+    "options": [
+      "Corpus callosum",
+      "Cerebellum",
+      "Pons",
+      "Thalamus"
+    ],
+    "correct_index": 0,
+    "explanation": "The cingulate gyrus is a band of cortical grey matter that arches over the corpus callosum. Therefore, the corpus callosum is the major structure located immediately inferior to it."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "8ca1399a4815",
+    "file": "8ca1399a4815.jpeg",
+    "width": 1897,
+    "height": 1578,
+    "source_pdf": "steeple_6.pdf",
+    "source_page": 7,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

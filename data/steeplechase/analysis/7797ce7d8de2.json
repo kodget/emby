@@ -1,0 +1,52 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Dry human skull (lateral view) with painted marks and a probe",
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.98,
+    "y1": 0.98
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "probe",
+    "x": 0.18,
+    "y": 0.4,
+    "description": "A thin metal probe/pin is inserted into a small foramen on the anterior surface of the maxilla near the canine region in the top and middle panels; blue and red paint marks are also present on the bone."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The probe points to a small foramen on the maxilla, but without a legible question paper or unambiguous visual context the exact named structure cannot be confirmed (candidates include the infraorbital foramen, a nutrient foramen, or a marked point). Per the no-invention rule, the structure is left null.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.35,
+  "needs_review": true,
+  "review_reason": "No legible question paper or station number is visible. The probe marks a small foramen on the maxilla, but the exact named structure cannot be confidently identified from the image alone (infraorbital foramen vs. nutrient foramen vs. other). The image is also a multi-panel composite with varying focus and lighting, making a single clean station difficult.",
+  "quality_flags": [
+    "multi-panel composite image rather than a single clean station photo",
+    "no legible question paper visible",
+    "no station number visible",
+    "marker target (small foramen) is ambiguous without the question text",
+    "uneven lighting and focus across panels"
+  ],
+  "_source": {
+    "id": "7797ce7d8de2",
+    "file": "7797ce7d8de2.jpeg",
+    "width": 448,
+    "height": 597,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 13,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

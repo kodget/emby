@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.25,
+    "x1": 0.15,
+    "y1": 0.65
+  },
+  "question_paper_present": true,
+  "transcribed_question": "34\n(a) Identify the structure bearing the green pin (Be specific)\n(b) What structure bears the blue pin",
+  "station_number": 34,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "The question paper references green and blue pins, but the specimen and pins are not visible in the frame."
+  },
+  "structure": null,
+  "main_question": "Identify the structure bearing the green pin (Be specific)",
+  "main_answer": null,
+  "main_explanation": "The anatomical specimen is not visible in the photograph, making it impossible to identify the structure indicated by the pin.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.1,
+  "needs_review": true,
+  "review_reason": "The photograph does not show the anatomical specimen or the pins mentioned in the question paper. Only the edge of a tray and the paper are visible.",
+  "quality_flags": [
+    "Specimen mostly out of frame",
+    "Marker not visible"
+  ],
+  "_source": {
+    "id": "604f58cde086",
+    "file": "604f58cde086.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 2,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

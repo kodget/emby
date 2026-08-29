@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": "dissected male external genitalia",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.65,
+    "y1": 0.65
+  },
+  "question_paper_present": true,
+  "transcribed_question": "1) What branch of vessel passes through the tied structure?\n2) Specifically state the innervation of the pinned (green) structure.",
+  "station_number": 44,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.18,
+    "y": 0.58,
+    "description": "White thread tied around the cross-section of the corpus cavernosum of the penis"
+  },
+  "structure": "Corpus cavernosum of penis",
+  "main_question": "What branch of vessel passes through the tied structure?",
+  "main_answer": "Deep artery of the penis",
+  "main_explanation": "The tied structure is the corpus cavernosum of the penis (seen in cross-section). The deep artery of the penis (a branch of the internal pudendal artery) runs centrally through the corpus cavernosum to supply the erectile tissue.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "The erectile tissue of the corpus cavernosum is directly surrounded by which dense fibrous sheath?",
+    "options": [
+      "Tunica albuginea",
+      "Buck's fascia",
+      "Dartos fascia",
+      "Colles' fascia"
+    ],
+    "correct_index": 0,
+    "explanation": "Each corpus cavernosum is individually enveloped by a dense, fibrous sheath known as the tunica albuginea."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The deep artery of the penis is a direct branch of the external pudendal artery.",
+    "answer": false,
+    "explanation": "The deep artery of the penis is a branch of the internal pudendal artery, which is a branch of the internal iliac artery."
+  },
+  "confidence": 0.8,
+  "needs_review": true,
+  "review_reason": "The specimen is highly dissected and partially obscured by a hand holding a green pin at the top. While the tied structure is likely the corpus cavernosum of the penis, the pinned structure at the top is difficult to identify with certainty due to the hand and the angle of the photograph.",
+  "quality_flags": [
+    "marker_obscured",
+    "hand_in_frame"
+  ],
+  "_source": {
+    "id": "758cb202bfbc",
+    "file": "758cb202bfbc.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 59,
+    "model": "gemini-3.5-flash"
+  }
+}

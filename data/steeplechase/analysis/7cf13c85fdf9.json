@@ -1,0 +1,49 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Mandible",
+  "specimen_bbox": {
+    "x0": 0.3,
+    "y0": 0.0,
+    "x1": 0.85,
+    "y1": 0.38
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What structure is attached to the area marked BLACK\nB) What is its embryological origin",
+  "station_number": 390,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "The question refers to an area 'marked BLACK', but no black mark is visible on the specimen in the photograph."
+  },
+  "structure": null,
+  "main_question": "What structure is attached to the area marked BLACK?",
+  "main_answer": null,
+  "main_explanation": "The specific area indicated by the question is not visible in the image, making it impossible to identify the structure.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The question asks about a specific area 'marked BLACK', but no such mark is visible on the mandible in the provided photograph. The target structure cannot be identified.",
+  "quality_flags": [
+    "Marker not visible",
+    "Specimen partially out of frame"
+  ],
+  "_source": {
+    "id": "7cf13c85fdf9",
+    "file": "7cf13c85fdf9.jpeg",
+    "width": 641,
+    "height": 481,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 14,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "thoracic cage with sternum and ribs",
+  "specimen_bbox": {
+    "x0": 0.03,
+    "y0": 0.0,
+    "x1": 0.86,
+    "y1": 0.99
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) What type of joint is labelled 'A'?\nB) What structure originates from the area painted blue? (follow the arrow)",
+  "station_number": 9,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.46,
+    "y": 0.13,
+    "description": "red painted area near the upper sternocostal region by label A; blue painted area mentioned on the paper is not clearly visible"
+  },
+  "structure": "sternoclavicular joint region",
+  "main_question": "What type of joint is labelled A?",
+  "main_answer": "Saddle synovial joint",
+  "main_explanation": "The label A appears to indicate the sternoclavicular joint, which is a synovial saddle joint between the sternal end of the clavicle and the clavicular notch of the manubrium, with an articular disc.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which ligament mainly stabilizes the sternoclavicular joint against superior displacement of the clavicle?",
+    "options": [
+      "Costoclavicular ligament",
+      "Coracoclavicular ligament",
+      "Transverse humeral ligament",
+      "Inferior glenohumeral ligament"
+    ],
+    "correct_index": 0,
+    "explanation": "The costoclavicular ligament is the main stabilizer of the sternoclavicular joint and limits elevation of the clavicle."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The sternoclavicular joint is the only synovial joint connecting the upper limb to the axial skeleton.",
+    "answer": true,
+    "explanation": "The upper limb attaches to the trunk only via the sternoclavicular joint."
+  },
+  "confidence": 0.71,
+  "needs_review": true,
+  "review_reason": "The specimen appears to be a thoracic cage model/prosection, but the exact labelled joint and the blue-painted area mentioned on the paper are not clearly visible. The answer is therefore only moderately confident.",
+  "quality_flags": [
+    "marker ambiguous",
+    "paper partially obscures specimen",
+    "blue painted region not clearly visible"
+  ],
+  "_source": {
+    "id": "6870ac995d03",
+    "file": "6870ac995d03.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 11,
+    "model": "gpt-5.4-mini"
+  }
+}

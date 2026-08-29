@@ -1,0 +1,57 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "Dissected ankle and foot",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.42,
+    "x1": 1.0,
+    "y1": 0.92
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "tag",
+    "x": 0.54,
+    "y": 0.86,
+    "description": "Green plastic sleeve/cap at the inferior aspect of the specimen"
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the marker.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specimen is poorly dissected and the orientation is highly ambiguous. The green marker (plastic sleeve) is placed at the bottom of the specimen, but the exact anatomical structure it points to cannot be confidently identified.",
+  "quality_flags": [
+    "blurred",
+    "marker_ambiguous",
+    "poor_dissection"
+  ],
+  "_source": {
+    "id": "6c9ba3ce64ed",
+    "file": "6c9ba3ce64ed.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 54,
+    "model": "gemini-3.5-flash"
+  }
+}

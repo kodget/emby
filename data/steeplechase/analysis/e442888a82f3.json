@@ -1,0 +1,60 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "LOWER_LIMB",
+  "specimen_label": "dissected lower limb",
+  "specimen_bbox": {
+    "x0": 0.21,
+    "y0": 0.04,
+    "x1": 1.0,
+    "y1": 0.5
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) IDENTIFY THE STRUCTURE TIED A\nB) IDENTIFY THE STRUCTURE TIED B",
+  "station_number": 32,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.33,
+    "y": 0.4,
+    "description": "Threads tied around structures in the sole of the foot and posterior leg"
+  },
+  "structure": null,
+  "main_question": "Identify the structures tied A and B.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which nerve innervates the muscles of the posterior compartment of the leg and divides into the medial and lateral plantar nerves in the foot?",
+    "options": [
+      "Tibial nerve",
+      "Common fibular nerve",
+      "Deep fibular nerve",
+      "Femoral nerve"
+    ],
+    "correct_index": 0,
+    "explanation": "The tibial nerve innervates the posterior compartment of the leg and passes posterior to the medial malleolus to enter the sole of the foot, where it divides into the medial and lateral plantar nerves."
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The specimen has multiple threads tied ('A' and 'B') but they are not clearly labeled in the image, and the specific anatomical structures tied cannot be confidently identified from this angle and resolution.",
+  "quality_flags": [
+    "marker_ambiguous"
+  ],
+  "_source": {
+    "id": "e442888a82f3",
+    "file": "e442888a82f3.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 41,
+    "model": "gemini-3.5-flash"
+  }
+}

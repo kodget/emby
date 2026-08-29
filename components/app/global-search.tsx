@@ -182,8 +182,13 @@ export function GlobalSearch() {
             className="pointer-events-none absolute left-3 size-3.5 text-muted-foreground"
             aria-hidden="true"
           />
-          <div className="h-10 w-full min-w-0 rounded-full border border-border bg-card pl-9 pr-4 text-left text-sm text-muted-foreground transition-colors hover:border-primary/50 sm:max-w-md">
-            <span className="truncate">
+          {/* `truncate` only ellipsizes when the element it sits on is width-constrained.
+              The span was inline inside a non-flex div, so the placeholder ran straight
+              past the pill and out of the header. The row is now a flex container that
+              actually clips, and the phone gets a placeholder that fits. */}
+          <div className="flex h-10 w-full min-w-0 items-center overflow-hidden rounded-full border border-border bg-card pl-9 pr-4 text-left text-sm text-muted-foreground transition-colors hover:border-primary/50 sm:max-w-md">
+            <span className="min-w-0 flex-1 truncate sm:hidden">Search…</span>
+            <span className="hidden min-w-0 flex-1 truncate sm:block">
               Search axilla, glycolysis, cranial nerves…
             </span>
           </div>

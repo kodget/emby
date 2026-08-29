@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "human thoracic skeleton with sternum and ribs",
+  "specimen_bbox": {
+    "x0": 0.3,
+    "y0": 0.0,
+    "x1": 0.76,
+    "y1": 0.98
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": 9,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "Identify the specimen shown.",
+  "main_answer": "Thoracic cage (rib cage) with sternum and ribs.",
+  "main_explanation": "The photograph shows the thoracic cage: sternum in the midline with multiple ribs articulating posteriorly to the thoracic vertebrae.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following ribs is a true rib?",
+    "options": [
+      "8th rib",
+      "10th rib",
+      "1st rib",
+      "12th rib"
+    ],
+    "correct_index": 2,
+    "explanation": "True ribs are ribs 1 to 7, which attach directly to the sternum via their own costal cartilages."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The sternum is located in the midline of the anterior thoracic wall.",
+    "answer": true,
+    "explanation": "The sternum lies centrally on the anterior chest wall."
+  },
+  "confidence": 0.94,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "question paper obscures lower part of specimen",
+    "hand present in image"
+  ],
+  "_source": {
+    "id": "9b7c189ea05b",
+    "file": "9b7c189ea05b.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 10,
+    "model": "gpt-5.4-mini"
+  }
+}

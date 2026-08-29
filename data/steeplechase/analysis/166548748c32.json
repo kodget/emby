@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "NEUROANATOMY",
+  "specimen_label": "vertebra",
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.46,
+    "x1": 0.33,
+    "y1": 0.98
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Identify the bone (be specific)\nB) Identify the area painted blue and what does it articulate with",
+  "station_number": 4,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.105,
+    "y": 0.648,
+    "description": "Blue paint marking on the left side of the vertebra."
+  },
+  "structure": "articular facet",
+  "main_question": "Identify the bone and the blue-painted area, and state what it articulates with.",
+  "main_answer": "Lumbar vertebra; the blue-painted area is the superior articular facet, which articulates with the inferior articular facet of the vertebra above.",
+  "main_explanation": "The specimen is a vertebra with a large vertebral body and a triangular vertebral foramen, consistent with a lumbar vertebra. The blue mark is on an articular process/facet region; on this view it most likely indicates a superior articular facet, which forms a zygapophysial joint with the inferior articular facet of the vertebra above.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which feature best distinguishes a lumbar vertebra from a thoracic vertebra?",
+    "options": [
+      "Presence of costal facets",
+      "Large kidney-shaped body",
+      "Foramen transversarium",
+      "Long spinous process sloping inferiorly"
+    ],
+    "correct_index": 1,
+    "explanation": "Lumbar vertebrae have large kidney-shaped bodies and lack costal facets and transverse foramina."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "Lumbar vertebrae articulate with each other at the zygapophysial joints formed by the articular facets.",
+    "answer": true,
+    "explanation": "Adjacent vertebrae meet at paired synovial facet joints, also called zygapophysial joints."
+  },
+  "confidence": 0.84,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "question paper partially obscures the specimen",
+    "marker slightly ambiguous"
+  ],
+  "_source": {
+    "id": "166548748c32",
+    "file": "166548748c32.jpeg",
+    "width": 768,
+    "height": 569,
+    "source_pdf": "steeple_4.pdf",
+    "source_page": 5,
+    "model": "gpt-5.4-mini"
+  }
+}

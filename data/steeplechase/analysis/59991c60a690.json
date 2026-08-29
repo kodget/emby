@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "THORAX",
+  "specimen_label": "Lung",
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.0,
+    "x1": 0.75,
+    "y1": 0.35
+  },
+  "question_paper_present": true,
+  "transcribed_question": "1) Identify this organ\n2) What is the structure indicated by the pin?\na) Right lungs\nb) Right eparterial bronchus",
+  "station_number": 32,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.35,
+    "y": 0.06,
+    "description": "Green-headed pin inserted into the hilum of the lung"
+  },
+  "structure": "Right eparterial bronchus",
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": "Right eparterial bronchus",
+  "main_explanation": "The pin indicates a bronchus located superior to the pulmonary artery at the hilum of the right lung, which is the eparterial bronchus (supplying the right upper lobe).",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following structures is located inferior to the pulmonary artery at the right lung hilum?",
+    "options": [
+      "Right eparterial bronchus",
+      "Right lower lobe bronchus",
+      "Right superior pulmonary vein",
+      "Right phrenic nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The right lower lobe bronchus (hyparterial bronchus) passes inferior to the pulmonary artery, whereas the eparterial bronchus passes superior to it."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The right eparterial bronchus supplies the right upper lobe.",
+    "answer": true,
+    "explanation": "The eparterial bronchus is the bronchus that passes over the pulmonary artery and supplies the upper lobe of the right lung."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Specimen is preserved and somewhat distorted",
+    "Image is a composite of multiple views"
+  ],
+  "_source": {
+    "id": "59991c60a690",
+    "file": "59991c60a690.jpeg",
+    "width": 1920,
+    "height": 2560,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 37,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

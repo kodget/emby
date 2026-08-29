@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "24\n(A) What muscle is deep to the structure bearing the green pin\n(B) What structure bears the blue pin",
+  "station_number": 24,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame, only the question paper."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only the handwritten question sheet and the surrounding bench surface. The actual anatomical specimen (which appears to be a prosection involving muscles and structures indicated by green and blue pins) is not visible in the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The anatomical specimen is completely missing from the frame. The photo only captures the question paper, making it impossible to identify the structures or create a valid exam station.",
+  "quality_flags": [
+    "specimen_out_of_frame",
+    "only_question_paper_visible"
+  ],
+  "_source": {
+    "id": "0d55945fb3ad",
+    "file": "0d55945fb3ad.jpeg",
+    "width": 606,
+    "height": 455,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 16,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

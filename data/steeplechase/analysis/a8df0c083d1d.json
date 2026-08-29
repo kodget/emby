@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "PELVIS",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.0,
+    "x1": 0.75,
+    "y1": 0.42
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "Small white paper tags are visible in some panels but no single pin, arrow, or thread clearly marks one specific structure."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a multi-panel collage of a cadaveric prosection (likely pelvic/lower abdominal region) without a legible question or a single unambiguous marker, so a specific structure cannot be confidently identified.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "Image is a multi-panel collage rather than a single station photograph; no legible handwritten question is present and no single marker (pin/arrow/thread) clearly indicates one specific structure. The exact region and target structure cannot be confidently determined.",
+  "quality_flags": [
+    "multi_panel_collage",
+    "no_legible_question_paper",
+    "no_clear_single_marker",
+    "poor_orientation_clarity"
+  ],
+  "_source": {
+    "id": "a8df0c083d1d",
+    "file": "a8df0c083d1d.jpeg",
+    "width": 437,
+    "height": 582,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 18,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

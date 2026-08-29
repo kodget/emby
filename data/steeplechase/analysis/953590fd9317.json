@@ -1,0 +1,52 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.05,
+    "x1": 1.0,
+    "y1": 0.65
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "A metal probe or instrument is resting on the specimen, but there is no pin, arrow, tag, or other marker indicating a specific structure to be identified."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a preserved cadaveric specimen on a blue tray, but the specific anatomical region and the structure of interest cannot be determined. There is no question paper, station number, or clear marker visible.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The image is a composite of multiple views of a specimen, but it lacks any question paper, station number, or clear marker (pin/arrow) to define an exam station. The specific anatomical structure is not identifiable from the visual information alone.",
+  "quality_flags": [
+    "No question paper visible",
+    "No station number visible",
+    "No clear marker (pin/arrow) indicating a specific structure",
+    "Image appears to be a composite of multiple photos",
+    "Specimen identification is ambiguous"
+  ],
+  "_source": {
+    "id": "953590fd9317",
+    "file": "953590fd9317.jpeg",
+    "width": 653,
+    "height": 490,
+    "source_pdf": "steeple_7.pdf",
+    "source_page": 5,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

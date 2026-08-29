@@ -39,13 +39,21 @@ export function UserMenu() {
     router.push("/signin");
   };
 
+  // The stored profile can legitimately have no name yet — a fresh Google sign-in
+  // before the profile call resolves, for instance. This component sits in the topbar
+  // on every authenticated page, so an unguarded read here took the whole app down.
+  const displayName = (user.name ?? "").trim();
+  const firstName = displayName.split(/\s+/)[0] || "User";
+
   const getInitials = (name: string) => {
-    if (!name) return "U";
-    const parts = name.split(" ");
+    const parts = name.split(/\s+/).filter(Boolean);
     if (parts.length >= 2) {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    if (parts.length === 1) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    return "U";
   };
 
   if (!mounted) {
@@ -74,20 +82,20 @@ export function UserMenu() {
           aria-label="User menu"
         >
           <Avatar className="h-7 w-7">
-            <AvatarImage src={user.photoUrl || undefined} alt={user.name} />
+            <AvatarImage src={user.photoUrl || undefined} alt={displayName} />
             <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-              {getInitials(user.name)}
+              {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
           <span className="hidden sm:inline-block max-w-[120px] truncate">
-            {user.name.split(" ")[0] || "User"}
+            {firstName}
           </span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium">{user.name}</p>
+            <p className="text-sm font-medium">{displayName || "User"}</p>
             <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
         </DropdownMenuLabel>

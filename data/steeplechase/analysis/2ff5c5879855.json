@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "ABDOMEN",
+  "specimen_label": "Stomach",
+  "specimen_bbox": {
+    "x0": 0.02,
+    "y0": 0.02,
+    "x1": 0.48,
+    "y1": 0.58
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A. Identify the structure pinned green\nB. Identify the structure pinned blue\nC. What is the volume of the organ in adults\n\na) Gastric Rugae\nb) Pylorus Sphincter\nc) 1.5 - 2L",
+  "station_number": 43,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.28,
+    "y": 0.45,
+    "description": "Green-headed pin indicating a specific structure on the stomach wall"
+  },
+  "structure": "Gastric Rugae",
+  "main_question": "Identify the structure indicated by the green pin.",
+  "main_answer": "Gastric Rugae",
+  "main_explanation": "The green pin points to the longitudinal folds of the mucosa and submucosa of the stomach, known as gastric rugae. These folds allow the stomach to expand when filled with food.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "What is the approximate functional capacity of the stomach in an adult?",
+    "options": [
+      "0.5 - 1.0 L",
+      "1.5 - 2.0 L",
+      "3.0 - 4.0 L",
+      "5.0 - 6.0 L"
+    ],
+    "correct_index": 1,
+    "explanation": "The stomach can typically hold about 1.5 to 2.0 liters of food and fluid before distension becomes uncomfortable."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The structure indicated by the blue pin is the pyloric sphincter.",
+    "answer": true,
+    "explanation": "The blue pin is located at the distal end of the stomach, marking the pyloric sphincter which controls the passage of chyme into the duodenum."
+  },
+  "confidence": 0.95,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [],
+  "_source": {
+    "id": "2ff5c5879855",
+    "file": "2ff5c5879855.jpeg",
+    "width": 1228,
+    "height": 2556,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 50,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

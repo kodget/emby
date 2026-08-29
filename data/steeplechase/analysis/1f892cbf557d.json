@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "IDENTIFY: THE AREA SHOWN BLUE WHERE IS IT SIGNIFICANT? LOCATION OF THE AREA PAINTED GREEN",
+  "station_number": 44,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical marker visible as the specimen is not in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph only shows the question paper and station number; the anatomical specimen is not visible in the frame.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 1.0,
+  "needs_review": true,
+  "review_reason": "The image does not contain the anatomical specimen, only the question paper. It is not a usable exam station image.",
+  "quality_flags": [
+    "Specimen not in frame",
+    "Only question paper visible"
+  ],
+  "_source": {
+    "id": "1f892cbf557d",
+    "file": "1f892cbf557d.jpeg",
+    "width": 1620,
+    "height": 1096,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 52,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

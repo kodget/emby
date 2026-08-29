@@ -1,0 +1,49 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "a) Identify the pinned structure green. b) Identify the pinned structure blue.",
+  "station_number": 10,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No anatomical specimen or marker is visible in the frame, only the question paper."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph shows only the question paper and station number. The anatomical specimen is not visible in the frame, making it impossible to identify the structures or verify the answers.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The image contains no visible anatomical specimen, only the question paper. It is not a usable exam station image.",
+  "quality_flags": [
+    "Specimen not visible",
+    "Paper obscures the specimen"
+  ],
+  "_source": {
+    "id": "a2a34d437a82",
+    "file": "a2a34d437a82.jpeg",
+    "width": 1544,
+    "height": 1040,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 13,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

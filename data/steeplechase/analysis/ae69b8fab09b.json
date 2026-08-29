@@ -1,0 +1,62 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "long bone specimen",
+  "specimen_bbox": {
+    "x0": 0.515,
+    "y0": 0.235,
+    "x1": 0.845,
+    "y1": 0.765
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) Side this bone (please be specific)\nB) What inserts to the area painted pink\nC) State its nerve supply",
+  "station_number": 17,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "Identify and side the bone; then state the structure that inserts into the pink painted area and its nerve supply.",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which muscle inserts on the posterior roughening near the proximal end of this bone?",
+    "options": [
+      "Biceps brachii",
+      "Teres major",
+      "Deltoid",
+      "Pectoralis major"
+    ],
+    "correct_index": 2,
+    "explanation": "The painted rough area corresponds to the deltoid tuberosity, which receives insertion of the deltoid muscle."
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.41,
+  "needs_review": true,
+  "review_reason": "The specimen appears to be a long bone, possibly a humerus, but the image is not clear enough to confidently identify and side it or confirm the painted area. No marker is visible, and the pink paint mentioned on the paper is not clearly seen on the specimen.",
+  "quality_flags": [
+    "marker ambiguous",
+    "specimen partly out of frame",
+    "question paper visible"
+  ],
+  "_source": {
+    "id": "ae69b8fab09b",
+    "file": "ae69b8fab09b.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 22,
+    "model": "gpt-5.4-mini"
+  }
+}

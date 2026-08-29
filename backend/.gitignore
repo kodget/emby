@@ -1,4 +1,8 @@
 .env
 .venv/
 __pycache__/
-migrations/
+*.pyc
+
+# NOTE: Django migrations are source code and MUST be committed. This file used to
+# contain a blanket `migrations/` rule, which meant new migrations were silently left
+# out of every commit and deploys drifted from the models. Do not re-add it.

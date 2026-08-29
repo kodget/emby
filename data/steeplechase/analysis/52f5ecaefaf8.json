@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "NEUROANATOMY",
+  "specimen_label": "vertebra",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.0,
+    "x1": 0.52,
+    "y1": 0.43
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(A) What structure attaches to the area painted \"pink\"?\n(B) List two features of the vertebrae in question?",
+  "station_number": 19,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.33,
+    "y": 0.41,
+    "description": "Pink paint marking a roughened area on the vertebral body"
+  },
+  "structure": "anterior longitudinal ligament",
+  "main_question": "What structure attaches to the area painted \"pink\"?",
+  "main_answer": "Anterior longitudinal ligament",
+  "main_explanation": "The pink-marked rough area is on the anterior surface of the vertebral body, which provides attachment for the anterior longitudinal ligament.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which feature is characteristic of a thoracic vertebra?",
+    "options": [
+      "Large kidney-shaped body without costal facets",
+      "Presence of costal facets for rib articulation",
+      "Absence of a vertebral foramen",
+      "Bifid spinous process in all thoracic vertebrae"
+    ],
+    "correct_index": 1,
+    "explanation": "Thoracic vertebrae have costal facets for articulation with ribs."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The anterior longitudinal ligament is attached to the anterior surfaces of the vertebral bodies.",
+    "answer": true,
+    "explanation": "This ligament runs along the anterior aspect of the vertebral bodies and intervertebral discs."
+  },
+  "confidence": 0.78,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "handwritten question partially obscured by the specimen; view is limited",
+    "specimen identification inferred from a partial vertebra image"
+  ],
+  "_source": {
+    "id": "52f5ecaefaf8",
+    "file": "52f5ecaefaf8.jpeg",
+    "width": 1508,
+    "height": 2552,
+    "source_pdf": "steeple_2.pdf",
+    "source_page": 23,
+    "model": "gpt-5.4-mini"
+  }
+}

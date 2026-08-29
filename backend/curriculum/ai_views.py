@@ -31,12 +31,21 @@ AI_DISCLAIMER = (
 
 
 def has_premium_access(user):
-    """Check if user has premium access (Premium User OR Class Head)"""
-    try:
-        profile = user.profile
-        return profile.is_premium or profile.role == 'Class Head'
-    except AttributeError:
+    """Whether this user may use premium features.
+
+    Delegates to accounts.permissions so entitlement is decided in exactly one place.
+    The previous implementation read `profile.role`, a field that does not exist — the
+    model has `platform_role` and `class_role`. In views.py that raised AttributeError
+    whenever is_premium was False; in ai_views.py it was swallowed by an except clause,
+    which silently denied premium AI to verified class heads. The clause was also
+    redundant: Profile.is_premium already covers admins and verified class heads.
+    """
+    from accounts.permissions import can_access_premium_features
+
+    profile = getattr(user, "profile", None)
+    if profile is None:
         return False
+    return can_access_premium_features(profile)
 
 
 def _messages_used_today(user):

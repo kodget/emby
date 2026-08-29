@@ -1,0 +1,51 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.15,
+    "y0": 0.1,
+    "x1": 0.8,
+    "y1": 0.6
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No specific marker (pin, arrow, or tag) is visible to indicate a particular anatomical feature."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image is a composite of multiple low-resolution photos of a bone specimen (likely a cervical vertebra) with green and blue paint markings, but it lacks the necessary components of an exam station such as a question paper or a specific marker.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": true,
+  "review_reason": "The image is a collage of multiple photos rather than a single clear station view, and it lacks a question paper or clear marker, making it unsuitable for direct use as an exam station.",
+  "quality_flags": [
+    "composite_image",
+    "low_resolution",
+    "no_question_paper",
+    "no_marker"
+  ],
+  "_source": {
+    "id": "2b7281d5a12e",
+    "file": "2b7281d5a12e.jpeg",
+    "width": 1632,
+    "height": 1224,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 9,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

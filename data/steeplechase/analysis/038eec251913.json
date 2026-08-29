@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Vertebrae",
+  "specimen_bbox": {
+    "x0": 0.3,
+    "y0": 0.2,
+    "x1": 0.55,
+    "y1": 0.55
+  },
+  "question_paper_present": true,
+  "transcribed_question": "Q. List of the structures indicated by the arrow",
+  "station_number": 24,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.35,
+    "y": 0.38,
+    "description": "Blue-headed pin inserted into the specimen"
+  },
+  "structure": null,
+  "main_question": "List the structures indicated by the arrow.",
+  "main_answer": null,
+  "main_explanation": "The specimen appears to be a section of the vertebral column, but the specific structure indicated by the pin is not clearly identifiable due to the angle and lighting.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.4,
+  "needs_review": true,
+  "review_reason": "The specific anatomical structure indicated by the pin is difficult to identify with certainty from this angle. The specimen appears to be a section of the vertebral column, but the exact feature being tested (e.g., a specific foramen, process, or joint) is ambiguous.",
+  "quality_flags": [
+    "Dark lighting",
+    "Specimen held by hand",
+    "Marker location ambiguous"
+  ],
+  "_source": {
+    "id": "038eec251913",
+    "file": "038eec251913.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 120,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

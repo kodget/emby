@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.4,
+    "y0": 0.1,
+    "x1": 1.0,
+    "y1": 0.5
+  },
+  "question_paper_present": true,
+  "transcribed_question": "15. @ Identify the structure fixed @ What is its significance",
+  "station_number": 15,
+  "marker": {
+    "present": true,
+    "type": "thread",
+    "x": 0.75,
+    "y": 0.25,
+    "description": "A length of thread is tied around a structure within the dark specimen."
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the thread.",
+  "main_answer": null,
+  "main_explanation": "The image is too dark and the specimen is poorly illuminated to allow confident identification of the anatomical structure.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "The specimen is extremely dark and underexposed, making it impossible to identify the anatomical region or the specific structure marked by the thread.",
+  "quality_flags": [
+    "very_dark",
+    "poor_illumination",
+    "specimen_mostly_out_of_frame"
+  ],
+  "_source": {
+    "id": "3bdc9efcdac6",
+    "file": "3bdc9efcdac6.jpeg",
+    "width": 3200,
+    "height": 2400,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 51,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

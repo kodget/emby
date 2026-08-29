@@ -1,0 +1,61 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": "Dissected upper limb prosection",
+  "specimen_bbox": {
+    "x0": 0.04,
+    "y0": 0.04,
+    "x1": 0.95,
+    "y1": 0.45
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A) IDENTIFY THE STRUCTURE TIED (BE SPECIFIC)\nB) IDENTIFY THE STRUCTURE PINNED GREEN A\nC) WHAT IS THE INNERVATION OF THE STRUCTURE PINNED GREEN A",
+  "station_number": 23,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.78,
+    "y": 0.35,
+    "description": "Green-headed pin"
+  },
+  "structure": "Median nerve",
+  "main_question": "Identify the structure indicated by the green pin.",
+  "main_answer": "Median nerve",
+  "main_explanation": "The green pin indicates the median nerve, which is visible in the anterior compartment of the arm, typically running with the brachial artery.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following muscles is *not* typically innervated by the median nerve in the forearm?",
+    "options": [
+      "Flexor digitorum superficialis",
+      "Flexor pollicis longus",
+      "Flexor carpi ulnaris",
+      "Pronator teres"
+    ],
+    "correct_index": 2,
+    "explanation": "The flexor carpi ulnaris muscle is innervated by the ulnar nerve. The median nerve (and its anterior interosseous branch) innervates most other muscles of the anterior forearm, including the flexor digitorum superficialis, flexor pollicis longus, and pronator teres."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The median nerve passes through the carpal tunnel.",
+    "answer": true,
+    "explanation": "The median nerve passes through the carpal tunnel, deep to the flexor retinaculum, along with the tendons of the flexor digitorum superficialis, flexor digitorum profundus, and flexor pollicis longus. Compression of the median nerve in this tunnel causes carpal tunnel syndrome."
+  },
+  "confidence": 1.0,
+  "needs_review": false,
+  "review_reason": null,
+  "quality_flags": [
+    "Dark image",
+    "Specimen condition"
+  ],
+  "_source": {
+    "id": "3eac4314e474",
+    "file": "3eac4314e474.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 29,
+    "model": "gemini-2.5-flash"
+  }
+}

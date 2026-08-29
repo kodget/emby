@@ -81,14 +81,13 @@
 }
 
 @theme inline {
-  /* Clash Display for display/headings, Satoshi for body.
-     We alias --font-serif -> Clash Display so the existing `font-serif`
-     usage across the app becomes our display font without editing dozens
-     of files. next/font vars remain as graceful fallbacks. */
-  --font-sans: 'Satoshi', var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-serif: 'Clash Display', var(--font-sora), ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Clash Display', var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  /* Lilita One carries the interface, Anton the headlines, JetBrains Mono the data.
+     `--font-serif` stays aliased to the display face because dozens of components
+     already use `font-serif`; retargeting the token changes them all at once. */
+  --font-sans: 'Lilita One', ui-rounded, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --font-serif: 'Anton', 'Lilita One', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Anton', 'Lilita One', ui-sans-serif, system-ui, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -158,9 +157,24 @@
     background-attachment: fixed;
     background-repeat: no-repeat;
   }
-  /* Display headings use Clash Display via --font-serif alias */
+  /* Anton is condensed and heavy: it needs a little tracking to breathe, and it has
+     only one weight, so hierarchy comes from size rather than weight. */
   h1, h2, h3 {
-    letter-spacing: -0.02em;
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: 0.005em;
+    line-height: 1.08;
+  }
+
+  /* Lilita One sits large on its em box, so default line-height crowds body copy. */
+  body {
+    line-height: 1.5;
+    letter-spacing: 0.004em;
+  }
+
+  /* It also has no bold cut — asking for one triggers a synthetic smear. */
+  strong, b, .font-semibold, .font-bold, .font-medium {
+    font-weight: 400;
   }
   /* Tabular figures everywhere numbers matter feel intentional */
   .font-mono {
@@ -339,5 +353,175 @@
     .hover-lift {
       transition: none;
     }
+  }
+}
+
+/* =====================================================================
+   APP SHELL — make a web app behave like an installed mobile app.
+   Emby is delivered on the web but is used like a phone app, so these
+   rules remove the browser tells: text selection on chrome, the blue tap
+   flash, rubber-band scroll chaining, and content sliding under a notch.
+   ===================================================================== */
+@layer base {
+  html {
+    /* Stop iOS enlarging text when a device is rotated. */
+    -webkit-text-size-adjust: 100%;
+    /* Never let the whole page bounce; individual panes opt back in. */
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    /* No blue flash when tapping a control. */
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+
+  /* App chrome should not be selectable — only real content should be. */
+  nav, header, aside, button, [role="tab"], [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Inputs below 16px cause iOS Safari to zoom on focus. */
+  @media (max-width: 767px) {
+    input, select, textarea {
+      font-size: 16px;
+    }
+  }
+}
+
+@layer utilities {
+  /* ---- Safe areas (notches, home indicator) --------------------------- */
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+  .pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+  .h-safe-bottom { height: env(safe-area-inset-bottom, 0px); }
+  /* Clears the bottom tab bar plus the home indicator. */
+  .pb-tabbar { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+
+  /* Momentum scrolling inside a pane, without chaining to the page. */
+  .scroll-pane {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* ---- Depth ---------------------------------------------------------
+     A five-step elevation ramp. Shadows are tinted with the ink colour
+     rather than pure black so they sit correctly on the warm canvas.     */
+  .depth-1 {
+    box-shadow:
+      0 1px 2px -1px color-mix(in oklab, var(--foreground) 10%, transparent),
+      0 2px 6px -2px color-mix(in oklab, var(--foreground) 8%, transparent);
+  }
+  .depth-2 {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.65),
+      0 2px 4px -2px color-mix(in oklab, var(--foreground) 10%, transparent),
+      0 8px 20px -8px color-mix(in oklab, var(--foreground) 16%, transparent);
+  }
+  .depth-3 {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.7),
+      0 4px 8px -4px color-mix(in oklab, var(--foreground) 10%, transparent),
+      0 16px 36px -14px color-mix(in oklab, var(--foreground) 20%, transparent);
+  }
+  .depth-4 {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.75),
+      0 8px 16px -8px color-mix(in oklab, var(--foreground) 12%, transparent),
+      0 28px 56px -20px color-mix(in oklab, var(--foreground) 24%, transparent);
+  }
+
+  /* ---- Card 3D -------------------------------------------------------
+     A raised surface with a lit top edge and a grounded bottom edge, so
+     cards read as physical objects instead of flat rectangles.           */
+  .card-3d {
+    position: relative;
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, white 100%, transparent),
+      color-mix(in oklab, var(--secondary) 30%, white)
+    );
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.9),
+      inset 0 -1px 0 0 color-mix(in oklab, var(--foreground) 5%, transparent),
+      0 2px 4px -2px color-mix(in oklab, var(--foreground) 9%, transparent),
+      0 14px 32px -12px color-mix(in oklab, var(--foreground) 18%, transparent);
+    transition:
+      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .card-3d-hover:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.95),
+      0 4px 8px -4px color-mix(in oklab, var(--foreground) 10%, transparent),
+      0 26px 52px -16px color-mix(in oklab, var(--foreground) 24%, transparent);
+  }
+
+  /* A coloured plinth for feature tiles. */
+  .plinth {
+    background:
+      radial-gradient(120% 100% at 50% 0%, color-mix(in oklab, white 70%, transparent), transparent 60%),
+      linear-gradient(180deg, color-mix(in oklab, var(--primary) 12%, white), color-mix(in oklab, var(--primary) 5%, white));
+  }
+
+  /* ---- Touch feedback ------------------------------------------------
+     Native apps respond instantly to a finger. `press` gives every tappable
+     surface that immediate, springy acknowledgement.                      */
+  .press {
+    transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), filter 0.16s ease;
+    touch-action: manipulation;
+  }
+  .press:active {
+    transform: scale(0.965);
+    filter: brightness(0.98);
+  }
+  .press-sm:active { transform: scale(0.985); }
+  .press-lg:active { transform: scale(0.94); }
+
+  /* ---- Sheet / modal motion ------------------------------------------ */
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .sheet-up {
+    animation: sheet-up 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Drag handle at the top of a bottom sheet. */
+  .sheet-grabber {
+    width: 2.25rem;
+    height: 0.25rem;
+    border-radius: 99px;
+    background: color-mix(in oklab, var(--foreground) 18%, transparent);
+  }
+
+  /* ---- Skeleton ------------------------------------------------------- */
+  @keyframes skeleton-sweep {
+    from { background-position: -180% 0; }
+    to { background-position: 180% 0; }
+  }
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--foreground) 6%, transparent) 25%,
+      color-mix(in oklab, var(--foreground) 11%, transparent) 37%,
+      color-mix(in oklab, var(--foreground) 6%, transparent) 63%
+    );
+    background-size: 400% 100%;
+    animation: skeleton-sweep 1.5s ease-in-out infinite;
+    border-radius: var(--radius-md);
+  }
+
+  /* Numbers that tick should not reflow the layout around them. */
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton, .sheet-up { animation: none !important; }
+    .card-3d, .card-3d-hover:hover, .press { transition: none; transform: none; }
   }
 }

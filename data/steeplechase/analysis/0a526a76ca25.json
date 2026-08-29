@@ -1,0 +1,58 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.0,
+    "y1": 0.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": 35,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": false,
+    "question": null,
+    "options": [],
+    "correct_index": null,
+    "explanation": null
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.19,
+  "needs_review": true,
+  "review_reason": "The image does not show a clear anatomy specimen or identifiable marked structure; it appears to be a blurred photo of papers/poster on a bench with no usable station content visible.",
+  "quality_flags": [
+    "blurred",
+    "specimen not visible",
+    "marker absent",
+    "paper obscures scene"
+  ],
+  "_source": {
+    "id": "0a526a76ca25",
+    "file": "0a526a76ca25.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 9,
+    "model": "gpt-5.4-mini"
+  }
+}

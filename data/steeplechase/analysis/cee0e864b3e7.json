@@ -1,0 +1,60 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UPPER_LIMB",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 0.0,
+    "y1": 0.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "1) Name 2 STRUCTURES THAT PIERCES THE CLAVIPECTORAL FASCIA\n\n3) What cutaneous Nerve is Most likely to be DAMAGED In the Infiltration of central Group of Axillary lymph node by A TUMOR",
+  "station_number": 37,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": null
+  },
+  "structure": null,
+  "main_question": "Name two structures that pierce the clavipectoral fascia.",
+  "main_answer": "Any two of: Cephalic vein, Thoracoacromial artery (or its branches), Lateral pectoral nerve, Lymphatic vessels (draining to apical axillary nodes).",
+  "main_explanation": "The clavipectoral fascia is a strong fascial sheet situated deep to the clavicular head of the pectoralis major. It is pierced by four structures: the cephalic vein, the thoracoacromial artery, the lateral pectoral nerve, and lymphatic vessels.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which cutaneous nerve is most likely to be damaged or compressed by enlargement/infiltration of the central group of axillary lymph nodes?",
+    "options": [
+      "Medial cutaneous nerve of the arm",
+      "Intercostobrachial nerve",
+      "Lateral cutaneous nerve of the forearm",
+      "Supraclavicular nerve"
+    ],
+    "correct_index": 1,
+    "explanation": "The intercostobrachial nerve (the lateral cutaneous branch of the second intercostal nerve) traverses the axilla, passing close to the central group of axillary lymph nodes. It is highly vulnerable to compression by axillary lymphadenopathy or damage during axillary lymph node dissection."
+  },
+  "true_false": {
+    "enabled": true,
+    "statement": "The lateral pectoral nerve pierces the clavipectoral fascia to supply the pectoralis major muscle.",
+    "answer": true,
+    "explanation": "The lateral pectoral nerve arises from the lateral cord of the brachial plexus, pierces the clavipectoral fascia, and supplies the pectoralis major muscle."
+  },
+  "confidence": 1.0,
+  "needs_review": true,
+  "review_reason": "The photograph contains only a handwritten question paper on a metal table; there is no anatomical specimen or model visible in the image.",
+  "quality_flags": [
+    "no_specimen"
+  ],
+  "_source": {
+    "id": "cee0e864b3e7",
+    "file": "cee0e864b3e7.jpeg",
+    "width": 2048,
+    "height": 1536,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 48,
+    "model": "gemini-3.5-flash"
+  }
+}

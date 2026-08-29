@@ -1,0 +1,63 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "long bone, likely humerus",
+  "specimen_bbox": {
+    "x0": 0.57,
+    "y0": 0.23,
+    "x1": 0.89,
+    "y1": 0.97
+  },
+  "question_paper_present": true,
+  "transcribed_question": "1) What structure attach to the area painted pink\nB) Damage to the area that painted green present what anatomical deformity",
+  "station_number": 14,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.74,
+    "y": 0.76,
+    "description": "Green paint mark on the distal shaft near the lower end of the bone."
+  },
+  "structure": null,
+  "main_question": "What structure attaches to the area painted pink?",
+  "main_answer": null,
+  "main_explanation": null,
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which nerve is most closely related to the marked region on this bone?",
+    "options": [
+      "Radial nerve",
+      "Median nerve",
+      "Ulnar nerve",
+      "Musculocutaneous nerve"
+    ],
+    "correct_index": 0,
+    "explanation": "If this is the humeral shaft region, the radial nerve lies in the radial groove on the posterior aspect of the humerus."
+  },
+  "true_false": {
+    "enabled": false,
+    "statement": null,
+    "answer": null,
+    "explanation": null
+  },
+  "confidence": 0.34,
+  "needs_review": true,
+  "review_reason": "The specimen appears to be a long bone, probably humerus, but the image does not clearly show the painted pink area, and the handwritten prompt is partially illegible. The exact bone and marked structure cannot be identified confidently.",
+  "quality_flags": [
+    "marker ambiguous",
+    "question paper partly illegible",
+    "specimen partially obscured by paper",
+    "low confidence bone identification"
+  ],
+  "_source": {
+    "id": "debdc372f49a",
+    "file": "debdc372f49a.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 19,
+    "model": "gpt-5.4-mini"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": "Small isolated bone fragment",
+  "specimen_bbox": {
+    "x0": 0.18,
+    "y0": 0.24,
+    "x1": 0.32,
+    "y1": 0.38
+  },
+  "question_paper_present": true,
+  "transcribed_question": "(A) Specifically identify this bone. (B) What articulate to the area marked - tell me",
+  "station_number": 49,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No pin, arrow, or thread is visible on the specimen in the photograph."
+  },
+  "structure": null,
+  "main_question": "Specifically identify this bone.",
+  "main_answer": null,
+  "main_explanation": "The specimen is a small, isolated bone fragment. Due to the low resolution and lack of orientation, it is impossible to definitively identify the specific bone (e.g., a carpal, tarsal, or small cranial bone) from the image alone.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.3,
+  "needs_review": true,
+  "review_reason": "The bone is too small and the image resolution is too low to identify the specific anatomical structure. The handwritten question is partially legible but the specific bone cannot be determined.",
+  "quality_flags": [
+    "low_resolution",
+    "specimen_too_small",
+    "ambiguous_specimen"
+  ],
+  "_source": {
+    "id": "80b037ae0165",
+    "file": "80b037ae0165.jpeg",
+    "width": 1536,
+    "height": 2048,
+    "source_pdf": "steeple_1.pdf",
+    "source_page": 64,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

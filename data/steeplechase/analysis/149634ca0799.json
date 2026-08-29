@@ -1,0 +1,58 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Brain prosection",
+  "specimen_bbox": {
+    "x0": 0.12,
+    "y0": 0.13,
+    "x1": 0.48,
+    "y1": 0.58
+  },
+  "question_paper_present": true,
+  "transcribed_question": "32\n(A) Identify the grey matter of the upper part of the pink structure\n(B) What nerve branches off the pink structure to parietal lobe",
+  "station_number": 32,
+  "marker": {
+    "present": true,
+    "type": "paint",
+    "x": 0.18,
+    "y": 0.35,
+    "description": "Pink paint applied to a specific structure on the brain surface"
+  },
+  "structure": "Corpus callosum",
+  "main_question": "Identify the grey matter of the upper part of the pink structure.",
+  "main_answer": "Cingulate gyrus",
+  "main_explanation": "The pink structure is the corpus callosum. The grey matter of the upper part (superior aspect) of the corpus callosum is the cingulate gyrus, which is part of the limbic system.",
+  "supporting_question": {
+    "enabled": true,
+    "question": "Which of the following is a function of the structure indicated by the pink paint?",
+    "options": [
+      "Connects the two cerebral hemispheres",
+      "Transmits sensory information from the body to the brain",
+      "Regulates heart rate and respiration",
+      "Produces cerebrospinal fluid"
+    ],
+    "correct_index": 0,
+    "explanation": "The corpus callosum is the largest white matter tract in the brain and serves to connect the left and right cerebral hemispheres, allowing communication between them."
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.9,
+  "needs_review": false,
+  "review_reason": "",
+  "quality_flags": [
+    "Image is a composite of multiple views",
+    "Specimen is partially obscured by the question paper in the main view"
+  ],
+  "_source": {
+    "id": "149634ca0799",
+    "file": "149634ca0799.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 3,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "HEAD_NECK",
+  "specimen_label": "Sectioned skull (dry bone)",
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.05,
+    "x1": 0.95,
+    "y1": 0.75
+  },
+  "question_paper_present": true,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.2,
+    "y": 0.35,
+    "description": "Blue-headed dressmaker pin marking a structure in the upper portion of the sectioned skull"
+  },
+  "structure": null,
+  "main_question": "Identify the structure indicated by the pin.",
+  "main_answer": null,
+  "main_explanation": "The specimen is a sectioned dry skull, but the exact structure marked by the blue pin cannot be confidently identified from the image alone due to the angle and the nature of the section.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.4,
+  "needs_review": true,
+  "review_reason": "The exact structure marked by the blue pin cannot be confidently identified. The specimen appears to be a sectioned skull, but the orientation and the specific anatomical landmark indicated by the pin are unclear. The handwritten question paper is partially visible but the text is not legible enough to confirm what is being asked.",
+  "quality_flags": [
+    "Marker structure ambiguous - cannot confidently identify the specific anatomical landmark",
+    "Question paper text partially cut off and not fully legible",
+    "Image shows multiple views/angles which may be confusing"
+  ],
+  "_source": {
+    "id": "fe56c329836c",
+    "file": "fe56c329836c.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 1,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

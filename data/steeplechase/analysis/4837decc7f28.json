@@ -1,0 +1,51 @@
+{
+  "is_station": true,
+  "station_kind": "GROSS_ANATOMY",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.05,
+    "y0": 0.0,
+    "x1": 0.95,
+    "y1": 0.72
+  },
+  "question_paper_present": false,
+  "transcribed_question": null,
+  "station_number": null,
+  "marker": {
+    "present": true,
+    "type": "pin",
+    "x": 0.48,
+    "y": 0.58,
+    "description": "Blue-headed dressmaker pin inserted into the specimen"
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The image shows a cadaveric prosection with a blue-headed pin, but the specific anatomical structure indicated cannot be confidently identified from the photograph. The orientation, surrounding landmarks, and exact region are unclear.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.2,
+  "needs_review": true,
+  "review_reason": "Cannot confidently identify the anatomical structure marked by the blue pin. The prosection orientation and region are ambiguous, and there is no question paper or station number visible to provide context. A plausible guess would be a serious error.",
+  "quality_flags": [
+    "structure unclear",
+    "no question paper visible",
+    "no station number visible",
+    "orientation ambiguous"
+  ],
+  "_source": {
+    "id": "4837decc7f28",
+    "file": "4837decc7f28.jpeg",
+    "width": 809,
+    "height": 606,
+    "source_pdf": "steeple_3.pdf",
+    "source_page": 11,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

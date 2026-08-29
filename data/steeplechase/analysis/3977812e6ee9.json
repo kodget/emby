@@ -1,0 +1,50 @@
+{
+  "is_station": false,
+  "station_kind": "OTHER",
+  "histology_topic": "UNKNOWN",
+  "region": "UNKNOWN",
+  "specimen_label": null,
+  "specimen_bbox": {
+    "x0": 0.0,
+    "y0": 0.0,
+    "x1": 1.0,
+    "y1": 1.0
+  },
+  "question_paper_present": true,
+  "transcribed_question": "A> Identify A. B> What structure is related to the area pinned B?",
+  "station_number": 11,
+  "marker": {
+    "present": false,
+    "type": "none",
+    "x": null,
+    "y": null,
+    "description": "No marker visible on a specimen because the specimen is not in the frame."
+  },
+  "structure": null,
+  "main_question": null,
+  "main_answer": null,
+  "main_explanation": "The photograph only shows the question paper and the station number. The anatomical specimen referenced by the questions is not visible in the image.",
+  "supporting_question": {
+    "enabled": false
+  },
+  "true_false": {
+    "enabled": false
+  },
+  "confidence": 0.95,
+  "needs_review": true,
+  "review_reason": "The anatomical specimen is not visible in the photograph. Only the question paper and station number are shown. The image is likely misframed or the specimen was removed before the photo was taken.",
+  "quality_flags": [
+    "Specimen not visible",
+    "Only question paper visible",
+    "Image does not show the anatomical structure to be tested"
+  ],
+  "_source": {
+    "id": "3977812e6ee9",
+    "file": "3977812e6ee9.jpeg",
+    "width": 3200,
+    "height": 2059,
+    "source_pdf": "steeple_8.pdf",
+    "source_page": 56,
+    "model": "qwen/qwen3.8-27b"
+  }
+}

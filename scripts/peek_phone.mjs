@@ -1,0 +1,20 @@
+import { chromium, devices } from "playwright";
+const [BASE, OUT] = process.argv.slice(2);
+const b = await chromium.launch();
+// Real phone profile, and no seeded session — this signs in exactly as you will.
+const c = await b.newContext({ ...devices["iPhone 13"] });
+const p = await c.newPage();
+p.on("pageerror", e => console.log("  ! page error:", e.message));
+p.on("response", r => { if (r.url().includes("/auth/login")) console.log("  login response:", r.status(), "from", new URL(r.url()).host); });
+await p.goto(BASE + "/signin", { waitUntil: "load" });
+await p.waitForTimeout(1800);
+await p.fill('input[type="email"], input[name="email"]', "demo@emby.app");
+await p.fill('input[type="password"], input[name="password"]', "emby1234");
+await p.click('button[type="submit"]');
+await p.waitForTimeout(7000);
+console.log("  landed on:", p.url().replace(BASE, "") || "/");
+const body = (await p.textContent("body")) || "";
+console.log("  signed in:", /Ada|ready to study/i.test(body));
+console.log("  tab bar:  ", await p.locator('nav[aria-label="Primary"]').isVisible().catch(()=>false));
+await p.screenshot({ path: OUT });
+await b.close();
