@@ -48,6 +48,9 @@ class ProfileSerializer(serializers.ModelSerializer):
     # sidebar show a permanent zero while the dashboard showed the real figure.
     streak = serializers.SerializerMethodField()
 
+    is_superuser = serializers.BooleanField(source='user.is_superuser', read_only=True)
+    is_staff = serializers.BooleanField(source='user.is_staff', read_only=True)
+
     def get_streak(self, obj) -> int:
         stats = getattr(obj.user, "stats", None)
         return getattr(stats, "current_streak", 0) or 0
@@ -59,9 +62,10 @@ class ProfileSerializer(serializers.ModelSerializer):
                   'subscription_tier', 'subscription_expires_at', 'is_premium',
                   'onboarding_completed', 'email_verified', 'class_head_verified',
                   'class_head_verification_requested', 'class_head_rejection_reason',
-                  'can_access_app', 'streak', 'created_at']
+                  'can_access_app', 'streak', 'created_at', 'is_superuser', 'is_staff']
         read_only_fields = ['subscription_tier', 'subscription_expires_at', 'email_verified',
-                            'class_head_verified', 'class_head_verification_requested']
+                            'class_head_verified', 'class_head_verification_requested',
+                            'is_superuser', 'is_staff']
 
 
 class UpdateProfileSerializer(serializers.Serializer):

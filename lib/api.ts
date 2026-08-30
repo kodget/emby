@@ -127,6 +127,8 @@ export type UserProfile = {
   can_access_app: boolean;
   streak: number;
   created_at: string;
+  is_superuser?: boolean;
+  is_staff?: boolean;
 };
 
 export type AuthTokens = {
@@ -603,7 +605,6 @@ export const onboardingApi = {
     return response.data;
   },
 
-  // Validate class code without submitting
   validateClassCode: async (
     class_code: string,
   ): Promise<{ valid: boolean }> => {
@@ -612,6 +613,63 @@ export const onboardingApi = {
     });
     return response.data;
   },
+};
+
+// ==================== ADMIN API ====================
+
+export const adminApi = {
+  getAnalytics: async (): Promise<{
+    total_users: number;
+    total_premium_users: number;
+    total_classes: number;
+    total_subjects: number;
+    total_slides: number;
+    total_quizzes_taken: number;
+    revenue_summary: { monthly: number; yearly: number };
+  }> => {
+    const response = await api.get("/auth/admin/analytics/");
+    return response.data;
+  },
+  getUsers: async (): Promise<UserProfile[]> => {
+    const response = await api.get("/auth/admin/users/");
+    return response.data;
+  },
+  getCurriculum: async (): Promise<{
+    schools: any[];
+    classes: any[];
+    subjects: any[];
+  }> => {
+    const response = await api.get("/auth/admin/curriculum/");
+    return response.data;
+  },
+  getPayments: async (): Promise<any[]> => {
+    const response = await api.get("/auth/admin/payments/");
+    return response.data;
+  },
+  getSchema: async (): Promise<any[]> => {
+    const response = await api.get("/auth/admin/schema/");
+    return response.data;
+  },
+  getAdminDataList: async (appLabel: string, modelName: string, page: number = 1): Promise<{results: any[], total: number, page: number, limit: number}> => {
+    const response = await api.get(`/auth/admin/data/${appLabel}/${modelName}/?page=${page}`);
+    return response.data;
+  },
+  getAdminDataDetail: async (appLabel: string, modelName: string, id: string): Promise<any> => {
+    const response = await api.get(`/auth/admin/data/${appLabel}/${modelName}/${id}/`);
+    return response.data;
+  },
+  createAdminData: async (appLabel: string, modelName: string, data: any): Promise<any> => {
+    const response = await api.post(`/auth/admin/data/${appLabel}/${modelName}/`, data);
+    return response.data;
+  },
+  updateAdminData: async (appLabel: string, modelName: string, id: string, data: any): Promise<any> => {
+    const response = await api.put(`/auth/admin/data/${appLabel}/${modelName}/${id}/`, data);
+    return response.data;
+  },
+  deleteAdminData: async (appLabel: string, modelName: string, id: string): Promise<any> => {
+    const response = await api.delete(`/auth/admin/data/${appLabel}/${modelName}/${id}/`);
+    return response.data;
+  }
 };
 
 // ==================== CLASS API ====================

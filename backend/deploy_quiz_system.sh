@@ -40,12 +40,9 @@ fi
 
 echo "Migrations completed successfully."
 
-# Create admin user if explicitly requested (Render deployment process)
-if [ "$CREATE_SUPERUSER" = "True" ]; then
-    echo "Creating superuser..."
-    python manage.py create_admin
-    echo "Superuser creation step completed. Ensure CREATE_SUPERUSER is removed or set to False after successful deployment."
-fi
+# Create admin user (idempotent command, safely skips if user exists)
+echo "Ensuring superuser exists..."
+python manage.py create_admin
 
 
 # Collect static files

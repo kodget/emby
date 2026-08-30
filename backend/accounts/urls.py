@@ -44,6 +44,17 @@ urlpatterns = [
     path('payment/initiate/', views.initiate_payment, name='initiate-payment'),
     path('payment/verify/', views.verify_payment, name='verify-payment'),
     
+    # Admin
+    path('admin/analytics/', __import__('accounts.admin_views').admin_views.get_analytics, name='admin-analytics'),
+    path('admin/users/', __import__('accounts.admin_views').admin_views.get_users, name='admin-users'),
+    path('admin/curriculum/', __import__('accounts.admin_views').admin_views.get_curriculum, name='admin-curriculum'),
+    path('admin/payments/', __import__('accounts.admin_views').admin_views.get_payments, name='admin-payments'),
+    
+    # Universal Admin
+    path('admin/schema/', __import__('accounts.universal_admin').universal_admin.admin_schema, name='admin-schema'),
+    path('admin/data/<str:app_label>/<str:model_name>/', __import__('accounts.universal_admin').universal_admin.admin_data_list, name='admin-data-list'),
+    path('admin/data/<str:app_label>/<str:model_name>/<str:pk>/', __import__('accounts.universal_admin').universal_admin.admin_data_detail, name='admin-data-detail'),
+    
     # Router URLs
     path('', include(router.urls)),
 ]

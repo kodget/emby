@@ -11,11 +11,6 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-# Run create_admin only if explicitly requested to prevent unnecessary execution on every deploy
-if [ "$RENDER_CREATE_SUPERUSER" = "True" ]; then
-    echo "Creating superuser..."
-    python manage.py create_admin
-    echo "Superuser creation step completed. You may now remove RENDER_CREATE_SUPERUSER or set it to False."
-else
-    echo "Skipping superuser creation. Set RENDER_CREATE_SUPERUSER=True to run."
-fi
+# Run create_admin command (idempotent; safely skips if user exists)
+echo "Ensuring superuser exists..."
+python manage.py create_admin
