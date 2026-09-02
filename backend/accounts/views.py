@@ -41,7 +41,8 @@ def get_tokens_for_user(user):
 
 def send_verification_email(user, token):
     """Send email verification link"""
-    verification_link = f"http://localhost:3000/verify-email?token={token}"
+    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+    verification_link = f"{frontend_url}/verify-email?token={token}"
     send_mail(
         'Verify your email - Emby',
         f'Click this link to verify your email: {verification_link}',
@@ -291,7 +292,8 @@ def forgot_password(request):
         profile.save()
         
         # Send reset email
-        reset_link = f"http://localhost:3000/reset-password?token={reset_token}"
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+        reset_link = f"{frontend_url}/reset-password?token={reset_token}"
         try:
             send_mail(
                 'Password Reset - Emby',
