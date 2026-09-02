@@ -74,7 +74,6 @@ export function Reader({
   courseBreadcrumb: string;
 }) {
   const [panelOpen, setPanelOpen] = useState(false);
-  const [leftPanelOpen, setLeftPanelOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("ai");
   const [selection, setSelection] = useState<SelectionPayload | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -86,7 +85,6 @@ export function Reader({
   useEffect(() => {
     if (window.innerWidth >= 1024) {
       setPanelOpen(true);
-      setLeftPanelOpen(true);
     }
   }, []);
 
@@ -295,55 +293,17 @@ export function Reader({
         slideTitle={slide.title}
         panelOpen={panelOpen}
         onTogglePanel={() => setPanelOpen((v) => !v)}
-        leftPanelOpen={leftPanelOpen}
-        onToggleLeftPanel={() => setLeftPanelOpen((v) => !v)}
       />
 
       <div className="flex flex-1 min-h-0 relative">
-        {/* ── Collapsible Left Outline Panel ───────────────────────────── */}
-        {leftPanelOpen && (
-          <aside className="absolute inset-y-0 left-0 z-40 w-64 border-r border-border bg-card flex flex-col shrink-0 lg:static lg:z-auto shadow-2xl lg:shadow-none">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <span className="font-serif text-sm font-semibold text-foreground">Outline</span>
-              <button
-                type="button"
-                onClick={() => setLeftPanelOpen(false)}
-                className="p-1 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label="Close outline"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {slides.map((s, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => goToPage(idx)}
-                  className={cn(
-                    "w-full text-left px-3 py-2 rounded-xl text-xs transition-colors flex items-center justify-between",
-                    idx === currentSlideIndex
-                      ? "bg-primary text-primary-foreground font-semibold"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <span className="truncate pr-2">{s.title || `Page ${idx + 1}`}</span>
-                  <span className={cn("text-[10px] shrink-0 ml-1", idx === currentSlideIndex ? "text-primary-foreground/70" : "text-muted-foreground/40")}>
-                    {idx + 1}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </aside>
-        )}
-
         {/* ── Center: Slide Viewer ────────────────────────────────────────── */}
         <div
           className={cn(
-            "flex-1 min-w-0 overflow-y-auto border-r border-border transition-[margin]",
-            panelOpen ? "lg:mr-[420px]" : "",
+            "flex-1 min-w-0 border-r border-border transition-[margin] flex flex-col",
+            slideContent && slideContent.pages && slideContent.pages.length > 0 ? "overflow-hidden bg-muted/20" : "overflow-y-auto"
           )}
         >
-          <div className="mx-auto max-w-4xl px-6 py-10">
+          <div className={cn("mx-auto w-full flex-1 flex flex-col min-h-0", slideContent && slideContent.pages && slideContent.pages.length > 0 ? "px-0 py-0" : "px-4 sm:px-8 py-6")}>
             <ReaderContent
               blocks={[]}
               slideContent={slideContent}
@@ -355,7 +315,10 @@ export function Reader({
 
             {/* ── Page navigation ─────────────────────────────────────── */}
             <nav
-              className="mt-10 flex items-center justify-between border-t border-border pt-6 text-sm"
+              className={cn(
+                "shrink-0 flex items-center justify-between border-t border-border text-sm",
+                slideContent && slideContent.pages && slideContent.pages.length > 0 ? "px-6 py-3 bg-card" : "mt-10 pt-6"
+              )}
               aria-label="Page navigation"
             >
               <button
@@ -392,10 +355,10 @@ export function Reader({
         {/* ── Right: AI + Resource Panel ───────────────────────────────── */}
         {panelOpen && (
           <aside className={cn(
-            "fixed inset-x-0 bottom-0 top-[4rem] z-40 flex flex-col border-l border-border bg-card lg:static lg:h-[calc(100vh-4rem)] lg:w-[420px] lg:z-auto shadow-2xl lg:shadow-none",
+            "absolute inset-0 z-40 flex flex-col border-l border-border bg-card lg:static lg:h-[calc(100vh-4rem-3.5rem)] lg:w-[420px] lg:z-auto shadow-2xl lg:shadow-none",
             isSession ? "pb-28" : ""
           )}>
-            <PanelTabs tab={tab} onChange={setTab} />
+            <PanelTabs tab={tab} onChange={setTab} onClose={() => setPanelOpen(false)} />
             <div className="flex-1 min-h-0 overflow-y-auto">
               {/* AI Chat */}
               {tab === "ai" &&
@@ -467,28 +430,15 @@ function ReaderToolbar({
   slideTitle,
   panelOpen,
   onTogglePanel,
-  leftPanelOpen,
-  onToggleLeftPanel,
 }: {
   courseId: string;
   courseBreadcrumb: string;
   slideTitle: string;
   panelOpen: boolean;
   onTogglePanel: () => void;
-  leftPanelOpen: boolean;
-  onToggleLeftPanel: () => void;
 }) {
   return (
     <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/90 px-4 py-2.5 backdrop-blur-md sm:px-6">
-      <button
-        type="button"
-        onClick={onToggleLeftPanel}
-        aria-pressed={leftPanelOpen}
-        aria-label={leftPanelOpen ? "Hide outline" : "Show outline"}
-        className="flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground"
-      >
-        <BookOpenText className="size-4" />
-      </button>
       <Link
         href={`/courses/${courseId}`}
         className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground ml-1"
@@ -497,11 +447,11 @@ function ReaderToolbar({
         <span className="hidden sm:inline">Back</span>
       </Link>
       <span className="hidden text-xs text-muted-foreground sm:inline">/</span>
-      <p className="truncate text-xs text-muted-foreground">
+      <p className="truncate flex-1 min-w-0 text-xs text-muted-foreground">
         <span className="text-foreground">{courseBreadcrumb}</span> ·{" "}
         {slideTitle}
       </p>
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         <span className="hidden items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary md:inline-flex">
           <Sparkles className="size-3.5" />
           Emby tutor
@@ -531,9 +481,11 @@ function ReaderToolbar({
 function PanelTabs({
   tab,
   onChange,
+  onClose,
 }: {
   tab: Tab;
   onChange: (t: Tab) => void;
+  onClose: () => void;
 }) {
   const tabs: {
     id: Tab;
@@ -547,26 +499,35 @@ function PanelTabs({
     { id: "flashcards", label: "Cards", icon: Layers },
   ];
   return (
-    <div className="flex items-center gap-1 border-b border-border px-3 py-2">
-      {tabs.map((t) => {
-        const active = tab === t.id;
-        return (
-          <button
-            key={t.id}
-            onClick={() => onChange(t.id)}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
-              active
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted",
-            )}
-            aria-pressed={active}
-          >
-            <t.icon className="size-3.5" />
-            {t.label}
-          </button>
-        );
-      })}
+    <div className="flex items-center justify-between border-b border-border px-3 py-2 gap-2">
+      <div className="flex flex-1 min-w-0 items-center gap-1 overflow-x-auto no-scrollbar">
+        {tabs.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => onChange(t.id)}
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted",
+              )}
+              aria-pressed={active}
+            >
+              <t.icon className="size-3.5" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+      <button
+        onClick={onClose}
+        aria-label="Close panel"
+        className="ml-2 flex shrink-0 size-8 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
+      >
+        <PanelRightClose className="size-4" />
+      </button>
     </div>
   );
 }

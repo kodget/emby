@@ -81,6 +81,7 @@ function toApi(item: Partial<ScheduleItem>) {
   if (item.title !== undefined) payload.title = item.title;
   if (item.slideId !== undefined) payload.slide = item.slideId || null;
   if (item.topicId !== undefined) payload.sub_block = item.topicId || null;
+  if (item.courseId !== undefined) payload.block = item.courseId || null;
   if (item.scheduledDate !== undefined) payload.scheduled_date = item.scheduledDate;
   if (item.scheduledTime !== undefined) {
     payload.scheduled_time = item.scheduledTime ? `${item.scheduledTime}:00` : null;

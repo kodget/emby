@@ -51,13 +51,11 @@ export function ReaderContent({
     };
   }, [onSelect]);
 
-  // If slideContent from API is available with rendered pages, use image pages
   if (slideContent && slideContent.pages && slideContent.pages.length > 0) {
     // Show ONLY the current page (controlled by parent via currentPageIndex)
     const page = slideContent.pages[currentPageIndex] ?? slideContent.pages[0];
     return (
-      <article ref={articleRef} aria-label="Study material">
-        <HintBar />
+      <article ref={articleRef} aria-label="Study material" className="flex-1 flex flex-col min-h-0 w-full relative">
         <SlideImageBlock key={currentPageIndex} page={page} />
       </article>
     );

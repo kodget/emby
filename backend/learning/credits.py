@@ -99,15 +99,31 @@ def _roll_period(account: AICreditAccount, user: User) -> None:
 
 def balance(user: User) -> dict:
     """Everything the frontend needs to render the credit meter."""
-    account = get_account(user)
-    return {
-        "allocated": account.allocated,
-        "used": account.used,
-        "remaining": account.remaining,
-        "tier": account.tier_at_grant,
-        "period_started": account.period_started,
-        "period_ends": account.period_ends,
-    }
+    try:
+        from credits.services import CreditManager
+        from credits.config import get_user_credit_tier
+        from datetime import timedelta
+        real_balance = CreditManager.get_user_balance(user)
+        daily_amount, monthly_cap, source, tier_name = get_user_credit_tier(user)
+        return {
+            "allocated": monthly_cap,
+            "used": 0,
+            "remaining": real_balance,
+            "tier": tier_name,
+            "period_started": timezone.now(),
+            "period_ends": timezone.now() + timedelta(days=30),
+        }
+    except Exception as e:
+        logger.warning("Falling back to legacy credit account: %s", e)
+        account = get_account(user)
+        return {
+            "allocated": account.allocated,
+            "used": account.used,
+            "remaining": account.remaining,
+            "tier": account.tier_at_grant,
+            "period_started": account.period_started,
+            "period_ends": account.period_ends,
+        }
 
 
 @transaction.atomic

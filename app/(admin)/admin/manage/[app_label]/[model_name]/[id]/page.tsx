@@ -88,7 +88,7 @@ export default function UniversalAdminFormPage() {
   };
 
   const handleFieldChange = (name: string, value: any) => {
-     setFormData(prev => ({ ...prev, [name]: value }));
+     setFormData((prev: Record<string, any>) => ({ ...prev, [name]: value }));
   };
 
   if (loading) {

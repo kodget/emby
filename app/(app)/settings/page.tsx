@@ -1,27 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Bell, User, LogOut, Trash2 } from "lucide-react";
 import AuthGuard from "@/components/auth/auth-guard";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 
 export default function SettingsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
     "account" | "password" | "notifications"
   >("account");
+  const { isSupported, isSubscribed, subscribe, unsubscribe } = usePushNotifications();
   const [passwordForm, setPasswordForm] = useState({
     current_password: "",
     new_password: "",
     confirm_password: "",
   });
   const [notifications, setNotifications] = useState({
-    email_updates: true,
-    community_activity: true,
-    study_reminders: false,
-    weekly_report: true,
+    academic_enabled: true,
+    community_enabled: true,
+    system_enabled: true,
+    flashcards_enabled: true,
+    planner_enabled: true,
+    study_goal_enabled: true,
+    streak_enabled: true,
+    weak_area_enabled: true,
+    browser_push_enabled: false,
   });
   const [loading, setLoading] = useState(false);
+  const [prefsLoading, setPrefsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPrefs = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+        const res = await fetch(`${baseUrl}/api/notifications/preferences/`, {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications({
+            academic_enabled: data.academic_enabled,
+            community_enabled: data.community_enabled,
+            system_enabled: data.system_enabled,
+            flashcards_enabled: data.flashcards_enabled,
+            planner_enabled: data.planner_enabled,
+            study_goal_enabled: data.study_goal_enabled,
+            streak_enabled: data.streak_enabled,
+            weak_area_enabled: data.weak_area_enabled,
+            browser_push_enabled: data.browser_push_enabled,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch preferences", err);
+      } finally {
+        setPrefsLoading(false);
+      }
+    };
+    fetchPrefs();
+  }, []);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,24 +329,49 @@ export default function SettingsPage() {
                   <div className="space-y-4">
                     {[
                       {
-                        key: "email_updates",
-                        label: "Email Updates",
-                        desc: "Receive updates about new features and content",
+                        key: "academic_enabled",
+                        label: "Academic Notifications",
+                        desc: "Get notified about quizzes, steeplechases, and academic activities",
                       },
                       {
-                        key: "community_activity",
+                        key: "community_enabled",
                         label: "Community Activity",
-                        desc: "Get notified about likes and comments on your posts",
+                        desc: "Get notified about likes, replies, and comments",
                       },
                       {
-                        key: "study_reminders",
-                        label: "Study Reminders",
+                        key: "system_enabled",
+                        label: "System Updates",
+                        desc: "Important platform announcements and account alerts",
+                      },
+                      {
+                        key: "flashcards_enabled",
+                        label: "Flashcards Due",
+                        desc: "Reminders when your flashcards are due for review",
+                      },
+                      {
+                        key: "planner_enabled",
+                        label: "Study Planner",
+                        desc: "Get notified about upcoming tasks in your study plan",
+                      },
+                      {
+                        key: "study_goal_enabled",
+                        label: "Study Goals",
+                        desc: "Updates on your personal study goals",
+                      },
+                      {
+                        key: "streak_enabled",
+                        label: "Streak Reminders",
                         desc: "Daily reminders to keep your streak going",
                       },
                       {
-                        key: "weekly_report",
-                        label: "Weekly Report",
-                        desc: "Weekly summary of your learning progress",
+                        key: "weak_area_enabled",
+                        label: "Weak Area Focus",
+                        desc: "Recommendations based on your weak areas",
+                      },
+                      {
+                        key: "browser_push_enabled",
+                        label: "Browser Push Notifications",
+                        desc: "Receive real-time popups even when you are on other tabs",
                       },
                     ].map((item) => (
                       <div
@@ -327,12 +392,33 @@ export default function SettingsPage() {
                                 item.key as keyof typeof notifications
                               ]
                             }
-                            onChange={(e) =>
-                              setNotifications({
-                                ...notifications,
-                                [item.key]: e.target.checked,
-                              })
-                            }
+                            onChange={async (e) => {
+                              const checked = e.target.checked;
+                              if (item.key === "browser_push_enabled") {
+                                if (checked) {
+                                  if (isSupported) {
+                                    const success = await subscribe();
+                                    if (success) {
+                                      setNotifications({ ...notifications, browser_push_enabled: true });
+                                    } else {
+                                      alert("Failed to enable push notifications. Please check your browser permissions.");
+                                    }
+                                  } else {
+                                    alert("Push notifications are not supported in your browser.");
+                                  }
+                                } else {
+                                  if (isSupported) {
+                                    await unsubscribe();
+                                  }
+                                  setNotifications({ ...notifications, browser_push_enabled: false });
+                                }
+                              } else {
+                                setNotifications({
+                                  ...notifications,
+                                  [item.key]: checked,
+                                });
+                              }
+                            }}
                             className="sr-only peer"
                           />
                           <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
@@ -341,7 +427,27 @@ export default function SettingsPage() {
                     ))}
 
                     <button
-                      onClick={() => alert("Notification preferences saved")}
+                      onClick={async () => {
+                        try {
+                          const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+                          const res = await fetch(`${baseUrl}/api/notifications/preferences/`, {
+                            method: "PATCH",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+                            },
+                            body: JSON.stringify(notifications),
+                          });
+                          if (res.ok) {
+                            alert("Notification preferences saved successfully");
+                          } else {
+                            alert("Failed to save notification preferences");
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          alert("Failed to save notification preferences");
+                        }
+                      }}
                       className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium press transition-colors mt-6"
                     >
                       Save Preferences

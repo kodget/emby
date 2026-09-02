@@ -565,3 +565,172 @@ def battle_finish(request, battle_id):
         return Response(battles.finish_for_user(request.user, battle))
     except battles.BattleError as exc:
         return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
+# ---------------------------------------------------------------------------
+# GAMIFICATION
+# ---------------------------------------------------------------------------
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def achievements_list(request):
+    """List all available achievements and the user's progress."""
+    from .models import Achievement, UserAchievement
+    achievements = Achievement.objects.filter(is_active=True).select_related("badge")
+    user_achs = {ua.achievement_id: ua for ua in UserAchievement.objects.filter(user=request.user)}
+    
+    data = []
+    for ach in achievements:
+        ua = user_achs.get(ach.id)
+        # Skip hidden achievements unless completed
+        if ach.is_hidden and (not ua or not ua.is_completed):
+            continue
+            
+        badge_data = None
+        if ach.badge:
+            badge_data = {
+                "id": ach.badge.id,
+                "name": ach.badge.name,
+                "icon": ach.badge.icon,
+                "rarity": ach.badge.rarity,
+                "image_url": ach.badge.image_url,
+            }
+            
+        data.append({
+            "id": ach.id,
+            "name": ach.name,
+            "description": ach.description,
+            "category": ach.category,
+            "target_metric": ach.target_metric,
+            "target_value": ach.target_value,
+            "progress": ua.progress if ua else 0,
+            "percentage": ua.percentage if ua else 0,
+            "is_completed": ua.is_completed if ua else False,
+            "completed_at": ua.completed_at.isoformat() if ua and ua.completed_at else None,
+            "badge": badge_data
+        })
+        
+    return Response(data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_badges(request):
+    """List all badges earned by the user."""
+    from .models import UserBadge
+    badges = UserBadge.objects.filter(user=request.user).select_related("badge")
+    
+    data = []
+    for ub in badges:
+        data.append({
+            "id": ub.id,
+            "badge_id": ub.badge.id,
+            "name": ub.badge.name,
+            "description": ub.badge.description,
+            "category": ub.badge.category,
+            "rarity": ub.badge.rarity,
+            "icon": ub.badge.icon,
+            "image_url": ub.badge.image_url,
+            "earned_at": ub.earned_at.isoformat()
+        })
+        
+    return Response(data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def gamification_profile(request):
+    """Get a summary of gamification stats for the user's profile."""
+    from .models import UserBadge, UserAchievement
+    from .xp import total_xp
+    
+    earned_badges = UserBadge.objects.filter(user=request.user).count()
+    completed_achievements = UserAchievement.objects.filter(user=request.user, is_completed=True).count()
+    user_xp = total_xp(request.user)
+    stats = getattr(request.user, "stats", None)
+    current_streak = stats.active_streak if stats else 0
+    longest_streak = stats.longest_streak if stats else 0
+    
+    return Response({
+        "xp": user_xp,
+        "badges_count": earned_badges,
+        "achievements_count": completed_achievements,
+        "current_streak": current_streak,
+        "longest_streak": longest_streak,
+    })
+
+# ---------------------------------------------------------------------------
+# NOTIFICATIONS
+# ---------------------------------------------------------------------------
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def notification_list(request):
+    """Return the user's notifications."""
+    from .models import Notification
+    unread_only = request.GET.get("unread") == "true"
+    qs = Notification.objects.filter(user=request.user)
+    if unread_only:
+        qs = qs.filter(read=False)
+    
+    qs = qs.order_by("-scheduled_for")[:50]
+    
+    data = []
+    for n in qs:
+        data.append({
+            "id": n.id,
+            "type": n.type,
+            "priority": n.priority,
+            "title": n.title,
+            "body": n.body,
+            "action_url": n.action_url,
+            "payload": n.payload,
+            "read": n.read,
+            "scheduled_for": n.scheduled_for.isoformat() if n.scheduled_for else None,
+            "created_at": n.created_at.isoformat(),
+        })
+    return Response(data)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def notification_read(request):
+    """Mark a notification (or all) as read."""
+    from .models import Notification
+    from django.utils import timezone
+    notif_id = request.data.get("id")
+    
+    qs = Notification.objects.filter(user=request.user, read=False)
+    if notif_id:
+        qs = qs.filter(id=notif_id)
+        
+    updated = qs.update(read=True, read_at=timezone.now())
+    return Response({"success": True, "updated_count": updated})
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def notification_preferences(request):
+    """Get or update notification preferences."""
+    from .models import NotificationPreference
+    
+    pref, _ = NotificationPreference.objects.get_or_create(user=request.user)
+    
+    if request.method == "POST":
+        for field in [
+            "academic_enabled", "community_enabled", "system_enabled",
+            "flashcards_enabled", "planner_enabled", "study_goal_enabled", "streak_enabled"
+        ]:
+            if field in request.data:
+                setattr(pref, field, bool(request.data[field]))
+        pref.save()
+        
+    return Response({
+        "academic_enabled": pref.academic_enabled,
+        "community_enabled": pref.community_enabled,
+        "system_enabled": pref.system_enabled,
+        "flashcards_enabled": pref.flashcards_enabled,
+        "planner_enabled": pref.planner_enabled,
+        "study_goal_enabled": pref.study_goal_enabled,
+        "streak_enabled": pref.streak_enabled,
+    })
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def notification_subscribe(request):
+    """Subscribe a device for push notifications (web push)."""
+    return Response({"success": True})

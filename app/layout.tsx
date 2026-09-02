@@ -4,6 +4,7 @@ import { ReduxProvider } from "@/store/redux-provider";
 import { GoogleAuthProvider } from "@/components/auth/google-auth-provider";
 import { PwaRegister } from "@/components/pwa/pwa-register";
 import { AppInitializer } from "@/components/app/app-initializer";
+import { NotificationProvider } from "@/components/app/notification-provider";
 import { Toaster } from "@/components/ui/toaster";
 
 import "./globals.css";
@@ -77,9 +78,11 @@ export default function RootLayout({
         <ReduxProvider>
           <AppInitializer>
             <GoogleAuthProvider>
-              {children}
-              <PwaRegister />
-              <Toaster />
+              <NotificationProvider>
+                {children}
+                <PwaRegister />
+                <Toaster />
+              </NotificationProvider>
             </GoogleAuthProvider>
           </AppInitializer>
         </ReduxProvider>

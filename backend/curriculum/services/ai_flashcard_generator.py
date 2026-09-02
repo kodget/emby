@@ -11,7 +11,7 @@ class AIFlashcardGenerator:
     """
     
     @staticmethod
-    def generate_flashcards_from_text(text: str, slide, topic, count: int) -> List[Dict[str, Any]]:
+    def generate_flashcards_from_text(text: str, slide, topic, count: int, return_usage: bool = False) -> Any:
         """
         Generate flashcards from text.
         """
@@ -41,7 +41,10 @@ Format:
   }}
 ]
 """
-        raw = _generate([prompt])
+        if return_usage:
+            raw, tokens = _generate([prompt], return_usage=True)
+        else:
+            raw = _generate([prompt])
         data = json.loads(_strip_json_fences(raw))
         if not isinstance(data, list):
             if isinstance(data, dict) and "flashcards" in data:
@@ -60,5 +63,8 @@ Format:
                     "back": back,
                     "explanation": item.get("explanation", "").strip(),
                 })
+        
+        if return_usage:
+            return cleaned, tokens
         return cleaned
 

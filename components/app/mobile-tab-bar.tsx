@@ -24,6 +24,7 @@ import {
   Microscope,
   Settings,
   Sparkles,
+  Trophy,
   Users,
   X,
 } from "lucide-react";
@@ -50,6 +51,7 @@ const TABS: Tab[] = [
 const MORE_LINKS = [
   { label: "Analytics", href: "/analytics", Icon: BarChart3 },
   { label: "Study plan", href: "/study-plan", Icon: CalendarDays },
+  { label: "Achievements", href: "/achievements", Icon: Trophy },
   { label: "Brain Battle", href: "/battles", Icon: Sparkles },
   { label: "Histology", href: "/histology", Icon: Microscope },
   { label: "Community", href: "/community", Icon: Users },

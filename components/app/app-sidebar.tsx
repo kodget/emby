@@ -46,6 +46,7 @@ const STUDY: NavItem[] = [
 const TOOLS: NavItem[] = [
   { label: "Analytics", href: "/analytics", icon: "analytics", match: /^\/analytics/ },
   { label: "Study Plan", href: "/study-plan", icon: "planner", match: /^\/study-plan/ },
+  { label: "Achievements", href: "/achievements", icon: "target", match: /^\/achievements/ },
   { label: "Community", href: "/community", icon: "community", match: /^\/community/ },
   { label: "Profile", href: "/profile", icon: "profile", match: /^\/profile$/ },
   { label: "Premium", href: "/premium", icon: "premium", match: /^\/premium$/ },

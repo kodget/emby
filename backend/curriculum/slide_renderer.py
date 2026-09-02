@@ -87,10 +87,13 @@ def _render_pptx_from_bytes(pptx_bytes, slide_id):
         tmp_dir = tempfile.mkdtemp()
         
         try:
+            from .services.slide_conversion_pipeline import _libreoffice_path
+            soffice_cmd = _libreoffice_path()
+            
             # Convert PPTX to PDF using LibreOffice
-            print(f"Converting PPTX to PDF using LibreOffice...")
+            print(f"Converting PPTX to PDF using LibreOffice ({soffice_cmd})...")
             result = subprocess.run([
-                'soffice',
+                soffice_cmd,
                 '--headless',
                 '--convert-to', 'pdf',
                 '--outdir', tmp_dir,
@@ -283,10 +286,13 @@ def _render_docx_from_bytes(docx_bytes, slide_id):
         tmp_dir = tempfile.mkdtemp()
         
         try:
+            from .services.slide_conversion_pipeline import _libreoffice_path
+            soffice_cmd = _libreoffice_path()
+            
             # Convert DOCX to PDF using LibreOffice
-            print(f"Converting DOCX to PDF using LibreOffice...")
+            print(f"Converting DOCX to PDF using LibreOffice ({soffice_cmd})...")
             result = subprocess.run([
-                'soffice',
+                soffice_cmd,
                 '--headless',
                 '--convert-to', 'pdf',
                 '--outdir', tmp_dir,

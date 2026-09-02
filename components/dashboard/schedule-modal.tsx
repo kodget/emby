@@ -22,8 +22,8 @@ import {
   type ScheduleItemType,
 } from "@/store/schedule-slice";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { curriculum } from "@/lib/curriculum";
 import { getSlidesForCourse } from "@/lib/slides";
+import { curriculumApi } from "@/lib/api";
 
 // Every activity type the backend accepts needs an entry here, otherwise picking one
 // renders an undefined icon and label. Typing the maps to ScheduleItemType means a new
@@ -81,18 +81,30 @@ export function ScheduleModal() {
     }
   }, [editingItem, isModalOpen]);
 
-  // Get all courses from curriculum
-  const allCourses = curriculum.flatMap((subject) =>
-    subject.blocks.flatMap((block) =>
-      block.topics.length > 0
-        ? block.topics.map((topic) => ({
-            id: topic.id,
-            name: topic.title,
-            subject: subject.title,
-          }))
-        : [{ id: block.id, name: block.title, subject: subject.title }],
-    ),
-  );
+  const [allCourses, setAllCourses] = useState<{id: string, name: string, subject: string}[]>([]);
+
+  useEffect(() => {
+    async function loadCurriculum() {
+      try {
+        const [subjects, blocks] = await Promise.all([
+          curriculumApi.getSubjects(),
+          curriculumApi.getBlocks(),
+        ]);
+        
+        const subjectMap = new Map(subjects.map(s => [s.id, s.name]));
+        
+        const courses = blocks.map((block) => ({
+          id: block.id,
+          name: block.name,
+          subject: subjectMap.get(block.subject) || block.subject,
+        }));
+        setAllCourses(courses);
+      } catch (err) {
+        console.error("Failed to load curriculum for schedule modal", err);
+      }
+    }
+    loadCurriculum();
+  }, []);
 
   // Get slides for selected course
   const availableSlides = courseId ? getSlidesForCourse(courseId) : [];
@@ -109,7 +121,7 @@ export function ScheduleModal() {
       courseId,
       courseName,
       slideId: type === "read" ? slideId : undefined,
-      topicId: type !== "read" ? courseId : undefined,
+      topicId: undefined, // Let the backend map courseId to block directly
       details: detail.trim() || undefined,
       estimatedMinutes: minutes,
       scheduledDate: date,

@@ -28,6 +28,7 @@ urlpatterns = [
     path("api/learning/", include("learning.urls")),
     path("api/pastquestions/", include("pastquestions.urls")),
     path("api/payments/", include("payments.urls")),
+    path("api/credits/", include("credits.urls")),
 ]
 
 from django.conf import settings

@@ -12,12 +12,14 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
 django_asgi_app = get_asgi_application()
 
 import curriculum.routing
+import learning.routing
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
     "websocket": AuthMiddlewareStack(
         URLRouter(
-            curriculum.routing.websocket_urlpatterns
+            curriculum.routing.websocket_urlpatterns +
+            learning.routing.websocket_urlpatterns
         )
     ),
 })

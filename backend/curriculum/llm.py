@@ -214,7 +214,8 @@ def chat(
     json_schema: dict[str, Any] | None = None,
     schema_name: str = "response",
     json_object: bool = False,
-) -> str:
+    return_usage: bool = False,
+) -> Any:
     """Run a chat completion and return the assistant's text.
 
     Args:
@@ -255,8 +256,10 @@ def chat(
         }
         for candidate in _provider_models(provider, model):
             payload = dict(payload_base, model=candidate)
-            content, last_error, fatal = _try_model(url, headers, payload, last_error)
+            content, last_error, fatal, total_tokens = _try_model(url, headers, payload, last_error)
             if content is not None:
+                if return_usage:
+                    return content, total_tokens
                 return content
             logger.warning(
                 "LLM %s/%s failed: %s", provider.name, candidate, last_error
@@ -281,8 +284,8 @@ def _try_model(
     headers: dict[str, str],
     payload: dict[str, Any],
     last_error: str,
-) -> tuple[str | None, str, bool]:
-    """Attempt one model with retries. Returns (content, error, provider_is_dead)."""
+) -> tuple[str | None, str, bool, int]:
+    """Attempt one model with retries. Returns (content, error, provider_is_dead, total_tokens)."""
     for attempt in range(_MAX_ATTEMPTS):
         try:
             resp = requests.post(url, headers=headers, json=payload, timeout=_timeout())
@@ -293,11 +296,13 @@ def _try_model(
 
         if resp.status_code == 200:
             try:
-                content = resp.json()["choices"][0]["message"]["content"] or ""
+                resp_json = resp.json()
+                content = resp_json["choices"][0]["message"]["content"] or ""
+                total_tokens = resp_json.get("usage", {}).get("total_tokens", 0)
             except (ValueError, KeyError, IndexError) as exc:
-                return None, f"malformed response: {exc}", False
+                return None, f"malformed response: {exc}", False, 0
             if content.strip():
-                return content, last_error, False
+                return content, last_error, False, total_tokens
             last_error = "empty completion"
             _sleep_backoff(attempt, None)
             continue
@@ -314,13 +319,13 @@ def _try_model(
         if resp.status_code == 413:
             raise RequestTooLarge(last_error)  # prompt too large, skip retries and bubble up
         if resp.status_code in (401, 402, 403, 404):
-            return None, last_error, True  # credentials/host/quota problem: skip provider
+            return None, last_error, True, 0  # credentials/host/quota problem: skip provider
         if resp.status_code in _RETRY_STATUS:
             _sleep_backoff(attempt, resp.headers.get("Retry-After"))
             continue
-        return None, last_error, False
+        return None, last_error, False, 0
 
-    return None, last_error, False
+    return None, last_error, False, 0
 
 
 def chat_json(
@@ -418,7 +423,8 @@ def chat_with_image(
     system: str | None = None,
     max_tokens: int = 1200,
     temperature: float = 0.4,
-) -> str:
+    return_usage: bool = False,
+) -> Any:
     """Run a completion that includes an image.
 
     Routed to the multimodal model rather than the primary text one. Raises
@@ -448,4 +454,5 @@ def chat_with_image(
         model=vision_model(),
         temperature=temperature,
         max_tokens=max_tokens,
+        return_usage=return_usage,
     )

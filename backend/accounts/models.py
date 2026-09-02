@@ -11,6 +11,7 @@ import string
 class SubscriptionTier(models.TextChoices):
     FREE = "free", "Free"
     PREMIUM = "premium", "Premium"
+    PLATINUM = "platinum", "Platinum"
 
 
 # -------------------------

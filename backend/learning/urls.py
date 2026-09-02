@@ -58,4 +58,10 @@ urlpatterns = [
         views.notification_preferences,
         name="notification-preferences",
     ),
+    path("notifications/subscribe/", views.notification_subscribe, name="notification_subscribe"),
+    
+    # Gamification
+    path("achievements/", views.achievements_list, name="achievements-list"),
+    path("badges/", views.user_badges, name="user-badges"),
+    path("gamification/profile/", views.gamification_profile, name="gamification-profile"),
 ]

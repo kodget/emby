@@ -540,11 +540,12 @@ def generate_flashcards_task(self, attempt_id):
         raise self.retry(exc=e)
 
 @shared_task(bind=True, max_retries=3)
-def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, count: int = 5):
+def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, count: int = 5, transaction_id: str = None):
     """
     Generate flashcards from slide content using AI.
     """
     from .models import Slide, SlideContent, Flashcard, FlashcardProgress
+    from credits.services import CreditManager
     from .services.ai_flashcard_generator import AIFlashcardGenerator
     from django.contrib.auth import get_user_model
     from django.utils import timezone
@@ -580,15 +581,24 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
         return {'success': False, 'slide_id': slide_id, 'error': error_msg}
     
     try:
-        flashcards_data = AIFlashcardGenerator.generate_flashcards_from_text(
+        flashcards_data, tokens = AIFlashcardGenerator.generate_flashcards_from_text(
             text=text,
             slide=slide,
             topic=slide.topic,
-            count=count
+            count=count,
+            return_usage=True
         )
+        if transaction_id:
+            CreditManager.commit_usage(
+                user, 
+                {'transaction_id': transaction_id, 'reserved_amount': count * 10}, 
+                tokens
+            )
     except Exception as e:
         error_msg = f"Error generating flashcards: {str(e)}"
         logger.error(error_msg, exc_info=True)
+        if transaction_id:
+            CreditManager.refund_credits(user, count * 10, action="REFUND_FLASHCARD_ERROR", tx_id=transaction_id)
         # Note: if it's Gemini429Exception, we could retry here if we imported it
         return {'success': False, 'slide_id': slide_id, 'error': error_msg}
     

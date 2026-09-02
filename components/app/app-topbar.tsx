@@ -13,11 +13,13 @@ import {
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { openUploadModal } from "@/store/uploads-slice";
 import { SlideUploadModal } from "@/components/app/slide-upload-modal";
+import { NotificationsDropdown } from "@/components/app/notifications-dropdown";
 import { GlobalSearch } from "@/components/app/global-search";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { Crown } from "lucide-react";
 import { canUploadMaterials } from "@/lib/guards";
 import { useState, useEffect } from "react";
+import { GlobalCreditBar } from "@/components/credits/global-credit-bar";
 
 export function AppTopbar() {
   const dispatch = useAppDispatch();
@@ -96,19 +98,11 @@ export function AppTopbar() {
             </button>
           )}
 
+          {/* Credit Bar */}
+          {mounted && <GlobalCreditBar />}
+
           {/* Notifications */}
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.9 }}
-            className="flex size-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Notifications"
-          >
-            <FontAwesomeIcon
-              icon={faBell}
-              className="size-4"
-              aria-hidden="true"
-            />
-          </motion.button>
+          {mounted && <NotificationsDropdown />}
 
           {/* User Menu */}
           <UserMenu />
@@ -119,3 +113,5 @@ export function AppTopbar() {
     </>
   );
 }
+
+

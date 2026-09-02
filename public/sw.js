@@ -26,3 +26,35 @@ self.addEventListener("fetch", (event) => {
     caches.match(request).then((cached) => cached || fetch(request)),
   );
 });
+
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  try {
+    const data = event.data.json();
+    const title = data.title || "Emby";
+    const options = {
+      body: data.body,
+      icon: "/android-chrome-192x192.png", // fallback icon
+      data: data.data || {},
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (err) {
+    console.error("Push event error:", err);
+  }
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  
+  if (event.notification.data && event.notification.data.url) {
+    event.waitUntil(
+      clients.openWindow(event.notification.data.url)
+    );
+  } else {
+    event.waitUntil(
+      clients.openWindow("/")
+    );
+  }
+});

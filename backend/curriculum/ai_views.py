@@ -18,16 +18,13 @@ from rest_framework.response import Response
 from .ai_service import slide_ai
 from .models import Slide, SlideContent, SlideChatMessage
 
-logger = logging.getLogger(__name__)
-
-# PRD §6.4.3 / §7.1 — free tier is capped at 20 AI messages per day; premium unlimited.
-FREE_DAILY_MESSAGE_LIMIT = 20
 # PRD §6.4.3 — keep the last 50 messages of context per student per slide.
 MAX_HISTORY_MESSAGES = 50
 # PRD §6.4.3 — required safety disclaimer.
 AI_DISCLAIMER = (
     "This is for educational purposes only and is not a substitute for clinical judgment."
 )
+from credits.services import CreditManager, InsufficientCreditsError
 
 
 def has_premium_access(user):
@@ -82,15 +79,19 @@ def _slide_text(slide):
     return ""
 
 
-def _get_or_generate_resources(slide, slide_image_base64=None, force_refresh=False):
+def _get_or_generate_resources(slide, user, slide_image_base64=None, force_refresh=False):
     """
     Return generated study resources for a slide, caching them on SlideContent
     so we don't re-call the LLM on every request (persistence — Goal #3).
+    Deducts AI credits only if generation actually happens.
     """
     sc, _ = SlideContent.objects.get_or_create(slide=slide)
     cached = (sc.content_data or {}).get('resources') if isinstance(sc.content_data, dict) else None
     if cached and not force_refresh:
         return cached
+
+    # Reserve credits since we need to generate
+    reservation = CreditManager.reserve_credits(user, "GENERATE_RESOURCES")
 
     slide_context = {
         'title': slide.title,
@@ -100,15 +101,20 @@ def _get_or_generate_resources(slide, slide_image_base64=None, force_refresh=Fal
     resources = slide_ai.generate_resources(
         slide_context=slide_context,
         slide_image_base64=slide_image_base64,
+        return_usage=True
     )
 
-    # Only cache successful generations
     if resources and not resources.get('error'):
+        # Commit exact usage
+        CreditManager.commit_usage(user, reservation, resources.get('total_tokens', 0))
         sc.refresh_from_db()
         data = sc.content_data if isinstance(sc.content_data, dict) else {}
         data['resources'] = resources
         sc.content_data = data
         sc.save(update_fields=['content_data', 'updated_at'])
+    else:
+        # Refund on error
+        CreditManager.refund_credits(user, reservation['reserved_amount'], action="REFUND_RESOURCE_ERROR")
 
     return resources
 
@@ -183,10 +189,14 @@ def textbook_suggestions(request):
         logger.info(f"Generating textbook suggestions for slide {slide_id}")
 
         force = str(request.data.get('refresh', '')).lower() in ('1', 'true', 'yes')
-        resources = _get_or_generate_resources(slide, slide_image_base64, force_refresh=force)
+        try:
+            resources = _get_or_generate_resources(slide, request.user, slide_image_base64, force_refresh=force)
+        except InsufficientCreditsError as e:
+            return Response({'error': str(e), 'insufficient_credits': True}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         return Response({
-            'textbooks': resources.get('textbooks', [])
+            'textbooks': resources.get('textbooks', []),
+            'balance': CreditManager.get_user_balance(request.user)
         }, status=status.HTTP_200_OK)
     
     except Exception as e:
@@ -265,10 +275,13 @@ def video_suggestions(request):
         # Generate AI search-query suggestions for this slide
         logger.info(f"Generating video suggestions for slide {slide_id}")
 
-        resources = slide_ai.generate_resources(
-            slide_context=slide_context,
-            slide_image_base64=slide_image_base64
-        )
+        try:
+            resources = _get_or_generate_resources(
+                slide, request.user, slide_image_base64, force_refresh=False
+            )
+        except InsufficientCreditsError as e:
+            return Response({'error': str(e), 'insufficient_credits': True}, status=status.HTTP_402_PAYMENT_REQUIRED)
+            
         ai_suggestions = resources.get('youtube', [])
 
         # Upgrade to REAL YouTube Data API results when configured (PRD §6.3.5)
@@ -288,13 +301,17 @@ def video_suggestions(request):
                 if len(real_videos) >= 5:
                     break
             if real_videos:
-                return Response({'videos': real_videos[:5], 'source': 'youtube_api'},
-                                status=status.HTTP_200_OK)
+                return Response({
+                    'videos': real_videos[:5], 
+                    'source': 'youtube_api',
+                    'balance': CreditManager.get_user_balance(request.user)
+                }, status=status.HTTP_200_OK)
 
         # Fallback: AI-suggested search queries (no real API key configured)
         return Response({
             'videos': ai_suggestions,
-            'source': 'ai_suggestions'
+            'source': 'ai_suggestions',
+            'balance': CreditManager.get_user_balance(request.user)
         }, status=status.HTTP_200_OK)
 
     except Exception as e:
@@ -375,10 +392,14 @@ def generate_mcqs(request):
         logger.info(f"Generating MCQs for slide {slide_id}")
 
         force = str(request.data.get('refresh', '')).lower() in ('1', 'true', 'yes')
-        resources = _get_or_generate_resources(slide, slide_image_base64, force_refresh=force)
+        try:
+            resources = _get_or_generate_resources(slide, request.user, slide_image_base64, force_refresh=force)
+        except InsufficientCreditsError as e:
+            return Response({'error': str(e), 'insufficient_credits': True}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         return Response({
-            'mcqs': resources.get('mcqs', [])
+            'mcqs': resources.get('mcqs', []),
+            'balance': CreditManager.get_user_balance(request.user)
         }, status=status.HTTP_200_OK)
     
     except Exception as e:
@@ -432,23 +453,19 @@ def chat_with_slide(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Enforce daily free-tier limit (PRD §7.1)
         is_premium = has_premium_access(request.user)
-        if not is_premium:
-            used = _messages_used_today(request.user)
-            if used >= FREE_DAILY_MESSAGE_LIMIT:
-                return Response(
-                    {
-                        'error': (
-                            f'Daily free limit of {FREE_DAILY_MESSAGE_LIMIT} AI messages reached. '
-                            'Upgrade to Premium for unlimited chat.'
-                        ),
-                        'premium_required': True,
-                        'limit': FREE_DAILY_MESSAGE_LIMIT,
-                        'used': used,
-                    },
-                    status=status.HTTP_429_TOO_MANY_REQUESTS
-                )
+
+        # 1. Reserve credits dynamically
+        try:
+            reservation = CreditManager.reserve_credits(request.user, "CHAT")
+        except InsufficientCreditsError as e:
+            return Response(
+                {
+                    'error': str(e),
+                    'insufficient_credits': True,
+                },
+                status=status.HTTP_402_PAYMENT_REQUIRED
+            )
 
         # Get slide
         try:
@@ -498,14 +515,19 @@ def chat_with_slide(request):
             user_message=message,
             slide_context=slide_context,
             slide_image_base64=slide_image_base64,
-            conversation_history=conversation_history
+            conversation_history=conversation_history,
+            return_usage=True
         )
 
         if 'error' in result and not result.get('response'):
+            CreditManager.refund_credits(request.user, reservation['reserved_amount'], action="REFUND_CHAT_ERROR")
             return Response(
                 {'error': result['error']},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+            
+        # 2. Commit usage
+        CreditManager.commit_usage(request.user, reservation, result.get('total_tokens', 0))
 
         # Persist the exchange (PRD §6.4.3)
         try:
@@ -520,10 +542,7 @@ def chat_with_slide(request):
             logger.error(f"Failed to persist chat for slide {slide_id}: {persist_err}")
 
         result['disclaimer'] = AI_DISCLAIMER
-        if not is_premium:
-            result['messages_remaining'] = max(
-                0, FREE_DAILY_MESSAGE_LIMIT - _messages_used_today(request.user)
-            )
+        result['balance'] = CreditManager.get_user_balance(request.user)
 
         return Response(result, status=status.HTTP_200_OK)
 
@@ -616,11 +635,15 @@ def generate_resources(request):
         logger.info(f"Generating resources for slide {slide_id}")
 
         force = str(request.data.get('refresh', '')).lower() in ('1', 'true', 'yes')
-        resources = _get_or_generate_resources(slide, slide_image_base64, force_refresh=force)
+        try:
+            resources = _get_or_generate_resources(slide, request.user, slide_image_base64, force_refresh=force)
+        except InsufficientCreditsError as e:
+            return Response({'error': str(e), 'insufficient_credits': True}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         if 'error' in resources:
             logger.error(f"Resource generation failed: {resources['error']}")
         
+        resources['balance'] = CreditManager.get_user_balance(request.user)
         return Response(resources, status=status.HTTP_200_OK)
 
     except Exception as e:
@@ -678,10 +701,12 @@ def generate_flashcards(request):
         "count": 5 // Optional
     }
     """
-    if not has_premium_access(request.user):
+    try:
+        reservation = CreditManager.reserve_credits(request.user, "GENERATE_FLASHCARDS")
+    except InsufficientCreditsError as e:
         return Response(
-            {'error': 'Premium access required', 'premium_required': True},
-            status=status.HTTP_403_FORBIDDEN
+            {'error': str(e), 'insufficient_credits': True},
+            status=status.HTTP_402_PAYMENT_REQUIRED
         )
     
     slide_id = request.data.get('slide_id')
@@ -692,14 +717,18 @@ def generate_flashcards(request):
         
     try:
         from .tasks import generate_ai_flashcards_from_slide_task
-        task = generate_ai_flashcards_from_slide_task.delay(slide_id, request.user.id, int(count))
+        task = generate_ai_flashcards_from_slide_task.delay(
+            slide_id, request.user.id, int(count), reservation['transaction_id']
+        )
         
         return Response({
             'message': 'Flashcard generation started',
-            'task_id': task.id
+            'task_id': task.id,
+            'balance': CreditManager.get_user_balance(request.user)
         }, status=status.HTTP_202_ACCEPTED)
         
     except Exception as e:
+        CreditManager.refund_credits(request.user, reservation['reserved_amount'], action="REFUND_FLASHCARD_ERROR")
         logger.error(f"Flashcard generation API error: {e}")
         return Response(
             {'error': str(e)},

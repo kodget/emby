@@ -571,6 +571,19 @@ class CommunityPostViewSet(viewsets.ModelViewSet):
         if created:
             post.likes_count += 1
             post.save()
+            
+            # Schedule notification for post author
+            if post.user != request.user:
+                from learning.notifications import schedule
+                from learning.models import NotificationType
+                schedule(
+                    user=post.user,
+                    type_=NotificationType.POST_LIKED,
+                    title=f"{request.user.first_name or request.user.username} liked your post",
+                    body=post.content[:100] + ("..." if len(post.content) > 100 else ""),
+                    action_url=f"/community/post/{post.id}",
+                    dedupe_key=f"like:post:{post.id}:user:{request.user.id}",
+                )
         
         return Response({'liked': True, 'likes_count': post.likes_count})
     
@@ -609,6 +622,19 @@ class CommunityPostViewSet(viewsets.ModelViewSet):
         
         post.comments_count += 1
         post.save()
+        
+        # Schedule notification for post author
+        if post.user != request.user:
+            from learning.notifications import schedule
+            from learning.models import NotificationType
+            schedule(
+                user=post.user,
+                type_=NotificationType.POST_COMMENTED,
+                title=f"{request.user.first_name or request.user.username} commented on your post",
+                body=content[:100] + ("..." if len(content) > 100 else ""),
+                action_url=f"/community/post/{post.id}",
+                dedupe_key=f"comment:post:{post.id}:comment:{comment.id}",
+            )
         
         serializer = PostCommentSerializer(comment)
         return Response(serializer.data)

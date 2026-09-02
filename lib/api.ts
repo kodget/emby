@@ -3,7 +3,7 @@ import axios from "axios";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 // Create axios instance with default config
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
@@ -43,6 +43,23 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token as string);
+    }
+  });
+  failedQueue = [];
+};
+
 // Add response interceptor to handle token refresh
 api.interceptors.response.use(
   (response) => response,
@@ -53,20 +70,35 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        const refreshToken = sessionStorage.getItem("refreshToken");
+      const refreshToken = sessionStorage.getItem("refreshToken");
 
-        if (!refreshToken) {
-          // No refresh token, redirect to login
-          if (typeof window !== "undefined") {
-            sessionStorage.removeItem("token");
-            sessionStorage.removeItem("refreshToken");
-            sessionStorage.removeItem("user");
-            window.location.href = "/signin";
-          }
-          return Promise.reject(error);
+      if (!refreshToken) {
+        // No refresh token, redirect to login
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("token");
+          sessionStorage.removeItem("refreshToken");
+          sessionStorage.removeItem("user");
+          window.location.href = "/signin";
         }
+        return Promise.reject(error);
+      }
 
+      if (isRefreshing) {
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      isRefreshing = true;
+
+      try {
         // Try to refresh the token
         const response = await axios.post(
           `${API_BASE_URL}/auth/token/refresh/`,
@@ -76,6 +108,9 @@ api.interceptors.response.use(
         );
 
         const newAccessToken = response.data.access;
+        if (response.data.refresh) {
+          sessionStorage.setItem("refreshToken", response.data.refresh);
+        }
 
         // Update token in sessionStorage
         sessionStorage.setItem("token", newAccessToken);
@@ -83,9 +118,11 @@ api.interceptors.response.use(
         // Update the failed request with new token
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
+        processQueue(null, newAccessToken);
         // Retry the original request
         return api(originalRequest);
       } catch (refreshError) {
+        processQueue(refreshError, null);
         // Refresh failed, redirect to login
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("token");
@@ -94,6 +131,8 @@ api.interceptors.response.use(
           window.location.href = "/signin";
         }
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
@@ -1226,7 +1265,7 @@ export interface StudyProfile {
   id?: number;
   exam_date?: string;
   daily_study_minutes?: number;
-  target_subjects?: number[];
+  target_subjects?: string[];
   focus_areas?: string[];
 }
 
@@ -2112,6 +2151,23 @@ export const learningApi = {
   getCreditHistory: async () =>
     (await api.get("/api/learning/credits/history/")).data,
 
+  getCreditPackages: async (): Promise<any[]> => {
+    const res = await api.get("/api/learning/credit-packages/");
+    return res.data;
+  },
+
+  getCreditLots: async (): Promise<any[]> => {
+    const res = await api.get("/api/learning/credit-lots/");
+    return res.data;
+  },
+
+  getCreditTransactions: async (limit = 50): Promise<any[]> => {
+    const res = await api.get("/api/learning/credit-transactions/", {
+      params: { limit },
+    });
+    return res.data;
+  },
+
   getWeakAreas: async (scope = "TOPIC", limit = 5) =>
     (await api.get("/api/learning/weak-areas/", { params: { scope, limit } }))
       .data,
@@ -2221,6 +2277,114 @@ export interface AnalyticsReport {
 export const analyticsApi = {
   getReport: async (days = 30): Promise<AnalyticsReport> => {
     const res = await api.get("/api/learning/analytics/", { params: { days } });
+    return res.data;
+  },
+};
+
+// ==================== GAMIFICATION API ====================
+
+export interface GamificationBadge {
+  id: string;
+  name: string;
+  icon: string;
+  rarity: "COMMON" | "UNCOMMON" | "RARE" | "EPIC" | "LEGENDARY";
+  image_url: string;
+}
+
+export interface GamificationAchievement {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  target_metric: string;
+  target_value: number;
+  progress: number;
+  percentage: number;
+  is_completed: boolean;
+  completed_at: string | null;
+  badge: GamificationBadge | null;
+}
+
+export interface GamificationUserBadge {
+  id: string;
+  badge_id: string;
+  name: string;
+  description: string;
+  category: string;
+  rarity: string;
+  icon: string;
+  image_url: string;
+  earned_at: string;
+}
+
+export interface GamificationProfile {
+  xp: number;
+  badges_count: number;
+  achievements_count: number;
+  current_streak: number;
+  longest_streak: number;
+}
+
+export const gamificationApi = {
+  getAchievements: async (): Promise<GamificationAchievement[]> => {
+    const res = await api.get("/api/learning/achievements/");
+    return res.data;
+  },
+
+  getBadges: async (): Promise<GamificationUserBadge[]> => {
+    const res = await api.get("/api/learning/badges/");
+    return res.data;
+  },
+
+  getProfile: async (): Promise<GamificationProfile> => {
+    const res = await api.get("/api/learning/gamification/profile/");
+    return res.data;
+  },
+};
+
+export interface CreditPackage {
+  id: number;
+  name: string;
+  credits: number;
+  price: number;
+  total_price: number;
+  service_fee: number;
+}
+
+export interface CreditHistoryItem {
+  id: number;
+  type: string;
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  action: string;
+  description: string;
+  created_at: string;
+}
+
+export const creditsApi = {
+  getBalance: async (): Promise<{ balance: number }> => {
+    const res = await api.get("/api/credits/balance/");
+    return res.data;
+  },
+
+  getPackages: async (): Promise<{ packages: CreditPackage[] }> => {
+    const res = await api.get("/api/credits/packages/");
+    return res.data;
+  },
+
+  getHistory: async (limit: number = 50): Promise<{ history: CreditHistoryItem[] }> => {
+    const res = await api.get("/api/credits/history/", { params: { limit } });
+    return res.data;
+  },
+
+  initPurchase: async (packageId: number): Promise<{ authorization_url: string; access_code: string; reference: string }> => {
+    const res = await api.post("/api/credits/purchase/", { package_id: packageId });
+    return res.data;
+  },
+
+  verifyPurchase: async (reference: string): Promise<{ message: string; credits_added: number; new_balance: number }> => {
+    const res = await api.post("/api/credits/verify-purchase/", { reference });
     return res.data;
   },
 };

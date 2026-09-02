@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     "learning",
     "pastquestions",
     "payments",
+    "credits",
 ]
 
 MIDDLEWARE = [

@@ -503,6 +503,7 @@ class PracticeRoundUsage(models.Model):
 # NOTIFICATIONS
 # ---------------------------------------------------------------------------
 class NotificationType(models.TextChoices):
+    # Existing
     FLASHCARDS_DUE = "FLASHCARDS_DUE", "Flashcards due"
     FLASHCARDS_MISSED = "FLASHCARDS_MISSED", "Missed flashcards"
     PLANNER_UPCOMING = "PLANNER_UPCOMING", "Planned session starting"
@@ -512,7 +513,51 @@ class NotificationType(models.TextChoices):
     WEAK_AREA = "WEAK_AREA", "Weak area needs revision"
     QUESTIONS_READY = "QUESTIONS_READY", "Generated questions ready"
     BATTLE_INVITE = "BATTLE_INVITE", "Brain battle invitation"
+    
+    # New - Academic
+    NEW_QUIZ_AVAILABLE = "NEW_QUIZ", "New Quiz Available"
+    QUIZ_COMPLETED = "QUIZ_COMPLETED", "Quiz Completed"
+    QUIZ_RESULT = "QUIZ_RESULT", "Quiz Result Available"
+    NEW_PAST_QUESTION = "NEW_PAST_Q", "New Past Question"
+    NEW_FLASHCARD_SET = "NEW_FLASH_SET", "New Flashcard Set"
+    STUDY_GOAL_COMPLETED = "GOAL_COMPLETED", "Study Goal Completed"
+    
+    # New - Class/Community
+    NEW_SLIDES = "NEW_SLIDES", "New Slides Uploaded"
+    SLIDE_UPDATED = "SLIDE_UPDATED", "Slide Updated"
+    NEW_MATERIAL = "NEW_MATERIAL", "New Class Material"
+    CLASS_ANNOUNCEMENT = "CLASS_ANNOUNCEMENT", "Class Announcement"
+    HEAD_ANNOUNCEMENT = "HEAD_ANNOUNCEMENT", "Class Head Announcement"
+    
+    # New - Social
+    NEW_COMMENT = "NEW_COMMENT", "New Comment"
+    COMMENT_REPLY = "COMMENT_REPLY", "Comment Reply"
+    POST_LIKED = "POST_LIKED", "Post Liked"
+    POST_COMMENTED = "POST_COMMENTED", "Post Commented"
+    MENTIONED = "MENTIONED", "Mentioned"
+    NEW_FOLLOWER = "NEW_FOLLOWER", "New Follower"
+    
+    # New - System
+    ACCOUNT_SECURITY = "ACCOUNT_SECURITY", "Account Security"
+    WELCOME = "WELCOME", "Welcome"
+    SYSTEM_MSG = "SYSTEM_MSG", "System Announcement"
+    MAINTENANCE = "MAINTENANCE", "Maintenance"
+    FEATURE_UPDATE = "FEATURE_UPDATE", "Feature Update"
+    
+    # Gamification additional
+    LEADERBOARD_CHANGE = "LEADERBOARD_CHANGE", "Leaderboard Changed"
+    ACHIEVEMENT = "ACHIEVEMENT", "Achievement Unlocked"
+    BADGE_EARNED = "BADGE_EARNED", "Badge Earned"
+    STREAK_MILESTONE = "STREAK_MILESTONE", "Streak Milestone"
+    COMPETITION_START = "COMPETITION_START", "Competition Started"
+    COMPETITION_END = "COMPETITION_END", "Competition Ending"
 
+
+class NotificationPriority(models.TextChoices):
+    LOW = "low", "Low"
+    NORMAL = "normal", "Normal"
+    HIGH = "high", "High"
+    URGENT = "urgent", "Urgent"
 
 class Notification(models.Model):
     """An in-app notification.
@@ -532,6 +577,7 @@ class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
 
     type = models.CharField(max_length=32, choices=NotificationType.choices)
+    priority = models.CharField(max_length=12, choices=NotificationPriority.choices, default=NotificationPriority.NORMAL)
     title = models.CharField(max_length=160)
     body = models.TextField(blank=True)
     # Where tapping the notification should take the student.
@@ -574,6 +620,10 @@ class NotificationPreference(models.Model):
         User, on_delete=models.CASCADE, related_name="notification_preference"
     )
 
+    academic_enabled = models.BooleanField(default=True)
+    community_enabled = models.BooleanField(default=True)
+    system_enabled = models.BooleanField(default=True)
+    
     flashcards_enabled = models.BooleanField(default=True)
     planner_enabled = models.BooleanField(default=True)
     study_goal_enabled = models.BooleanField(default=True)
@@ -594,6 +644,27 @@ class NotificationPreference(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.username} notification preferences"
+
+
+class PushSubscription(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="push_subscriptions")
+    
+    endpoint = models.URLField(max_length=500)
+    p256dh = models.CharField(max_length=100)
+    auth = models.CharField(max_length=100)
+    
+    user_agent = models.CharField(max_length=255, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ['user', 'endpoint']
+
+    def __str__(self):
+        return f"PushSubscription for {self.user.username}"
 
 
 # ---------------------------------------------------------------------------
@@ -704,3 +775,128 @@ class DashboardMessage(models.Model):
     def refresh_expiry(self) -> None:
         self.generated_at = timezone.now()
         self.expires_at = self.generated_at + timedelta(hours=self.TTL_HOURS)
+
+
+# ---------------------------------------------------------------------------
+# GAMIFICATION
+# ---------------------------------------------------------------------------
+class BadgeCategory(models.TextChoices):
+    ACADEMIC = "ACADEMIC", "Academic"
+    QUIZZES = "QUIZZES", "Quizzes"
+    FLASHCARDS = "FLASHCARDS", "Flashcards"
+    STUDY_CONSISTENCY = "STUDY_CONSISTENCY", "Study Consistency"
+    STREAKS = "STREAKS", "Streaks"
+    MASTERY = "MASTERY", "Mastery"
+    IMPROVEMENT = "IMPROVEMENT", "Improvement"
+    COMMUNITY = "COMMUNITY", "Community"
+    CONTRIBUTION = "CONTRIBUTION", "Contribution"
+    SPECIAL = "SPECIAL", "Special"
+
+
+class BadgeRarity(models.TextChoices):
+    COMMON = "COMMON", "Common"
+    UNCOMMON = "UNCOMMON", "Uncommon"
+    RARE = "RARE", "Rare"
+    EPIC = "EPIC", "Epic"
+    LEGENDARY = "LEGENDARY", "Legendary"
+
+
+class Badge(models.Model):
+    """A visual reward representing a meaningful accomplishment."""
+
+    id = models.CharField(primary_key=True, max_length=100)
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    category = models.CharField(max_length=50, choices=BadgeCategory.choices)
+    rarity = models.CharField(max_length=20, choices=BadgeRarity.choices, default=BadgeRarity.COMMON)
+    
+    icon = models.CharField(max_length=100, blank=True, help_text="Lucide icon name or emoji")
+    image_url = models.URLField(blank=True)
+    
+    is_active = models.BooleanField(default=True)
+    is_hidden = models.BooleanField(default=False, help_text="True if this should be a secret until unlocked")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["category", "rarity", "name"]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.rarity})"
+
+
+class Achievement(models.Model):
+    """A specific measurable accomplishment that awards a badge."""
+
+    id = models.CharField(primary_key=True, max_length=100)
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    category = models.CharField(max_length=50, choices=BadgeCategory.choices)
+    
+    badge = models.ForeignKey(Badge, on_delete=models.SET_NULL, null=True, blank=True, related_name="achievements")
+    
+    target_metric = models.CharField(max_length=100, help_text="Metric tracked (e.g. 'quizzes_completed')")
+    target_value = models.IntegerField(default=1)
+    
+    is_active = models.BooleanField(default=True)
+    is_hidden = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["category", "target_value", "name"]
+
+    def __str__(self) -> str:
+        return f"{self.name}: {self.target_metric} = {self.target_value}"
+
+
+class UserBadge(models.Model):
+    """Tracks the badges earned by a user."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="badges")
+    badge = models.ForeignKey(Badge, on_delete=models.CASCADE)
+    
+    earned_at = models.DateTimeField(default=timezone.now, db_index=True)
+    source_achievement = models.ForeignKey(Achievement, on_delete=models.SET_NULL, null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        unique_together = ["user", "badge"]
+        ordering = ["-earned_at"]
+
+    def __str__(self) -> str:
+        return f"{self.user.username} - {self.badge.name}"
+
+
+class UserAchievement(models.Model):
+    """Tracks a user's progress towards an achievement."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="achievements")
+    achievement = models.ForeignKey(Achievement, on_delete=models.CASCADE)
+    
+    progress = models.IntegerField(default=0)
+    is_completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ["user", "achievement"]
+        ordering = ["-updated_at"]
+        indexes = [
+            models.Index(fields=["user", "is_completed"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user.username} - {self.achievement.name} ({self.progress}/{self.achievement.target_value})"
+
+    @property
+    def percentage(self) -> int:
+        if not self.achievement.target_value:
+            return 100 if self.is_completed else 0
+        return min(100, int((self.progress / self.achievement.target_value) * 100))

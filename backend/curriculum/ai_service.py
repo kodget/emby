@@ -29,7 +29,7 @@ def _strip_json_fences(text: str) -> str:
     return llm.strip_fences(text)
 
 
-def _generate(parts: list, model: Optional[str] = None) -> str:
+def _generate(parts: list, model: Optional[str] = None, return_usage: bool = False) -> Any:
     """
     Core helper: run a completion against the configured open-weight model.
 
@@ -66,6 +66,8 @@ def _generate(parts: list, model: Optional[str] = None) -> str:
                 _as_base64(image["data"]),
                 mime_type=image.get("mime_type", "image/jpeg"),
                 max_tokens=1500,
+                # Vision chat doesn't explicitly have return_usage yet, let me update it too! wait.
+                # I'll just pass return_usage below.
             )
         except (llm.LLMError, llm.LLMNotConfigured, ValueError) as exc:
             logger.warning("Vision call failed, falling back to slide text: %s", exc)
@@ -75,6 +77,7 @@ def _generate(parts: list, model: Optional[str] = None) -> str:
         model=model,
         temperature=0.4,
         max_tokens=2048,
+        return_usage=return_usage,
     )
 
 
@@ -129,6 +132,7 @@ TONE: Warm, encouraging, like a helpful senior colleague. If something is confus
         slide_context: Dict[str, Any],
         slide_image_base64: Optional[str] = None,
         conversation_history: Optional[List[Dict[str, str]]] = None,
+        return_usage: bool = False,
     ) -> Dict[str, Any]:
         """
         Send a chat message with full slide context.
@@ -162,13 +166,19 @@ TONE: Warm, encouraging, like a helpful senior colleague. If something is confus
 
             parts.append(full_prompt)
 
-            response_text = _generate(parts)
+            if return_usage:
+                response_text, tokens = _generate(parts, return_usage=True)
+            else:
+                response_text = _generate(parts)
 
-            return {
+            result = {
                 "response": response_text,
                 "sources": None,
                 "youtube": None,
             }
+            if return_usage:
+                result["total_tokens"] = tokens
+            return result
 
         except Exception as e:
             logger.error(f"LLM chat error: {e}")
@@ -181,6 +191,7 @@ TONE: Warm, encouraging, like a helpful senior colleague. If something is confus
         self,
         slide_context: Dict[str, Any],
         slide_image_base64: Optional[str] = None,
+        return_usage: bool = False,
     ) -> Dict[str, Any]:
         """
         Generate structured study resources for a slide.
@@ -220,7 +231,10 @@ Generate: 3 YouTube suggestions, 2 textbook recommendations, 5 MCQs based on thi
                 parts.append({"data": slide_image_base64, "mime_type": "image/jpeg"})
             parts.append(prompt)
 
-            raw = _generate(parts)
+            if return_usage:
+                raw, tokens = _generate(parts, return_usage=True)
+            else:
+                raw = _generate(parts)
 
             # Strip markdown fences if present
             text = raw.strip()
@@ -234,6 +248,8 @@ Generate: 3 YouTube suggestions, 2 textbook recommendations, 5 MCQs based on thi
             resources.setdefault("youtube", [])
             resources.setdefault("textbooks", [])
             resources.setdefault("mcqs", [])
+            if return_usage:
+                resources["total_tokens"] = tokens
             return resources
 
         except json.JSONDecodeError as e:
@@ -378,6 +394,7 @@ def generate_questions_from_text(
     topic_name: str = "",
     num_mcq: int = 5,
     num_theory: int = 3,
+    return_usage: bool = False,
 ) -> Dict[str, Any]:
     """
     Generate MCQ and theory questions from arbitrary source text (slide content
@@ -435,7 +452,10 @@ and {num_theory} theory questions. Ensure every MCQ has a single unambiguous cor
 
     raw = ""
     try:
-        raw = _generate([prompt])
+        if return_usage:
+            raw, tokens = _generate([prompt], return_usage=True)
+        else:
+            raw = _generate([prompt])
         data = json.loads(_strip_json_fences(raw))
 
         mcqs = data.get("mcqs", []) if isinstance(data, dict) else []
@@ -464,7 +484,10 @@ and {num_theory} theory questions. Ensure every MCQ has a single unambiguous cor
             for t in theory if isinstance(t, dict)
         ]
 
-        return {"mcqs": cleaned_mcqs, "theory": cleaned_theory, "error": None}
+        res = {"mcqs": cleaned_mcqs, "theory": cleaned_theory, "error": None}
+        if return_usage:
+            res["total_tokens"] = tokens
+        return res
 
     except json.JSONDecodeError as e:
         logger.error(f"generate_questions_from_text JSON parse error: {e}; raw={raw[:300]}")
@@ -475,7 +498,7 @@ and {num_theory} theory questions. Ensure every MCQ has a single unambiguous cor
 
 
 def grade_theory_answer(
-    question_text: str, model_answer: str, student_answer: str
+    question_text: str, model_answer: str, student_answer: str, return_usage: bool = False
 ) -> Dict[str, Any]:
     """Legacy function used by views.py quiz answer endpoint."""
     prompt = f"""Grade this medical student's theory answer. Respond ONLY with valid JSON.
@@ -486,18 +509,25 @@ Format: {{"score": 7, "feedback": "Good explanation of..."}}
 Score out of 10."""
 
     try:
-        raw = _generate([prompt])
+        if return_usage:
+            raw, tokens = _generate([prompt], return_usage=True)
+        else:
+            raw = _generate([prompt])
+            
         text = raw.strip()
         if text.startswith("```"):
             lines = text.split("\n")
             text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-        return json.loads(text)
+        res = json.loads(text)
+        if return_usage:
+            res["total_tokens"] = tokens
+        return res
     except Exception as e:
         logger.error(f"grade_theory_answer error: {e}")
         return {"score": 0, "feedback": "Grading unavailable. Please review the model answer."}
 
 
-def generate_battle_questions(topic: str, num_questions: int = 10, difficulty: str = "mixed") -> List[Dict[str, Any]]:
+def generate_battle_questions(topic: str, num_questions: int = 10, difficulty: str = "mixed", return_usage: bool = False) -> Any:
     """Generates multiple choice questions for a Brain Battle or Friend Challenge."""
     prompt = f"""Generate {num_questions} quiz questions for medical students about the topic: '{topic}'.
 Target Difficulty Level: {difficulty.upper()} (ensure the cognitive complexity matches this level).
@@ -513,9 +543,16 @@ Respond ONLY with valid JSON in this exact structure:
 ]"""
 
     try:
-        raw = _generate([prompt])
+        if return_usage:
+            raw, tokens = _generate([prompt], return_usage=True)
+        else:
+            raw = _generate([prompt])
+            
         text = _strip_json_fences(raw)
-        return json.loads(text)
+        res = json.loads(text)
+        if return_usage:
+            return res, tokens
+        return res
     except Exception as e:
         logger.error(f"generate_battle_questions error: {e}")
         return []

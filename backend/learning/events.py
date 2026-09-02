@@ -100,6 +100,12 @@ def record(
         except Exception:  # noqa: BLE001 - XP must never break the student's action
             logger.exception("XP award failed for event %s", event.id)
 
+    try:
+        from .gamification import AchievementEngine
+        AchievementEngine.evaluate_event(event)
+    except Exception:
+        logger.exception("Gamification engine failed for event %s", event.id)
+
     return event
 
 

@@ -83,6 +83,7 @@ def checkout(request):
         json={
             "email": email,
             "amount": plan.amount_kobo,
+            "plan": plan.paystack_plan_code,
             "callback_url": settings.PAYSTACK_CALLBACK_URL,
             "metadata": {
                 "user_id": request.user.id,

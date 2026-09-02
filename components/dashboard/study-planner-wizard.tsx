@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { X, Calendar, Clock, BookOpen, Wand2, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { studyPlannerApi, StudyProfile } from "@/lib/api";
+import { studyPlannerApi, curriculumApi, StudyProfile, Subject } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface StudyPlannerWizardProps {
   isOpen: boolean;
@@ -18,28 +20,44 @@ export function StudyPlannerWizard({ isOpen, onClose, onSuccess }: StudyPlannerW
   
   const [examDate, setExamDate] = useState("");
   const [dailyMinutes, setDailyMinutes] = useState(120);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(false);
   
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
-      loadProfile();
+      loadProfileAndSubjects();
       setStep(1);
     }
   }, [isOpen]);
 
-  const loadProfile = async () => {
+  const loadProfileAndSubjects = async () => {
     try {
-      const existing = await studyPlannerApi.getProfile();
+      const [existing, subjects] = await Promise.all([
+        studyPlannerApi.getProfile(),
+        curriculumApi.getSubjects()
+      ]);
+      setAvailableSubjects(subjects);
+      
       if (existing) {
         setProfile(existing);
         if (existing.exam_date) setExamDate(existing.exam_date);
         if (existing.daily_study_minutes) setDailyMinutes(existing.daily_study_minutes);
+        if (existing.target_subjects) setSelectedSubjects(existing.target_subjects);
       }
     } catch (error) {
-      console.error("Failed to load profile", error);
+      console.error("Failed to load profile or subjects", error);
     }
+  };
+
+  const toggleSubject = (subjectId: string) => {
+    setSelectedSubjects((prev) =>
+      prev.includes(subjectId)
+        ? prev.filter((id) => id !== subjectId)
+        : [...prev, subjectId]
+    );
   };
 
   const handleSave = async () => {
@@ -48,6 +66,7 @@ export function StudyPlannerWizard({ isOpen, onClose, onSuccess }: StudyPlannerW
       const data: StudyProfile = {
         exam_date: examDate || undefined,
         daily_study_minutes: dailyMinutes,
+        target_subjects: selectedSubjects.length > 0 ? selectedSubjects : undefined,
       };
       
       if (profile && profile.id) {
@@ -146,6 +165,34 @@ export function StudyPlannerWizard({ isOpen, onClose, onSuccess }: StudyPlannerW
                   <p className="text-xs text-muted-foreground">
                     How much time can you commit to studying every day?
                   </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <BookOpen className="size-4 text-primary" /> Target Subjects
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Select the subjects you want to focus on. Leave empty to include all subjects.
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-1 max-h-40 overflow-y-auto pr-2 pb-2">
+                    {availableSubjects.map((subject) => {
+                      const isSelected = selectedSubjects.includes(subject.id);
+                      return (
+                        <button
+                          key={subject.id}
+                          onClick={() => toggleSubject(subject.id)}
+                          className={cn(
+                            "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                            isSelected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                          )}
+                        >
+                          {isSelected && <Check className="size-3" />}
+                          {subject.name || (subject as any).title}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>

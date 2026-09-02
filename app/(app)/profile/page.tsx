@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { authApi, statsApi } from "@/lib/api";
-import { UserProfile, UserStats } from "@/lib/api";
+import { authApi, statsApi, gamificationApi } from "@/lib/api";
+import { UserProfile, UserStats, GamificationProfile } from "@/lib/api";
 import AuthGuard from "@/components/auth/auth-guard";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { updateUserProfile } from "@/store/user-slice";
@@ -44,6 +44,7 @@ export default function ProfilePage() {
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [gamification, setGamification] = useState<GamificationProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -58,12 +59,14 @@ export default function ProfilePage() {
 
   const loadProfile = async () => {
     try {
-      const [profileData, statsData] = await Promise.all([
+      const [profileData, statsData, gamificationData] = await Promise.all([
         authApi.getProfile(),
         statsApi.getMyStats().catch(() => null),
+        gamificationApi.getProfile().catch(() => null),
       ]);
       setProfile(profileData);
       setStats(statsData);
+      setGamification(gamificationData);
 
       // Update Redux store
       dispatch(
@@ -524,6 +527,41 @@ export default function ProfilePage() {
                   <span className="text-muted-foreground">Quizzes Taken</span>
                   <span className="font-semibold">
                     {stats.quizzes_taken || 0}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Gamification Stats */}
+          {gamification && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="space-y-1.5">
+                  <CardTitle>Achievements & Badges</CardTitle>
+                  <CardDescription>Track your learning journey</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => router.push("/achievements")}>
+                  View All
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3 pt-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Total XP</span>
+                  <span className="font-semibold text-yellow-600 dark:text-yellow-400">
+                    {gamification.xp}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Badges Earned</span>
+                  <span className="font-semibold">
+                    {gamification.badges_count}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Achievements Unlocked</span>
+                  <span className="font-semibold">
+                    {gamification.achievements_count}
                   </span>
                 </div>
               </CardContent>

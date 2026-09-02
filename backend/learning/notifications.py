@@ -32,12 +32,17 @@ from .models import (
     Notification,
     NotificationPreference,
     NotificationType,
+    NotificationPriority,
 )
 
 logger = logging.getLogger(__name__)
 
 # Ordered by usefulness — when the daily budget is tight, the top of this list wins.
 PRIORITY = [
+    NotificationType.ACCOUNT_SECURITY,
+    NotificationType.SYSTEM_MSG,
+    NotificationType.HEAD_ANNOUNCEMENT,
+    NotificationType.CLASS_ANNOUNCEMENT,
     NotificationType.FLASHCARDS_DUE,
     NotificationType.PLANNER_UPCOMING,
     NotificationType.PLANNER_MISSED,
@@ -54,6 +59,34 @@ PREFERENCE_FIELD = {
     NotificationType.STUDY_GOAL: "study_goal_enabled",
     NotificationType.STREAK_AT_RISK: "streak_enabled",
     NotificationType.WEAK_AREA: "weak_area_enabled",
+    
+    # Academic
+    NotificationType.NEW_QUIZ_AVAILABLE: "academic_enabled",
+    NotificationType.QUIZ_COMPLETED: "academic_enabled",
+    NotificationType.QUIZ_RESULT: "academic_enabled",
+    NotificationType.NEW_PAST_QUESTION: "academic_enabled",
+    NotificationType.NEW_FLASHCARD_SET: "academic_enabled",
+    NotificationType.STUDY_GOAL_COMPLETED: "academic_enabled",
+    
+    # Community
+    NotificationType.NEW_SLIDES: "community_enabled",
+    NotificationType.SLIDE_UPDATED: "community_enabled",
+    NotificationType.NEW_MATERIAL: "community_enabled",
+    NotificationType.CLASS_ANNOUNCEMENT: "community_enabled",
+    NotificationType.HEAD_ANNOUNCEMENT: "community_enabled",
+    NotificationType.NEW_COMMENT: "community_enabled",
+    NotificationType.COMMENT_REPLY: "community_enabled",
+    NotificationType.POST_LIKED: "community_enabled",
+    NotificationType.POST_COMMENTED: "community_enabled",
+    NotificationType.MENTIONED: "community_enabled",
+    NotificationType.NEW_FOLLOWER: "community_enabled",
+    
+    # System
+    NotificationType.ACCOUNT_SECURITY: "system_enabled",
+    NotificationType.WELCOME: "system_enabled",
+    NotificationType.SYSTEM_MSG: "system_enabled",
+    NotificationType.MAINTENANCE: "system_enabled",
+    NotificationType.FEATURE_UPDATE: "system_enabled",
 }
 
 
@@ -103,6 +136,7 @@ def schedule(
     dedupe_key: str = "",
     when=None,
     payload: dict | None = None,
+    priority: str = NotificationPriority.NORMAL,
 ) -> Notification | None:
     """Create one notification, honouring preferences, quiet hours and the daily budget.
 
@@ -124,9 +158,10 @@ def schedule(
     key = dedupe_key or f"{type_}:{timezone.now():%Y-%m-%d}"
 
     try:
-        return Notification.objects.create(
+        notification = Notification.objects.create(
             user=user,
             type=type_,
+            priority=priority,
             title=title[:160],
             body=body,
             action_url=action_url,
@@ -134,6 +169,34 @@ def schedule(
             scheduled_for=when,
             dedupe_key=key,
         )
+        
+        # Send to WebSocket if it's scheduled for now (or in the past)
+        if notification.scheduled_for <= timezone.now():
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            from .tasks import send_push_notification_task
+            
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"user_{user.id}_notifications",
+                {
+                    "type": "notification_message",
+                    "message": {
+                        "id": str(notification.id),
+                        "type": notification.type,
+                        "priority": notification.priority,
+                        "title": notification.title,
+                        "body": notification.body,
+                        "action_url": notification.action_url,
+                        "created_at": notification.created_at.isoformat(),
+                    }
+                }
+            )
+            
+            # Send Web Push via Celery
+            send_push_notification_task.delay(notification.id)
+            
+        return notification
     except IntegrityError:
         # The unique constraint on (user, dedupe_key) did its job.
         return None
