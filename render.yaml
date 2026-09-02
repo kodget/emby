@@ -1,0 +1,138 @@
+# render.yaml — Render Blueprint
+# Defines all services needed to run Emby in production.
+#
+# Services:
+#   1. web        — Django + Daphne ASGI (handles HTTP + WebSockets)
+#   2. worker     — Celery worker (processes background tasks: slides, AI, etc.)
+#   3. redis      — Managed Redis (shared by Channels + Celery)
+#
+# Deploy: push this file to the root of your repo, then connect it in the
+# Render dashboard via "New Blueprint".
+
+services:
+  # ── Django Web Server ──────────────────────────────────────────────────────
+  - type: web
+    name: emby-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: bash render_build.sh
+    startCommand: daphne -b 0.0.0.0 -p $PORT backend.asgi:application
+    healthCheckPath: /api/health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: DEBUG
+        value: "False"
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: emby-redis
+          property: connectionString
+      # Add all your secret keys below using "Sync" from environment groups
+      # or set them manually in the Render dashboard.
+      - key: SECRET_KEY
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: ALLOWED_HOSTS
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: LLM_BACKUP_1_BASE_URL
+        sync: false
+      - key: LLM_BACKUP_1_API_KEY
+        sync: false
+      - key: LLM_BACKUP_1_MODEL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+
+  # ── Celery Worker ──────────────────────────────────────────────────────────
+  - type: worker
+    name: emby-celery-worker
+    runtime: python
+    rootDir: backend
+    buildCommand: bash render_build.sh
+    startCommand: celery -A backend worker --loglevel=info --concurrency=2
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: DEBUG
+        value: "False"
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: emby-redis
+          property: connectionString
+      - key: SECRET_KEY
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: LLM_BACKUP_1_BASE_URL
+        sync: false
+      - key: LLM_BACKUP_1_API_KEY
+        sync: false
+      - key: LLM_BACKUP_1_MODEL
+        sync: false
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  - type: redis
+    name: emby-redis
+    plan: free
+    maxmemoryPolicy: noeviction

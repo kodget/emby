@@ -123,11 +123,25 @@ TEMPLATES = [
 WSGI_APPLICATION = "backend.wsgi.application"
 ASGI_APPLICATION = "backend.asgi.application"
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",
+_REDIS_URL = os.getenv("REDIS_URL", "")
+
+if _REDIS_URL:
+    # Production: Redis-backed channel layer (required for multi-process Render deploys)
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [_REDIS_URL],
+            },
+        }
     }
-}
+else:
+    # Local dev: in-memory layer (single process only)
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +297,8 @@ CSRF_TRUSTED_ORIGINS = env_list(
 
 CELERY_BROKER_URL = os.getenv(
     "CELERY_BROKER_URL",
-    "redis://localhost:6379/0",
+    # Fall back to the shared Redis URL if no dedicated broker URL is set
+    os.getenv("REDIS_URL", "redis://localhost:6379/0"),
 )
 
 CELERY_RESULT_BACKEND = os.getenv(
