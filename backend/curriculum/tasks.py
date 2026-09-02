@@ -10,6 +10,41 @@ from .services.ai_theory_evaluator import AITheoryEvaluator, theory_evaluator
 logger = logging.getLogger(__name__)
 
 
+def _extract_text_from_content(content_data: dict) -> str:
+    """
+    Extract plain text from SlideContent.content_data regardless of structure.
+
+    The pipeline stores content in one of two shapes:
+      - Legacy: {'text': '...'}
+      - Current: {'pages': [{'text_blocks': ['...', ...]}, ...]}
+
+    Returns a single concatenated string suitable for passing to the LLM.
+    """
+    if not content_data:
+        return ''
+
+    # Fast path: top-level text key (legacy / hand-crafted slides)
+    top_text = content_data.get('text', '')
+    if top_text and len(top_text.strip()) >= 50:
+        return top_text.strip()
+
+    # Current path: iterate pages -> text_blocks
+    parts = []
+    for page in content_data.get('pages', []):
+        blocks = page.get('text_blocks', [])
+        if isinstance(blocks, list):
+            for block in blocks:
+                if isinstance(block, str):
+                    parts.append(block.strip())
+                elif isinstance(block, dict):
+                    # Some renderers store {'text': '...'} per block
+                    t = block.get('text', '') or block.get('content', '')
+                    if t:
+                        parts.append(str(t).strip())
+
+    return ' '.join(p for p in parts if p)
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def process_slide_task(self, slide_id: str, local_file_path: str = None):
     """
@@ -262,7 +297,7 @@ def generate_questions_task(self, slide_id: str):
     
     try:
         slide_content = SlideContent.objects.get(slide=slide)
-        text = slide_content.content_data.get('text', '')
+        text = _extract_text_from_content(slide_content.content_data)
         
         if not text or len(text.strip()) < 100:
             error_msg = f"Insufficient text content for slide {slide_id} ({len(text)} chars)"
@@ -569,7 +604,7 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
     
     try:
         slide_content = SlideContent.objects.get(slide=slide)
-        text = slide_content.content_data.get('text', '')
+        text = _extract_text_from_content(slide_content.content_data)
         
         if not text or len(text.strip()) < 100:
             error_msg = f"Insufficient text content for slide {slide_id} ({len(text)} chars)"
