@@ -156,7 +156,7 @@ def consistency(user: User, days: int = 30) -> dict:
         "active_days": active_days,
         "window_days": days,
         "active_rate": round(active_days / days, 3) if days else 0,
-        "current_streak": getattr(stats, "current_streak", 0) or 0,
+        "current_streak": getattr(stats, "active_streak", 0) or 0,
         "longest_streak": getattr(stats, "longest_streak", 0) or 0,
         "total_minutes": rows.aggregate(total=Sum("minutes_studied"))["total"] or 0,
         "average_minutes_per_active_day": (

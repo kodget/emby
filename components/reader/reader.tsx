@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   BookOpenText,
@@ -72,13 +73,22 @@ export function Reader({
   suggestedVideos?: any[];
   courseBreadcrumb: string;
 }) {
-  const [panelOpen, setPanelOpen] = useState(true);
-  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("ai");
   const [selection, setSelection] = useState<SelectionPayload | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [timeSpent, setTimeSpent] = useState(0);
   const startTimeRef = useRef<number>(Date.now());
+  const searchParams = useSearchParams();
+  const isSession = searchParams?.get("session") === "true";
+
+  useEffect(() => {
+    if (window.innerWidth >= 1024) {
+      setPanelOpen(true);
+      setLeftPanelOpen(true);
+    }
+  }, []);
 
   const dispatch = useAppDispatch();
   const { hasAccess, isPremium, isTrial } = useFeatureAccess();
@@ -292,7 +302,7 @@ export function Reader({
       <div className="flex flex-1 min-h-0 relative">
         {/* ── Collapsible Left Outline Panel ───────────────────────────── */}
         {leftPanelOpen && (
-          <aside className="w-64 border-r border-border bg-card flex flex-col shrink-0">
+          <aside className="absolute inset-y-0 left-0 z-40 w-64 border-r border-border bg-card flex flex-col shrink-0 lg:static lg:z-auto shadow-2xl lg:shadow-none">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <span className="font-serif text-sm font-semibold text-foreground">Outline</span>
               <button
@@ -381,7 +391,10 @@ export function Reader({
 
         {/* ── Right: AI + Resource Panel ───────────────────────────────── */}
         {panelOpen && (
-          <aside className="hidden w-[420px] shrink-0 flex-col border-l border-border bg-card lg:flex h-[calc(100vh-4rem)] fixed right-0 top-[4rem]">
+          <aside className={cn(
+            "fixed inset-x-0 bottom-0 top-[4rem] z-40 flex flex-col border-l border-border bg-card lg:static lg:h-[calc(100vh-4rem)] lg:w-[420px] lg:z-auto shadow-2xl lg:shadow-none",
+            isSession ? "pb-28" : ""
+          )}>
             <PanelTabs tab={tab} onChange={setTab} />
             <div className="flex-1 min-h-0 overflow-y-auto">
               {/* AI Chat */}

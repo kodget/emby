@@ -1,13 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { curriculumApi, progressApi, type Slide } from "@/lib/api"
 import { Reader } from "@/components/reader/reader"
+import { SessionFooter } from "@/components/session-footer"
 
 export default function ReadPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const courseId = params.courseId as string
   const materialId = params.materialId as string
   
@@ -90,5 +92,29 @@ export default function ReadPage() {
     return null
   }
 
-  return <Reader courseId={courseId} slide={slide} slideContent={slideContent} suggestedVideos={suggestedVideos} courseBreadcrumb={courseBreadcrumb} />
+  const step = searchParams.get("step") ? parseInt(searchParams.get("step") as string) : 1
+  const queueParam = searchParams.get("queue")
+  
+  let handleNext = undefined
+  
+  if (queueParam) {
+    const queue = queueParam.split(',')
+    const currentIndex = queue.indexOf(materialId)
+    
+    if (currentIndex !== -1 && currentIndex < queue.length - 1) {
+      const nextId = queue[currentIndex + 1]
+      handleNext = () => {
+        router.push(`/read/${courseId}/${nextId}?session=true&step=${step}&queue=${queueParam}`)
+      }
+    }
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-1 min-h-0">
+        <Reader courseId={courseId} slide={slide} slideContent={slideContent} suggestedVideos={suggestedVideos} courseBreadcrumb={courseBreadcrumb} />
+      </div>
+      <SessionFooter currentStep={step} onNext={handleNext} />
+    </div>
+  )
 }

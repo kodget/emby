@@ -58,7 +58,14 @@ def _generate(parts: list, model=None) -> str:
         if "429" in text or "rate limit" in text or "quota" in text:
             logger.warning("LLM rate limited across all providers: %s", e)
             raise RateLimitExceeded(str(e)) from e
+        if isinstance(e, llm.RequestTooLarge):
+            raise e
         raise
+
+
+MAX_INPUT_TOKENS_PER_REQUEST = int(llm._setting("MAX_INPUT_TOKENS_PER_REQUEST", "3000"))
+MAX_OUTPUT_TOKENS_PER_REQUEST = int(llm._setting("MAX_OUTPUT_TOKENS_PER_REQUEST", "2000"))
+MAX_INPUT_CHARS = MAX_INPUT_TOKENS_PER_REQUEST * 4
 
 
 class AIQuestionGenerator:
@@ -73,23 +80,108 @@ class AIQuestionGenerator:
         return QuizQuestion.objects.filter(source_slide_id=slide_id).exists()
 
     @staticmethod
+    def _chunk_text(text: str, max_chars: int = MAX_INPUT_CHARS) -> List[str]:
+        """Split text into semantic chunks under max_chars length."""
+        if len(text) <= max_chars:
+            return [text]
+        
+        chunks = []
+        current_chunk = ""
+        
+        for para in text.split("\n\n"):
+            if len(para) > max_chars:
+                for line in para.split("\n"):
+                    if len(line) > max_chars:
+                        for sentence in line.split(". "):
+                            sentence = sentence + ". "
+                            if len(sentence) > max_chars:
+                                for i in range(0, len(sentence), max_chars):
+                                    part = sentence[i:i+max_chars]
+                                    if len(current_chunk) + len(part) > max_chars:
+                                        if current_chunk.strip():
+                                            chunks.append(current_chunk.strip())
+                                        current_chunk = part
+                                    else:
+                                        current_chunk += part
+                            else:
+                                if len(current_chunk) + len(sentence) > max_chars:
+                                    if current_chunk.strip():
+                                        chunks.append(current_chunk.strip())
+                                    current_chunk = sentence
+                                else:
+                                    current_chunk += sentence
+                    else:
+                        if len(current_chunk) + len(line) + 1 > max_chars:
+                            if current_chunk.strip():
+                                chunks.append(current_chunk.strip())
+                            current_chunk = line + "\n"
+                        else:
+                            current_chunk += line + "\n"
+            else:
+                if len(current_chunk) + len(para) + 2 > max_chars:
+                    if current_chunk.strip():
+                        chunks.append(current_chunk.strip())
+                    current_chunk = para + "\n\n"
+                else:
+                    current_chunk += para + "\n\n"
+                    
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
+            
+        return chunks
+
+    @staticmethod
+    def _deduplicate_questions(questions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Deduplicate questions based on normalized question text."""
+        import string
+        seen = set()
+        unique = []
+        for q in questions:
+            normalized = q.get('question_text', '').lower().strip()
+            normalized = normalized.translate(str.maketrans('', '', string.punctuation))
+            if normalized not in seen:
+                seen.add(normalized)
+                unique.append(q)
+        return unique
+
+    @staticmethod
     def generate_mcqs_from_text(text: str, slide, topic, count: int, difficulty: str) -> List[Dict[str, Any]]:
         """
-        Generate multiple-choice questions (MCQs) from text.
+        Generate multiple-choice questions (MCQs) from text using chunking.
         """
         subject_name = slide.subject.name if slide.subject else "General"
         topic_name = topic.name if topic else ""
-        source = text.strip()[:15000]
+        source = text.strip()
         
-        prompt = f"""You are an examiner creating MCQ assessment questions for Nigerian medical students.
+        chunks = AIQuestionGenerator._chunk_text(source)
+        if not chunks:
+            return []
+            
+        # Distribute the requested count across chunks, at least 1 per chunk if possible
+        import math
+        base_per_chunk = math.ceil(count / len(chunks))
         
+        all_cleaned = []
+        
+        for idx, chunk in enumerate(chunks):
+            # Don't generate more than we need
+            remaining = count - len(all_cleaned)
+            if remaining <= 0:
+                break
+                
+            chunk_count = min(base_per_chunk, remaining)
+            # Add a small buffer in case of bad generation/duplicates
+            request_count = min(chunk_count + 1, remaining)
+
+            prompt = f"""You are an examiner creating MCQ assessment questions for Nigerian medical students.
+            
 SUBJECT: {subject_name}
 TOPIC: {topic_name}
 DIFFICULTY: {difficulty}
-SOURCE MATERIAL:
-{source}
+SOURCE MATERIAL (Part {idx+1} of {len(chunks)}):
+{chunk}
 
-TASK: Create exactly {count} MCQ questions strictly grounded in the SOURCE MATERIAL above.
+TASK: Create exactly {request_count} MCQ questions strictly grounded in the SOURCE MATERIAL above.
 All questions must have the difficulty: '{difficulty}'.
 
 Spread the correct answer evenly across A, B, C and D. Do not let one letter dominate,
@@ -120,51 +212,76 @@ Format:
   }}
 ]
 """
-        raw = _generate([prompt])
-        data = json.loads(_strip_json_fences(raw))
-        if not isinstance(data, list):
-            if isinstance(data, dict) and "mcqs" in data:
-                data = data["mcqs"]
-            else:
-                data = [data]
-                
-        # Validate/clean
-        cleaned = []
-        for item in data[:count]:
-            correct = str(item.get("correct_option", "A")).strip().upper()[:1]
-            if correct not in ("A", "B", "C", "D"):
-                correct = "A"
-            cleaned.append({
-                "question_text": item.get("question_text", item.get("question", "")),
-                "option_a": item.get("option_a", ""),
-                "option_b": item.get("option_b", ""),
-                "option_c": item.get("option_c", ""),
-                "option_d": item.get("option_d", ""),
-                "correct_option": correct,
-                "explanation": item.get("explanation", ""),
-                "difficulty": item.get("difficulty", difficulty),
-                "maximum_marks": int(item.get("maximum_marks", 1))
-            })
-        return cleaned
+            try:
+                raw = _generate([prompt])
+                data = json.loads(_strip_json_fences(raw))
+                if not isinstance(data, list):
+                    if isinstance(data, dict) and "mcqs" in data:
+                        data = data["mcqs"]
+                    else:
+                        data = [data]
+                        
+                for item in data:
+                    correct = str(item.get("correct_option", "A")).strip().upper()[:1]
+                    if correct not in ("A", "B", "C", "D"):
+                        correct = "A"
+                    all_cleaned.append({
+                        "question_text": item.get("question_text", item.get("question", "")),
+                        "option_a": item.get("option_a", ""),
+                        "option_b": item.get("option_b", ""),
+                        "option_c": item.get("option_c", ""),
+                        "option_d": item.get("option_d", ""),
+                        "correct_option": correct,
+                        "explanation": item.get("explanation", ""),
+                        "difficulty": item.get("difficulty", difficulty),
+                        "maximum_marks": int(item.get("maximum_marks", 1))
+                    })
+            except llm.RequestTooLarge:
+                logger.warning(f"Chunk {idx+1} too large for provider. Skipping this chunk.")
+                continue
+            except Exception as e:
+                logger.warning(f"Failed to generate MCQs for chunk {idx+1}: {e}")
+                continue
+
+        # Deduplicate and limit to required count
+        unique_questions = AIQuestionGenerator._deduplicate_questions(all_cleaned)
+        return unique_questions[:count]
 
     @staticmethod
     def generate_theory_from_text(text: str, slide, topic, count: int, difficulty: str) -> List[Dict[str, Any]]:
         """
-        Generate theory (open-ended) questions from text with marking rubrics.
+        Generate theory (open-ended) questions from text with marking rubrics, using chunking.
         """
         subject_name = slide.subject.name if slide.subject else "General"
         topic_name = topic.name if topic else ""
-        source = text.strip()[:15000]
+        source = text.strip()
         
-        prompt = f"""You are an examiner creating theory assessment questions for Nigerian medical students.
+        chunks = AIQuestionGenerator._chunk_text(source)
+        if not chunks:
+            return []
+            
+        import math
+        base_per_chunk = math.ceil(count / len(chunks))
         
+        all_cleaned = []
+        
+        for idx, chunk in enumerate(chunks):
+            remaining = count - len(all_cleaned)
+            if remaining <= 0:
+                break
+                
+            chunk_count = min(base_per_chunk, remaining)
+            request_count = min(chunk_count + 1, remaining)
+
+            prompt = f"""You are an examiner creating theory assessment questions for Nigerian medical students.
+            
 SUBJECT: {subject_name}
 TOPIC: {topic_name}
 DIFFICULTY: {difficulty}
-SOURCE MATERIAL:
-{source}
+SOURCE MATERIAL (Part {idx+1} of {len(chunks)}):
+{chunk}
 
-TASK: Create exactly {count} theory questions strictly grounded in the SOURCE MATERIAL above.
+TASK: Create exactly {request_count} theory questions strictly grounded in the SOURCE MATERIAL above.
 All questions must have the difficulty: '{difficulty}'.
 Each question must include a marking rubric detailing specific scoring criteria (points) that sum to the maximum marks (typically 10 or 20).
 
@@ -184,34 +301,41 @@ Format:
   }}
 ]
 """
-        raw = _generate([prompt])
-        data = json.loads(_strip_json_fences(raw))
-        if not isinstance(data, list):
-            if isinstance(data, dict) and "theory" in data:
-                data = data["theory"]
-            else:
-                data = [data]
-                
-        cleaned = []
-        for item in data[:count]:
-            rubric = item.get("marking_rubric", [])
-            if not isinstance(rubric, list):
-                rubric = []
-            
-            # compute sum of rubric marks or use default
-            total_rubric_marks = sum(int(r.get("marks", 0)) for r in rubric if isinstance(r, dict))
-            max_marks = int(item.get("maximum_marks", 20))
-            if total_rubric_marks > 0:
-                max_marks = total_rubric_marks
-                
-            cleaned.append({
-                "question_text": item.get("question_text", item.get("question", "")),
-                "ideal_answer": item.get("ideal_answer", item.get("model_answer", "")),
-                "marking_rubric": rubric,
-                "difficulty": item.get("difficulty", difficulty),
-                "maximum_marks": max_marks
-            })
-        return cleaned
+            try:
+                raw = _generate([prompt])
+                data = json.loads(_strip_json_fences(raw))
+                if not isinstance(data, list):
+                    if isinstance(data, dict) and "theory" in data:
+                        data = data["theory"]
+                    else:
+                        data = [data]
+                        
+                for item in data:
+                    rubric = item.get("marking_rubric", [])
+                    if not isinstance(rubric, list):
+                        rubric = []
+                    
+                    total_rubric_marks = sum(int(r.get("marks", 0)) for r in rubric if isinstance(r, dict))
+                    max_marks = int(item.get("maximum_marks", 20))
+                    if total_rubric_marks > 0:
+                        max_marks = total_rubric_marks
+                        
+                    all_cleaned.append({
+                        "question_text": item.get("question_text", item.get("question", "")),
+                        "ideal_answer": item.get("ideal_answer", item.get("model_answer", "")),
+                        "marking_rubric": rubric,
+                        "difficulty": item.get("difficulty", difficulty),
+                        "maximum_marks": max_marks
+                    })
+            except llm.RequestTooLarge:
+                logger.warning(f"Chunk {idx+1} too large for provider. Skipping this chunk.")
+                continue
+            except Exception as e:
+                logger.warning(f"Failed to generate theory questions for chunk {idx+1}: {e}")
+                continue
+
+        unique_questions = AIQuestionGenerator._deduplicate_questions(all_cleaned)
+        return unique_questions[:count]
 
 
 # Global alias for compatibility

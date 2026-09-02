@@ -3,7 +3,7 @@
 import { useEffect, useState, use, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Trophy, Target, Brain, ArrowRight, RefreshCw, BookOpen, Crown, CheckCircle, XCircle, AlertCircle, Clock, Layers } from "lucide-react";
+import { Trophy, Target, Brain, ArrowRight, RefreshCw, BookOpen, Crown, CheckCircle, XCircle, AlertCircle, Clock, Layers, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,11 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import api from "@/lib/api";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
+import { SessionFooter } from "@/components/session-footer";
 
 interface ResultData {
   id: string;
-  score_percentage: number;
+  overall_percentage: number;
   mcq_score: number;
   mcq_total: number;
   total_mcq: number;
@@ -23,11 +24,18 @@ interface ResultData {
   theory_total: number;
   total_theory: number;
   status: string;
+  started_at?: string;
+  submitted_at?: string;
   exam_type: string;
   subject_name?: string;
   time_taken_minutes?: number;
   passed?: boolean;
   grade?: string;
+  analysis_data?: {
+    insights?: string;
+    next_steps?: string;
+    weakest_topics?: string[];
+  };
   topic_breakdown?: { topic_name: string; percentage: number; correct: number; total: number }[];
   difficulty_breakdown?: { difficulty: string; percentage: number; correct: number; total: number }[];
   weakest_topics?: string[];
@@ -52,6 +60,7 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isSession = searchParams.get("session") === "true";
+  const nextStep = searchParams.get("nextStep") || "4";
   const { hasAccess } = useFeatureAccess();
   const [result, setResult] = useState<ResultData | null>(null);
   const [missed, setMissed] = useState<MissedQuestion[]>([]);
@@ -102,13 +111,20 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
 
   if (!result) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Results not found</div>;
 
-  const score = Math.round(result.score_percentage);
+  const score = Math.round(result.overall_percentage ?? 0);
   const isPassing = score >= 50;
   const isPremium = hasAccess("premium" as any);
 
   // Normalize field names – backend returns both mcq_total and total_mcq
   const mcqTotal = result.total_mcq ?? result.mcq_total ?? 0;
   const theoryTotal = result.total_theory ?? result.theory_total ?? 0;
+  
+  let timeTakenMinutes = result.time_taken_minutes;
+  if (timeTakenMinutes == null && result.started_at && result.submitted_at) {
+    const start = new Date(result.started_at);
+    const end = new Date(result.submitted_at);
+    timeTakenMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+  }
 
   const scoreColor = score >= 70 ? "text-emerald-600" : score >= 50 ? "text-amber-600" : "text-rose-600";
   const scoreBg = score >= 70 ? "bg-emerald-50" : score >= 50 ? "bg-amber-50" : "bg-rose-50";
@@ -160,7 +176,7 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
                 <div className="p-3 rounded-xl bg-card border text-center">
                   <div className="text-2xl font-bold text-foreground flex items-center justify-center gap-1">
                     <Clock className="w-5 h-5" />
-                    {result.time_taken_minutes != null ? `${Math.round(result.time_taken_minutes)}m` : "—"}
+                    {timeTakenMinutes != null ? `${Math.round(timeTakenMinutes)}m` : "—"}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">Time Taken</div>
                 </div>
@@ -168,6 +184,42 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* AI Performance Analysis (Mock & Formal) */}
+        {result.analysis_data && (result.analysis_data.insights || result.analysis_data.next_steps) && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <Card className="border-indigo-200 bg-indigo-50/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-indigo-900">
+                  <Brain className="w-5 h-5 text-indigo-600" /> AI Performance Analysis
+                </CardTitle>
+                <CardDescription>Detailed insights and recommended next steps</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {result.analysis_data.insights && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-indigo-900 text-sm flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-indigo-600" /> Key Insights
+                    </h4>
+                    <p className="text-sm text-indigo-800/80 leading-relaxed whitespace-pre-wrap">
+                      {result.analysis_data.insights}
+                    </p>
+                  </div>
+                )}
+                {result.analysis_data.next_steps && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-indigo-900 text-sm flex items-center gap-2">
+                      <ArrowRight className="w-4 h-4 text-indigo-600" /> Recommended Action Plan
+                    </h4>
+                    <p className="text-sm text-indigo-800/80 leading-relaxed whitespace-pre-wrap">
+                      {result.analysis_data.next_steps}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Advanced Analytics */}
         {result.topic_breakdown && result.topic_breakdown.length > 0 && (
@@ -337,11 +389,7 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
 
         {/* Action Buttons */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row gap-3 justify-center">
-          {isSession ? (
-            <Button onClick={() => router.push(`/session?step=3&quizId=${attemptId}`)} className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">
-              Next: Review Mistakes <ArrowRight className="w-4 h-4" />
-            </Button>
-          ) : (
+          {!isSession && (
             <>
               <Button variant="outline" onClick={() => router.push("/quiz")} className="gap-2">
                 <RefreshCw className="w-4 h-4" />Take Another Quiz
@@ -354,6 +402,7 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
         </motion.div>
 
       </div>
+      {isSession && <SessionFooter currentStep={3} />}
     </div>
   );
 }

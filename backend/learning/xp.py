@@ -106,7 +106,7 @@ def _decay(occurrence_index: int) -> float:
 
 def _streak_multiplier(user: User) -> float:
     stats = getattr(user, "stats", None)
-    streak = getattr(stats, "current_streak", 0) or 0
+    streak = getattr(stats, "active_streak", 0) or 0
     for threshold, bonus in STREAK_BONUS:
         if streak >= threshold:
             return 1.0 + bonus

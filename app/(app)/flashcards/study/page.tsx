@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { FlashcardStudy } from "@/components/flashcards/flashcard-study";
 import { Loader2 } from "lucide-react";
+import { SessionFooter } from "@/components/session-footer";
 
 function StudyPageContent() {
   const params = useSearchParams();
@@ -13,8 +14,16 @@ function StudyPageContent() {
   const subBlock = subBlockParam ? parseInt(subBlockParam, 10) : undefined;
   const topicParam = params.get("topic");
   const topic = topicParam ? parseInt(topicParam, 10) : undefined;
+  const isSession = params.get("session") === "true";
 
-  return <FlashcardStudy subjectId={subject} blockId={block} subBlockId={subBlock} topicId={topic} />;
+  return (
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-1">
+        <FlashcardStudy subjectId={subject} blockId={block} subBlockId={subBlock} topicId={topic} />
+      </div>
+      {isSession && <SessionFooter currentStep={2} />}
+    </div>
+  );
 }
 
 export default function FlashcardStudyPage() {

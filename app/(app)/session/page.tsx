@@ -16,81 +16,63 @@ import {
   HelpCircle,
   ArrowUpRight,
   Zap,
+  CheckSquare,
+  Square,
+  RefreshCw,
+  History,
+  ListTodo
 } from "lucide-react";
 import { FlashcardStudy } from "@/components/flashcards/flashcard-study";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import api, { quizApi, curriculumApi, statsApi } from "@/lib/api";
+import { SessionFooter } from "@/components/session-footer";
+import api, { quizApi, curriculumApi, aiApi } from "@/lib/api";
 
 function SessionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Determine starting step based on query params (e.g. returning from quiz)
   const initialStep = searchParams.get("step") ? Number(searchParams.get("step")) : 1;
   const initialQuizId = searchParams.get("quizId") || "";
 
   const [step, setStep] = useState(initialStep);
   const [quizId, setQuizId] = useState(initialQuizId);
-  const [loadingQuiz, setLoadingQuiz] = useState(false);
-  const [loadingMissed, setLoadingMissed] = useState(false);
-  const [missedQuestions, setMissedQuestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingQuiz, setLoadingQuiz] = useState(false);
   
-  // Weak area context
-  const [weakTopic, setWeakTopic] = useState("Neuroanatomy");
+  // Session Data
+  const [sessionData, setSessionData] = useState<any>(null);
   const [targetSubjectId, setTargetSubjectId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load weak topic and first subject to prep the quiz
     async function loadSessionContext() {
       try {
         const [statsRes, subjectsRes] = await Promise.all([
-          statsApi.getRecommendations().catch(() => null),
+          aiApi.getRecommendations().catch(() => null),
           curriculumApi.getSubjects().catch(() => []),
         ]);
 
-        if (statsRes?.focus_areas && statsRes.focus_areas.length > 0) {
-          setWeakTopic(statsRes.focus_areas[0]);
+        if (statsRes) {
+          setSessionData(statsRes);
         }
-
         if (subjectsRes && subjectsRes.length > 0) {
           setTargetSubjectId(subjectsRes[0].id);
         }
       } catch (err) {
         console.error("Failed to load session context", err);
+      } finally {
+        setLoading(false);
       }
     }
     loadSessionContext();
   }, []);
 
-  // Fetch missed questions if we land on Step 3
-  useEffect(() => {
-    if (step === 3 && quizId) {
-      loadMissedQuestions(quizId);
-    }
-  }, [step, quizId]);
-
-  const loadMissedQuestions = async (id: string) => {
-    setLoadingMissed(true);
-    setError(null);
-    try {
-      const response = await api.get(`/api/quiz-attempts/${id}/missed/`);
-      setMissedQuestions(response.data?.missed_questions || []);
-    } catch (err) {
-      console.error("Failed to load missed questions:", err);
-      setError("Failed to load your missed questions summary.");
-    } finally {
-      setLoadingMissed(false);
-    }
-  };
-
   const startPracticeQuiz = async () => {
     setLoadingQuiz(true);
     setError(null);
     try {
-      // Start a practice quiz attempt
       const attempt = await quizApi.createQuizAttempt({
         subject: targetSubjectId || undefined,
         exam_type: "practice",
@@ -102,12 +84,29 @@ function SessionContent() {
         },
       });
 
-      // Redirect user to the active quiz runner with session mode query param
-      router.push(`/quiz/attempt/${attempt.id}?session=true`);
+      // Redirect to quiz, and on submit, redirect back to session?step=4
+      router.push(`/quiz/attempt/${attempt.id}?session=true&nextStep=4`);
     } catch (err: any) {
       console.error("Failed to create quiz attempt:", err);
       setError(err?.response?.data?.message || "Failed to initialize practice quiz.");
       setLoadingQuiz(false);
+    }
+  };
+
+  const toggleStudyPlanItem = async (itemId: number, currentStatus: string) => {
+    try {
+      const nextStatus = currentStatus === 'pending' ? 'in_progress' : 'completed';
+      await api.patch(`/api/schedule/${itemId}/`, { status: nextStatus });
+      
+      // Update local state
+      setSessionData((prev: any) => ({
+        ...prev,
+        study_plan_items: prev.study_plan_items.map((item: any) => 
+          item.id === itemId ? { ...item, status: nextStatus } : item
+        )
+      }));
+    } catch (err) {
+      console.error("Failed to update schedule item:", err);
     }
   };
 
@@ -118,18 +117,29 @@ function SessionContent() {
   };
 
   const getProgressPercentage = () => {
-    if (step === 1) return 15;
-    if (step === 2) return 50;
-    if (step === 3) return 85;
-    if (step === 4) return 100;
+    if (step === 1) return 10;
+    if (step === 2) return 30;
+    if (step === 3) return 50;
+    if (step === 4) return 70;
+    if (step === 5) return 90;
+    if (step === 6) return 100;
     return 0;
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="size-8 animate-spin text-primary" />
+        <p className="text-zinc-500 font-medium">Preparing your study session...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
       {/* Dynamic Header */}
-      {step < 4 && (
-        <header className="border-b border-border bg-card px-6 py-4 flex items-center justify-between">
+      {step < 6 && (
+        <header className="border-b border-border bg-card px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-xs">
           <div className="flex items-center gap-4">
             <button
               onClick={exitSession}
@@ -141,9 +151,11 @@ function SessionContent() {
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Active Study Session</p>
               <h1 className="text-sm font-semibold text-foreground">
-                {step === 1 && "Step 1: Spaced Repetition Review"}
-                {step === 2 && "Step 2: Target Practice"}
-                {step === 3 && "Step 3: Reinforce Missed Concepts"}
+                {step === 1 && "Step 1: Read New Material"}
+                {step === 2 && "Step 2: Spaced Repetition Review"}
+                {step === 3 && "Step 3: Target Practice"}
+                {step === 4 && "Step 4: Revise Stale Concepts"}
+                {step === 5 && "Step 5: Study Plan Checkoff"}
               </h1>
             </div>
           </div>
@@ -160,23 +172,84 @@ function SessionContent() {
       {/* Main Container */}
       <main className="flex-1 flex flex-col items-center justify-center p-6">
         <AnimatePresence mode="wait">
+          
+          {/* STEP 1: READ */}
           {step === 1 && (
             <motion.div
               key="step1"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
+              className="w-full max-w-lg text-center"
+            >
+              <Card className="border-border bg-card text-foreground p-6 md:p-8 rounded-3xl shadow-2xl">
+                <CardContent className="space-y-6 pt-6">
+                  <div className="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/25 flex items-center justify-center mx-auto text-blue-500">
+                    <BookOpen className="size-8" />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h2 className="font-serif text-2xl font-bold">Read Material</h2>
+                    <p className="text-zinc-400 text-sm">
+                      Read through the following slide to expand your knowledge before moving on.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-card border border-border text-left space-y-4">
+                    <div className="flex items-center justify-between text-xs text-zinc-400">
+                      <span>NEXT TO READ</span>
+                    </div>
+                    {sessionData?.slide_to_read?.id ? (
+                      <div>
+                        <h3 className="font-semibold text-foreground mb-4">
+                          {sessionData.slide_to_read.title}
+                        </h3>
+                        <Button 
+                          asChild
+                          variant="secondary"
+                          className="w-full"
+                        >
+                          <a href={`/read/general/${sessionData.slide_to_read.id}?session=true&step=1`} target="_self">
+                            Open Reader <ArrowUpRight className="size-4 ml-2" />
+                          </a>
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-sm font-medium text-zinc-400 italic">No new slides to read at the moment.</p>
+                    )}
+                  </div>
+
+                  <Button
+                    onClick={() => setStep(2)}
+                    className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg text-sm"
+                  >
+                    Mark as Read & Continue
+                    <ArrowRight className="size-4 ml-2" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* STEP 2: REVIEW (FLASHCARDS) */}
+          {step === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
               className="w-full max-w-3xl"
             >
               <div className="rounded-3xl border border-border bg-card p-1">
-                <FlashcardStudy onComplete={() => setStep(2)} />
+                <FlashcardStudy onComplete={() => setStep(3)} />
               </div>
             </motion.div>
           )}
 
-          {step === 2 && (
+          {/* STEP 3: PRACTICE */}
+          {step === 3 && (
             <motion.div
-              key="step2"
+              key="step3"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
@@ -189,7 +262,7 @@ function SessionContent() {
                   </div>
                   
                   <div className="space-y-2">
-                    <h2 className="font-serif text-2xl font-bold">Step 1 Completed!</h2>
+                    <h2 className="font-serif text-2xl font-bold">Step 2 Completed!</h2>
                     <p className="text-zinc-400 text-sm">
                       Decks reviewed. Next, test your clinical knowledge and retrieve concepts actively.
                     </p>
@@ -202,10 +275,10 @@ function SessionContent() {
                     </div>
                     <h3 className="font-semibold text-foreground flex items-center gap-1.5">
                       <BookOpen className="size-4 text-primary" />
-                      10 Questions focus: {weakTopic}
+                      10 Questions focus: {sessionData?.practice_topic || "General"}
                     </h3>
                     <p className="text-xs text-zinc-500">
-                      Emby will generate medium-difficulty questions focusing on your weakest subject area to strengthen weak nodes.
+                      Emby will generate medium-difficulty questions focusing on your weakest subject area.
                     </p>
                   </div>
 
@@ -216,111 +289,168 @@ function SessionContent() {
                     </div>
                   )}
 
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => setStep(4)}
+                      variant="outline"
+                      className="flex-1 h-12 rounded-xl text-sm"
+                    >
+                      Skip
+                    </Button>
+                    <Button
+                      onClick={startPracticeQuiz}
+                      disabled={loadingQuiz}
+                      className="flex-[2] h-12 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg text-sm"
+                    >
+                      {loadingQuiz ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <>Start Practice Quiz <ArrowRight className="size-4 ml-2" /></>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* STEP 4: REVISE (STALE SLIDES) */}
+          {step === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="w-full max-w-xl text-center"
+            >
+              <Card className="border-border bg-card text-foreground p-6 md:p-8 rounded-3xl shadow-2xl">
+                <CardContent className="space-y-6 pt-6">
+                  <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/25 flex items-center justify-center mx-auto text-rose-500">
+                    <History className="size-8" />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h2 className="font-serif text-2xl font-bold">Revise Stale Concepts</h2>
+                    <p className="text-zinc-400 text-sm">
+                      You haven't looked at these slides in over a week. Refresh your memory before they fade.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {sessionData?.stale_slides?.length > 0 ? (
+                      <div className="p-4 rounded-2xl bg-card border border-border flex items-center justify-between text-left group hover:border-primary/50 transition-colors">
+                        <div>
+                          <h3 className="font-semibold text-foreground">
+                            {sessionData.stale_slides.length} slides need revision
+                          </h3>
+                          <p className="text-xs text-zinc-400">Read them sequentially</p>
+                        </div>
+                        <Button asChild size="sm" variant="default" className="shrink-0 rounded-xl bg-primary text-primary-foreground">
+                          <a href={`/read/general/${sessionData.stale_slides[0].id}?session=true&step=4&queue=${sessionData.stale_slides.map((s: any) => s.id).join(',')}`} target="_self">
+                            Start Revision <ArrowUpRight className="size-3 ml-1" />
+                          </a>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="p-6 rounded-2xl bg-card border border-border">
+                        <p className="text-zinc-400 text-sm font-medium italic">You are all caught up! No stale slides to revise.</p>
+                      </div>
+                    )}
+                  </div>
+
                   <Button
-                    onClick={startPracticeQuiz}
-                    disabled={loadingQuiz}
+                    onClick={() => setStep(5)}
                     className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg text-sm"
                   >
-                    {loadingQuiz ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin mr-2" />
-                        Generating Quiz...
-                      </>
-                    ) : (
-                      <>
-                        Start Practice Quiz
-                        <ArrowRight className="size-4 ml-2" />
-                      </>
-                    )}
+                    Finish Revision & Continue
+                    <ArrowRight className="size-4 ml-2" />
                   </Button>
                 </CardContent>
               </Card>
             </motion.div>
           )}
 
-          {step === 3 && (
+          {/* STEP 5: STUDY PLAN (TASKS) */}
+          {step === 5 && (
             <motion.div
-              key="step3"
+              key="step5"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              className="w-full max-w-2xl"
+              className="w-full max-w-xl text-center"
             >
-              <div className="space-y-6">
-                <div className="text-center space-y-2">
-                  <div className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1 text-[11px] font-semibold text-rose-400">
-                    <AlertCircle className="size-3.5" />
-                    REINFORCE CONCEPTS
+              <Card className="border-border bg-card text-foreground p-6 md:p-8 rounded-3xl shadow-2xl">
+                <CardContent className="space-y-6 pt-6">
+                  <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/25 flex items-center justify-center mx-auto text-amber-500">
+                    <ListTodo className="size-8" />
                   </div>
-                  <h2 className="font-serif text-3xl font-bold">Review Your Mistakes</h2>
-                  <p className="text-zinc-400 text-sm">
-                    Read the clinical explanations for questions you answered incorrectly during the test.
-                  </p>
-                </div>
-
-                {loadingMissed ? (
-                  <div className="flex flex-col items-center py-12 space-y-3">
-                    <Loader2 className="size-8 animate-spin text-primary" />
-                    <p className="text-zinc-500 text-sm">Fetching incorrect answers...</p>
-                  </div>
-                ) : error ? (
-                  <Card className="border-border bg-card text-foreground p-6 rounded-2xl text-center">
-                    <p className="text-rose-400 mb-4">{error}</p>
-                    <Button onClick={() => loadMissedQuestions(quizId)} variant="outline">Retry</Button>
-                  </Card>
-                ) : missedQuestions.length === 0 ? (
-                  <Card className="border-mastery/25 bg-mastery/8 text-foreground p-8 rounded-3xl text-center space-y-3">
-                    <CheckCircle className="size-10 text-mastery mx-auto" />
-                    <h3 className="font-bold text-foreground">Perfect Practice Run!</h3>
+                  
+                  <div className="space-y-2">
+                    <h2 className="font-serif text-2xl font-bold">Today's Study Plan</h2>
                     <p className="text-zinc-400 text-sm">
-                      You answered 100% of the quiz questions correctly. No concepts to reinforce!
+                      Check off your planned tasks for today as you complete them.
                     </p>
-                    <Button onClick={() => setStep(4)} className="bg-primary text-primary-foreground mt-2">Proceed to Summary</Button>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {missedQuestions.map((q, idx) => (
-                      <Card key={q.id} className="border-border bg-card text-foreground rounded-2xl">
-                        <CardHeader className="pb-3 flex flex-row items-start justify-between gap-4">
-                          <div className="space-y-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">Question {idx + 1}</span>
-                            <CardTitle className="text-sm font-semibold leading-snug">{q.question_text}</CardTitle>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-3 text-sm">
-                          <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
-                            <div className="flex items-center gap-2 rounded-xl bg-mastery/10 border border-mastery/20 px-3 py-2 text-mastery">
-                              <CheckCircle className="size-4 shrink-0" />
-                              <span>Correct: {q.correct_option || q.correct_answer || "—"}</span>
-                            </div>
-                            <div className="flex items-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/10 px-3 py-2 text-rose-400">
-                              <XCircle className="size-4 shrink-0" />
-                              <span>Your answer: {q.selected_option || q.student_answer || "No answer"}</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {sessionData?.study_plan_items?.length > 0 ? (
+                      sessionData.study_plan_items.map((item: any) => (
+                        <div key={item.id} className="p-4 rounded-2xl bg-card border border-border flex items-center justify-between text-left">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => toggleStudyPlanItem(item.id, item.status)}
+                              className="text-muted-foreground hover:text-primary transition-colors focus:outline-none"
+                            >
+                              {item.status === 'completed' ? (
+                                <CheckSquare className="size-5 text-mastery" />
+                              ) : item.status === 'in_progress' ? (
+                                <RefreshCw className="size-5 text-amber-500" />
+                              ) : (
+                                <Square className="size-5" />
+                              )}
+                            </button>
+                            <div>
+                              <h3 className={`font-semibold text-sm ${item.status === 'completed' ? 'line-through text-zinc-500' : 'text-foreground'}`}>
+                                {item.title}
+                              </h3>
+                              <p className="text-[10px] text-zinc-400 uppercase tracking-wider">{item.item_type} - {item.status.replace('_', ' ')}</p>
                             </div>
                           </div>
                           
-                          {q.explanation && (
-                            <div className="p-3 rounded-xl bg-card border border-border text-zinc-300 text-xs">
-                              <strong className="text-foreground font-semibold block mb-1">Clinical Rationale:</strong>
-                              <p className="leading-relaxed">{q.explanation}</p>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                    
-                    <Button onClick={() => setStep(4)} className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg mt-6">
-                      Finish Study Session
-                    </Button>
+                          <Button 
+                            onClick={() => toggleStudyPlanItem(item.id, item.status)}
+                            size="sm" 
+                            variant={item.status === 'completed' ? 'outline' : 'default'} 
+                            className="shrink-0 rounded-xl"
+                            disabled={item.status === 'completed'}
+                          >
+                            {item.status === 'pending' ? 'Start' : item.status === 'in_progress' ? 'Complete' : 'Done'}
+                          </Button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-6 rounded-2xl bg-card border border-border">
+                        <p className="text-zinc-400 text-sm font-medium italic">No custom study plan items left for today.</p>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+
+                  <Button
+                    onClick={() => setStep(6)}
+                    className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg text-sm"
+                  >
+                    Finish Session
+                    <CheckCircle className="size-4 ml-2" />
+                  </Button>
+                </CardContent>
+              </Card>
             </motion.div>
           )}
 
-          {step === 4 && (
+          {/* FINISH SCREEN */}
+          {step === 6 && (
             <motion.div
-              key="step4"
+              key="step6"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
@@ -340,30 +470,15 @@ function SessionContent() {
                     </p>
                   </div>
 
-                  <div className="divide-y divide-white/5 border-y border-border py-4 text-left space-y-3">
-                    <div className="flex items-center justify-between text-sm py-1">
-                      <span className="text-zinc-400">Step 1: Spaced Repetition</span>
-                      <span className="text-foreground font-medium">Completed</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm py-2">
-                      <span className="text-zinc-400">Step 2: Weak-Area Quiz</span>
-                      <span className="text-foreground font-medium">10 Questions answered</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm py-2">
-                      <span className="text-zinc-400">Step 3: Mistakes Reviewed</span>
-                      <span className="text-foreground font-medium">{missedQuestions.length} Concepts corrected</span>
-                    </div>
-                  </div>
-
                   <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <Zap className="size-5 text-primary fill-current" />
                       <div className="text-left leading-tight">
                         <p className="text-[10px] uppercase font-bold text-primary">XP AWARDED</p>
-                        <p className="text-sm font-semibold text-foreground mt-0.5">Maintain Streak</p>
+                        <p className="text-sm font-semibold text-foreground mt-0.5">Session Completed</p>
                       </div>
                     </div>
-                    <span className="text-lg font-bold text-primary">+50 XP</span>
+                    <span className="text-lg font-bold text-primary">+150 XP</span>
                   </div>
 
                   <Button
@@ -376,8 +491,17 @@ function SessionContent() {
               </Card>
             </motion.div>
           )}
+
         </AnimatePresence>
       </main>
+
+      {/* Global Footer Navigation */}
+      <SessionFooter 
+        currentStep={step} 
+        isEmbedded={true}
+        onPrev={() => setStep(Math.max(1, step - 1))}
+        onNext={() => setStep(Math.min(6, step + 1))}
+      />
     </div>
   );
 }

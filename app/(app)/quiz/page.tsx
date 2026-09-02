@@ -261,6 +261,9 @@ function QuizConfigContent() {
   const selectedTopic = topics.find((t) => t.id === config.topic);
   const selectedSlide = slides.find((sl) => sl.id === config.slide);
   const selectedExamType = examTypes.find((t) => t.type === config.exam_type);
+  
+  const anyGenerating = slides.some((sl) => sl.generation_status === "pending" || sl.generation_status === "in_progress");
+  const isGenerating = config.slide ? (selectedSlide?.generation_status === "pending" || selectedSlide?.generation_status === "in_progress") : anyGenerating;
 
   const startMissedQuestions = async () => {
     try {
@@ -679,13 +682,38 @@ function QuizConfigContent() {
                       return (
                         <motion.div
                           key={et.type}
-                          whileHover={{ scale: locked ? 1 : 1.01 }}
+                          whileHover={{ scale: locked || (et.type === "formal" && (config.slide || config.topic)) ? 1 : 1.02 }}
+                          whileTap={{ scale: locked || (et.type === "formal" && (config.slide || config.topic)) ? 1 : 0.98 }}
                         >
                           <Card
-                            className={`cursor-pointer transition-all relative overflow-hidden ${config.exam_type === et.type ? "ring-2 ring-primary bg-primary/5 shadow-lg" : locked ? "opacity-60 cursor-not-allowed" : "hover:border-primary/30 hover:shadow-md"}`}
+                            className={`transition-all duration-200 
+                              ${locked || (et.type === "formal" && (config.slide || config.topic)) ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-md"} 
+                              ${config.exam_type === et.type ? "ring-2 ring-primary border-primary" : "border-border"}
+                            `}
                             onClick={() => {
-                              if (!locked)
-                                setConfig({ ...config, exam_type: et.type });
+                              if (locked) {
+                                toast({
+                                  title: "Premium Feature",
+                                  description:
+                                    "Please upgrade to access this exam type.",
+                                });
+                                return;
+                              }
+                              if (et.type === "formal" && (config.slide || config.topic)) {
+                                toast({
+                                  title: "Not Allowed",
+                                  description: "Formal Assessments can only be taken at the Block or Subject level.",
+                                  variant: "destructive"
+                                });
+                                return;
+                              }
+                              setConfig({
+                                ...config,
+                                exam_type: et.type,
+                                is_timed: et.type !== "practice",
+                                duration_minutes:
+                                  et.type === "formal" ? 180 : 30,
+                              });
                             }}
                           >
                             <CardContent className="p-6">
@@ -696,7 +724,8 @@ function QuizConfigContent() {
                                   <Icon className="w-7 h-7 text-white" />
                                 </div>
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
+                                  <div className="flex justify-between items-start mb-4">
+                                  <div>
                                     <h3 className="text-lg font-semibold">
                                       {et.title}
                                     </h3>
@@ -712,9 +741,15 @@ function QuizConfigContent() {
                                       </Badge>
                                     )}
                                   </div>
+                                  </div>
                                   <p className="text-muted-foreground text-sm mb-3">
                                     {et.description}
                                   </p>
+                                  {et.type === "formal" && (config.slide || config.topic) && (
+                                    <p className="text-destructive text-xs mb-2">
+                                      Formal Assessments must be taken at the Block or Subject level.
+                                    </p>
+                                  )}
                                   <div className="flex flex-wrap gap-2">
                                     {et.features.map((f, i) => (
                                       <Badge
@@ -1086,6 +1121,12 @@ function QuizConfigContent() {
                   </div>
 
                   <div className="text-center p-6 rounded-xl bg-linear-to-br from-primary/10 to-primary/5 border border-primary/20">
+                    {isGenerating && (
+                      <div className="mb-4 text-amber-600 font-medium animate-pulse flex items-center justify-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Please wait.. quiz generation in process
+                      </div>
+                    )}
                     <div className="flex items-center justify-center gap-4">
                       <Button
                         variant="outline"
@@ -1097,7 +1138,7 @@ function QuizConfigContent() {
                       </Button>
                       <Button
                         onClick={createQuiz}
-                        disabled={creating}
+                        disabled={creating || isGenerating}
                         size="lg"
                         className="gap-2 px-8 bg-linear-to-r from-primary to-primary/80"
                       >

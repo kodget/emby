@@ -44,7 +44,7 @@ def build_context(user: User) -> dict:
 
     return {
         "name": (user.first_name or user.username or "").strip(),
-        "streak": getattr(stats, "current_streak", 0) or 0,
+        "streak": getattr(stats, "active_streak", 0) or 0,
         "sessions_this_week": recent.count(),
         "questions_this_week": attempted,
         "accuracy_this_week": round(correct / attempted, 2) if attempted else None,
@@ -57,6 +57,7 @@ def build_context(user: User) -> dict:
             if stats and stats.last_activity_date
             else None
         ),
+        "credits": credits.balance(user),
     }
 
 

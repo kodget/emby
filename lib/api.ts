@@ -650,26 +650,64 @@ export const adminApi = {
     const response = await api.get("/auth/admin/schema/");
     return response.data;
   },
-  getAdminDataList: async (appLabel: string, modelName: string, page: number = 1): Promise<{results: any[], total: number, page: number, limit: number}> => {
-    const response = await api.get(`/auth/admin/data/${appLabel}/${modelName}/?page=${page}`);
+  getAdminDataList: async (
+    appLabel: string,
+    modelName: string,
+    page: number = 1,
+  ): Promise<{
+    results: any[];
+    total: number;
+    page: number;
+    limit: number;
+  }> => {
+    const response = await api.get(
+      `/auth/admin/data/${appLabel}/${modelName}/?page=${page}`,
+    );
     return response.data;
   },
-  getAdminDataDetail: async (appLabel: string, modelName: string, id: string): Promise<any> => {
-    const response = await api.get(`/auth/admin/data/${appLabel}/${modelName}/${id}/`);
+  getAdminDataDetail: async (
+    appLabel: string,
+    modelName: string,
+    id: string,
+  ): Promise<any> => {
+    const response = await api.get(
+      `/auth/admin/data/${appLabel}/${modelName}/${id}/`,
+    );
     return response.data;
   },
-  createAdminData: async (appLabel: string, modelName: string, data: any): Promise<any> => {
-    const response = await api.post(`/auth/admin/data/${appLabel}/${modelName}/`, data);
+  createAdminData: async (
+    appLabel: string,
+    modelName: string,
+    data: any,
+  ): Promise<any> => {
+    const response = await api.post(
+      `/auth/admin/data/${appLabel}/${modelName}/`,
+      data,
+    );
     return response.data;
   },
-  updateAdminData: async (appLabel: string, modelName: string, id: string, data: any): Promise<any> => {
-    const response = await api.put(`/auth/admin/data/${appLabel}/${modelName}/${id}/`, data);
+  updateAdminData: async (
+    appLabel: string,
+    modelName: string,
+    id: string,
+    data: any,
+  ): Promise<any> => {
+    const response = await api.put(
+      `/auth/admin/data/${appLabel}/${modelName}/${id}/`,
+      data,
+    );
     return response.data;
   },
-  deleteAdminData: async (appLabel: string, modelName: string, id: string): Promise<any> => {
-    const response = await api.delete(`/auth/admin/data/${appLabel}/${modelName}/${id}/`);
+  deleteAdminData: async (
+    appLabel: string,
+    modelName: string,
+    id: string,
+  ): Promise<any> => {
+    const response = await api.delete(
+      `/auth/admin/data/${appLabel}/${modelName}/${id}/`,
+    );
     return response.data;
-  }
+  },
 };
 
 // ==================== CLASS API ====================
@@ -818,7 +856,7 @@ export const curriculumApi = {
   }): Promise<Topic[]> => {
     const params = {
       sub_block: filters?.sub_block || filters?.topic,
-      block: filters?.block
+      block: filters?.block,
     };
     const response = await api.get("/api/topics/", { params });
     return response.data;
@@ -836,7 +874,7 @@ export const curriculumApi = {
   }): Promise<Topic[]> => {
     return curriculumApi.getTopics({
       sub_block: filters?.topic,
-      block: filters?.block
+      block: filters?.block,
     });
   },
 
@@ -992,6 +1030,25 @@ export const deckApi = {
         "Content-Type": "multipart/form-data",
       },
     });
+    return response.data;
+  },
+
+  uploadQuestionImages: async (
+    id: number,
+    frontImage: File | null,
+    backImage: File | null,
+  ): Promise<any> => {
+    const formData = new FormData();
+    if (frontImage) formData.append("front_image", frontImage);
+    if (backImage) formData.append("back_image", backImage);
+
+    const response = await api.post(
+      `/api/curriculum/questions/${id}/upload_images/`,
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      },
+    );
     return response.data;
   },
 
@@ -1174,13 +1231,16 @@ export interface StudyProfile {
 }
 
 export const studyPlannerApi = {
-  getProfile: async (): Promise<StudyProfile> => {
+  getProfile: async (): Promise<StudyProfile | null> => {
     const response = await api.get("/api/study-profile/");
     // returns an array, we want the first element
     return response.data.length > 0 ? response.data[0] : null;
   },
 
-  updateProfile: async (id: number, data: StudyProfile): Promise<StudyProfile> => {
+  updateProfile: async (
+    id: number,
+    data: StudyProfile,
+  ): Promise<StudyProfile> => {
     const response = await api.patch(`/api/study-profile/${id}/`, data);
     return response.data;
   },
@@ -1268,8 +1328,6 @@ export const communityApi = {
     });
     return response.data;
   },
-
-
 
   // Update post (owner only)
   updatePost: async (
@@ -1379,6 +1437,11 @@ export const quizApi = {
     const response = await api.get("/api/quiz/history/");
     return response.data;
   },
+
+  getQuizAttempts: async (): Promise<any[]> => {
+    const response = await api.get("/api/quiz-attempts/");
+    return response.data;
+  },
 };
 
 // ==================== AI API ====================
@@ -1394,8 +1457,20 @@ export const aiApi = {
   },
 
   getRecommendations: async (): Promise<{
-    recommendations: string[];
+    recommendations: any[];
     focus_areas: string[];
+    flashcards_due?: number;
+    practice_topic?: string;
+    missed_count?: number;
+    slide_to_read?: { id: string; title: string } | null;
+    stale_slides?: Array<{ id: string; title: string }>;
+    study_plan_items?: Array<{
+      id: string;
+      title: string;
+      item_type: string;
+      status: string;
+    }>;
+    insights?: string;
   }> => {
     const response = await api.get("/api/ai/recommendations/");
     return response.data;
@@ -1656,7 +1731,18 @@ export const flashcardApi = {
   /** Update a flashcard */
   update: async (
     id: number,
-    data: Partial<Pick<Flashcard, "front" | "back" | "explanation" | "subject" | "block" | "sub_block" | "topic">>
+    data: Partial<
+      Pick<
+        Flashcard,
+        | "front"
+        | "back"
+        | "explanation"
+        | "subject"
+        | "block"
+        | "sub_block"
+        | "topic"
+      >
+    >,
   ): Promise<Flashcard> => {
     const response = await api.patch(`/api/flashcards/${id}/`, data);
     return response.data;
@@ -1670,9 +1756,11 @@ export const flashcardApi = {
   /** Submit a review rating */
   review: async (
     id: number,
-    rating: FlashcardRating
+    rating: FlashcardRating,
   ): Promise<FlashcardReviewResult> => {
-    const response = await api.post(`/api/flashcards/${id}/review/`, { rating });
+    const response = await api.post(`/api/flashcards/${id}/review/`, {
+      rating,
+    });
     return response.data;
   },
 
@@ -1688,7 +1776,10 @@ export const challengeApi = {
     const response = await api.get("/api/challenges/");
     return response.data;
   },
-  createChallenge: async (data: { challenged: number; topic?: string }): Promise<any> => {
+  createChallenge: async (data: {
+    challenged: number;
+    topic?: string;
+  }): Promise<any> => {
     const response = await api.post("/api/challenges/", data);
     return response.data;
   },
@@ -1697,9 +1788,11 @@ export const challengeApi = {
     return response.data;
   },
   submitScore: async (id: number, score: number): Promise<any> => {
-    const response = await api.post(`/api/challenges/${id}/submit_score/`, { score });
+    const response = await api.post(`/api/challenges/${id}/submit_score/`, {
+      score,
+    });
     return response.data;
-  }
+  },
 };
 
 export interface BattleLookup {
@@ -1752,14 +1845,17 @@ export interface BattleStanding {
   is_host: boolean;
 }
 
-
-
 export const battleApi = {
   getBattles: async (): Promise<any[]> => {
     const response = await api.get("/api/battles/");
     return response.data;
   },
-  createBattle: async (data: { title: string; description?: string; topic?: string; num_questions?: number }): Promise<any> => {
+  createBattle: async (data: {
+    title: string;
+    description?: string;
+    topic?: string;
+    num_questions?: number;
+  }): Promise<any> => {
     const response = await api.post("/api/battles/", data);
     return response.data;
   },
@@ -1780,21 +1876,32 @@ export const battleApi = {
 
   /** Check a code before committing to join. */
   lookup: async (code: string): Promise<BattleLookup> =>
-    (await api.get(`/api/learning/battles/lookup/${encodeURIComponent(code)}/`)).data,
+    (await api.get(`/api/learning/battles/lookup/${encodeURIComponent(code)}/`))
+      .data,
 
   join: async (code: string): Promise<BattleJoin> =>
     (await api.post("/api/learning/battles/join/", { code })).data,
 
-  getQuestion: async (battleId: number, index: number): Promise<BattleQuestion> =>
-    (await api.get(`/api/learning/battles/${battleId}/question/${index}/`)).data,
+  getQuestion: async (
+    battleId: number,
+    index: number,
+  ): Promise<BattleQuestion> =>
+    (await api.get(`/api/learning/battles/${battleId}/question/${index}/`))
+      .data,
 
   answer: async (
     battleId: number,
-    payload: { index: number; selected_index: number | null; seconds_taken: number },
+    payload: {
+      index: number;
+      selected_index: number | null;
+      seconds_taken: number;
+    },
   ): Promise<BattleAnswerResult> =>
     (await api.post(`/api/learning/battles/${battleId}/answer/`, payload)).data,
 
-  leaderboard: async (battleId: number): Promise<{ leaderboard: BattleStanding[] }> =>
+  leaderboard: async (
+    battleId: number,
+  ): Promise<{ leaderboard: BattleStanding[] }> =>
     (await api.get(`/api/learning/battles/${battleId}/leaderboard/`)).data,
 
   finish: async (battleId: number) =>
@@ -1845,7 +1952,12 @@ export interface PracticeStation {
   seconds: number;
   image_url: string;
   section: string;
-  marker: { present: boolean; type: string; x: number | null; y: number | null };
+  marker: {
+    present: boolean;
+    type: string;
+    x: number | null;
+    y: number | null;
+  };
   main: { question: string };
   supporting?: { question: string; options: string[] };
   true_false?: { statement: string };
@@ -1855,8 +1967,16 @@ export interface PracticeStation {
 export interface PracticeReveal {
   station_id: string;
   main: { correct: boolean; answer: string | null; explanation: string };
-  supporting: { correct: boolean | null; correct_index: number | null; explanation: string } | null;
-  true_false: { correct: boolean | null; answer: boolean | null; explanation: string } | null;
+  supporting: {
+    correct: boolean | null;
+    correct_index: number | null;
+    explanation: string;
+  } | null;
+  true_false: {
+    correct: boolean | null;
+    answer: boolean | null;
+    explanation: string;
+  } | null;
   structure: string;
   timed_out: boolean;
 }
@@ -1872,7 +1992,10 @@ export interface PracticeResults {
   true_false_correct: number;
   timed_out: number;
   average_seconds: number;
-  section_breakdown: Record<string, { attempted: number; correct: number; accuracy: number }>;
+  section_breakdown: Record<
+    string,
+    { attempted: number; correct: number; accuracy: number }
+  >;
   is_premium: boolean;
   upgrade_hint?: string;
   weak_sections?: string[];
@@ -1893,7 +2016,9 @@ export interface PracticeResults {
 
 export const practiceApi = {
   getOptions: async (mode: PracticeMode): Promise<PracticeOptions> => {
-    const res = await api.get("/api/learning/practice/options/", { params: { mode } });
+    const res = await api.get("/api/learning/practice/options/", {
+      params: { mode },
+    });
     return res.data;
   },
 
@@ -1909,12 +2034,21 @@ export const practiceApi = {
     station: PracticeStation;
     entitlement: PracticeEntitlement;
   }> => {
-    const res = await api.post("/api/learning/practice/start/", { mode, sections, count });
+    const res = await api.post("/api/learning/practice/start/", {
+      mode,
+      sections,
+      count,
+    });
     return res.data;
   },
 
-  getStation: async (sessionId: string, index: number): Promise<PracticeStation> => {
-    const res = await api.get(`/api/learning/practice/${sessionId}/station/${index}/`);
+  getStation: async (
+    sessionId: string,
+    index: number,
+  ): Promise<PracticeStation> => {
+    const res = await api.get(
+      `/api/learning/practice/${sessionId}/station/${index}/`,
+    );
     return res.data;
   },
 
@@ -1929,7 +2063,10 @@ export const practiceApi = {
       timed_out?: boolean;
     },
   ): Promise<PracticeReveal> => {
-    const res = await api.post(`/api/learning/practice/${sessionId}/answer/`, payload);
+    const res = await api.post(
+      `/api/learning/practice/${sessionId}/answer/`,
+      payload,
+    );
     return res.data;
   },
 
@@ -1944,7 +2081,9 @@ export const practiceApi = {
   },
 
   getHistory: async (mode: PracticeMode) => {
-    const res = await api.get("/api/learning/practice/history/", { params: { mode } });
+    const res = await api.get("/api/learning/practice/history/", {
+      params: { mode },
+    });
     return res.data as Array<{
       session_id: string;
       completed_at: string;
@@ -1970,29 +2109,36 @@ export const learningApi = {
     return res.data;
   },
 
-  getCreditHistory: async () => (await api.get("/api/learning/credits/history/")).data,
+  getCreditHistory: async () =>
+    (await api.get("/api/learning/credits/history/")).data,
 
   getWeakAreas: async (scope = "TOPIC", limit = 5) =>
-    (await api.get("/api/learning/weak-areas/", { params: { scope, limit } })).data,
+    (await api.get("/api/learning/weak-areas/", { params: { scope, limit } }))
+      .data,
 
   getXp: async (days = 30) =>
     (await api.get("/api/learning/xp/", { params: { days } })).data,
 
   getDashboardMessage: async (refresh = false) =>
-    (await api.get("/api/learning/dashboard/message/", {
-      params: refresh ? { refresh: "true" } : {},
-    })).data as { headline: string; body: string; cached: boolean },
+    (
+      await api.get("/api/learning/dashboard/message/", {
+        params: refresh ? { refresh: "true" } : {},
+      })
+    ).data as { headline: string; body: string; cached: boolean },
 
   getDashboardSnapshot: async () =>
     (await api.get("/api/learning/dashboard/snapshot/")).data,
 
   getNotifications: async (unreadOnly = false) =>
-    (await api.get("/api/learning/notifications/", {
-      params: unreadOnly ? { unread: "true" } : {},
-    })).data,
+    (
+      await api.get("/api/learning/notifications/", {
+        params: unreadOnly ? { unread: "true" } : {},
+      })
+    ).data,
 
   markNotificationsRead: async (id?: string) =>
-    (await api.post("/api/learning/notifications/read/", id ? { id } : {})).data,
+    (await api.post("/api/learning/notifications/read/", id ? { id } : {}))
+      .data,
 };
 
 export interface AnalyticsReport {
@@ -2035,19 +2181,40 @@ export interface AnalyticsReport {
     accuracy: number | null;
     minutes: number;
   }>;
-  practice: Record<string, {
-    rounds: number;
-    stations: number;
-    average_accuracy: number | null;
-    timed_out: number;
-  }>;
+  practice: Record<
+    string,
+    {
+      rounds: number;
+      stations: number;
+      average_accuracy: number | null;
+      timed_out: number;
+    }
+  >;
   topics?: {
-    weakest: Array<{ label: string; attempted: number; correct: number; accuracy: number | null; mastery: number; priority: number }>;
-    strongest: Array<{ label: string; attempted: number; correct: number; accuracy: number | null; mastery: number }>;
+    weakest: Array<{
+      label: string;
+      attempted: number;
+      correct: number;
+      accuracy: number | null;
+      mastery: number;
+      priority: number;
+    }>;
+    strongest: Array<{
+      label: string;
+      attempted: number;
+      correct: number;
+      accuracy: number | null;
+      mastery: number;
+    }>;
     tracked_nodes: number;
   };
   question_bank?: {
-    total: number; seen: number; unseen: number; answered: number; missed: number; percent_seen: number;
+    total: number;
+    seen: number;
+    unseen: number;
+    answered: number;
+    missed: number;
+    percent_seen: number;
   };
 }
 

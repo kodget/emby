@@ -11,7 +11,7 @@ from .models import (
     Subject, Block, SubBlock, Topic, Slide, Material, UserProgress, ScheduleItem,
     UserStats, CommunityPost, PostComment, PostLike, UpcomingTest, DailyStudySession,
     QuizQuestion, Quiz, QuizAnswer, SlideContent, SlideDeck, SlidePage, SteeplechaseQuestion,
-    FriendChallenge, BrainBattle, BattleParticipant, Flashcard, FlashcardProgress, FlashcardReview
+    FriendChallenge, BrainBattle, BattleParticipant, Flashcard, FlashcardProgress, FlashcardReview, StudyProfile
 )
 from .serializers import (
     SubjectSerializer, BlockSerializer, SubBlockSerializer, TopicSerializer, SlideSerializer, MaterialSerializer,
@@ -20,7 +20,7 @@ from .serializers import (
     QuizQuestionSerializer, QuizSerializer, QuizAnswerSerializer,
     SlideDeckSerializer, SlideDeckListSerializer, SlidePageSerializer, SteeplechaseQuestionSerializer,
     FriendChallengeSerializer, BrainBattleSerializer, BattleParticipantSerializer,
-    FlashcardSerializer, FlashcardProgressSerializer, FlashcardReviewSerializer
+    FlashcardSerializer, FlashcardProgressSerializer, FlashcardReviewSerializer, StudyProfileSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -29,6 +29,18 @@ logger = logging.getLogger(__name__)
 # -------------------------
 # CURRICULUM VIEWS
 # -------------------------
+class StudyProfileViewSet(viewsets.ModelViewSet):
+    """CRUD operations for StudyProfile"""
+    serializer_class = StudyProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return StudyProfile.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
 class SubjectViewSet(viewsets.ModelViewSet):
     """List all subjects"""
     queryset = Subject.objects.all()
@@ -183,7 +195,9 @@ class SlideViewSet(viewsets.ModelViewSet):
             )
             
             print(f"✓ Slide created: {slide.id}")
-            # Skip triggering process_slide_task since rendering is done on-demand
+            # Trigger process_slide_task to extract text and render images to Cloudinary
+            from .tasks import process_slide_task
+            process_slide_task.delay(slide.id)
             
             serializer = self.get_serializer(slide)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -1306,35 +1320,84 @@ def generate_questions_from_slide_view(request, slide_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def ai_study_recommendations(request):
-    """Return personalised study recommendations for the current user."""
-    from .ai_service import get_study_recommendations
+    """Return study session context for the 5-step dynamic session."""
+    from curriculum.models import SlidePage, Topic, ScheduleItem, FlashcardProgress, QuizAttempt, UserProgress
+    from learning.models import WeakArea
+    from django.utils import timezone
+    from datetime import timedelta
 
-    recent_quizzes = Quiz.objects.filter(
+    now = timezone.now()
+    today = timezone.localdate()
+
+    # 1. Flashcards due
+    flashcards_due = FlashcardProgress.objects.filter(
+        user=request.user, 
+        due_date__lte=now
+    ).count()
+
+    # 2. Practice Topic (Weakest area)
+    weak_area = WeakArea.objects.filter(user=request.user).order_by('mastery').first()
+    practice_topic = weak_area.topic.name if weak_area and weak_area.topic else "General Review"
+    
+    # 3. Slide to read (next unread slide)
+    completed_slides = list(UserProgress.objects.filter(
         user=request.user, completed=True
-    ).select_related('sub_block', 'subject').order_by('-completed_at')[:10]
+    ).values_list('slide_id', flat=True))
+    next_slide = Slide.objects.exclude(id__in=completed_slides).first()
+    slide_to_read = {"id": next_slide.id, "title": next_slide.title} if next_slide else None
 
-    history = []
-    for q in recent_quizzes:
-        history.append({
-            'topic': q.sub_block.name if q.sub_block else (q.subject.name if q.subject else 'General'),
-            'score': q.score,
-            'quiz_type': q.quiz_type,
+    # 4. Stale slides (read > 1 week ago)
+    one_week_ago = now - timedelta(days=7)
+    stale_progress = UserProgress.objects.filter(
+        user=request.user, completed=True, last_accessed__lte=one_week_ago
+    ).select_related('slide').order_by('last_accessed')[:3]
+    
+    stale_slides = [
+        {"id": sp.slide.id, "title": sp.slide.title} for sp in stale_progress if sp.slide
+    ]
+
+    # 5. Study Plan Items (Tasks for today)
+    schedule_qs = ScheduleItem.objects.filter(
+        user=request.user,
+        scheduled_date=today,
+        completed=False
+    ).values('id', 'title', 'activity_type', 'completed')
+    
+    plan_items = []
+    for item in schedule_qs:
+        plan_items.append({
+            'id': item['id'],
+            'title': item['title'],
+            'item_type': item['activity_type'],
+            'status': 'completed' if item['completed'] else 'pending'
         })
 
-    # Topics with low average score (below 60%)
-    weak_topics = list({
-        (q.sub_block.name if q.sub_block else '') for q in recent_quizzes
-        if q.score < 60 and q.sub_block
+    # Also include recent missed questions count for the dashboard
+    recent_attempt = QuizAttempt.objects.filter(
+        user=request.user, 
+        submitted_at__isnull=False
+    ).order_by('-submitted_at').first()
+    
+    missed_count = 0
+    insights = None
+    if recent_attempt:
+        missed_count = recent_attempt.responses.filter(is_correct=False, question__question_type='mcq').count()
+        if recent_attempt.analysis_data:
+            insights = recent_attempt.analysis_data.get('insights')
+
+    return Response({
+        "slide_to_read": slide_to_read,
+        "flashcards_due": flashcards_due,
+        "practice_topic": practice_topic,
+        "stale_slides": stale_slides,
+        "study_plan_items": list(plan_items),
+        
+        # Legacy fields to avoid breaking TodaySessionCard until we update it
+        "focus_areas": [practice_topic] if practice_topic else [],
+        "recommendations": [{"action": "Read", "topic": slide_to_read}],
+        "missed_count": missed_count,
+        "insights": insights
     })
-
-    # Topics from slides not yet completed
-    completed_slides = UserProgress.objects.filter(
-        user=request.user, completed=True
-    ).values_list('slide__topic__name', flat=True)
-    upcoming = list(Topic.objects.exclude(name__in=completed_slides).values_list('name', flat=True)[:5])
-
-    result = get_study_recommendations(history, weak_topics, upcoming)
-    return Response(result)
 
 # -------------------------
 # AI ENHANCEMENT ENDPOINTS
