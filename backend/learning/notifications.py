@@ -210,7 +210,7 @@ def build_for_user(user: User) -> list[Notification]:
 
     # --- a streak about to break --------------------------------------------------
     stats = getattr(user, "stats", None)
-    streak = getattr(stats, "current_streak", 0) or 0
+    streak = getattr(stats, "active_streak", 0) or 0
     last = getattr(stats, "last_activity_date", None)
     if streak >= 2 and last and last < today and now.hour >= 17:
         n = schedule(

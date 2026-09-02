@@ -67,6 +67,10 @@ class LLMError(RuntimeError):
     """Raised when the provider could not produce a completion."""
 
 
+class RequestTooLarge(LLMError):
+    """Raised when the prompt exceeds the provider's token limits (HTTP 413)."""
+
+
 def _setting(name: str, default: str = "") -> str:
     try:
         from django.conf import settings
@@ -307,8 +311,10 @@ def _try_model(
             continue
 
         last_error = f"HTTP {resp.status_code}: {resp.text[:300]}"
-        if resp.status_code in (401, 403, 404):
-            return None, last_error, True  # credentials/host problem: skip provider
+        if resp.status_code == 413:
+            raise RequestTooLarge(last_error)  # prompt too large, skip retries and bubble up
+        if resp.status_code in (401, 402, 403, 404):
+            return None, last_error, True  # credentials/host/quota problem: skip provider
         if resp.status_code in _RETRY_STATUS:
             _sleep_backoff(attempt, resp.headers.get("Retry-After"))
             continue

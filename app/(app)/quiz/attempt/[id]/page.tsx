@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Send, Menu, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { ExamTimer } from "@/components/quiz/exam-timer";
 import { MCQQuestionCard } from "@/components/quiz/mcq-question-card";
 import { TheoryQuestionCard } from "@/components/quiz/theory-question-card";
 import { QuestionNavigator } from "@/components/quiz/question-navigator";
+import { SessionFooter } from "@/components/session-footer";
 
 interface ExamInterfacePageProps {
   params: Promise<{ id: string }>;
@@ -38,11 +39,19 @@ export default function ExamInterfacePage({ params }: ExamInterfacePageProps) {
     return () => { dispatch(resetAttempt()); };
   }, [attemptId, dispatch]);
 
+  const searchParams = useSearchParams();
+  const isSession = searchParams.get("session") === "true";
+  const nextStep = searchParams.get("nextStep") || "4";
+
   useEffect(() => {
     if (isSubmitted) {
-      router.push(`/quiz/attempt/${attemptId}/results`);
+      if (isSession) {
+        router.push(`/quiz/attempt/${attemptId}/results?session=true&nextStep=${nextStep}`);
+      } else {
+        router.push(`/quiz/attempt/${attemptId}/results`);
+      }
     }
-  }, [isSubmitted, attemptId, router]);
+  }, [isSubmitted, attemptId, router, isSession, nextStep]);
 
   const handleTick = useCallback(() => { dispatch(tickTimer()); }, [dispatch]);
 
@@ -88,7 +97,35 @@ export default function ExamInterfacePage({ params }: ExamInterfacePageProps) {
   }
 
   const questions = currentAttempt.questions;
+
+  if (!questions || questions.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="text-center space-y-4 max-w-md">
+          <AlertTriangle className="w-12 h-12 text-destructive mx-auto" />
+          <h2 className="text-xl font-semibold">No Questions Available</h2>
+          <p className="text-muted-foreground">
+            This quiz attempt has no questions associated with it. This usually happens if there are no questions available for the selected topic or difficulty.
+          </p>
+          <Button onClick={() => router.push("/quiz")}>Back to Quizzes</Button>
+        </div>
+      </div>
+    );
+  }
+
   const currentQuestion = questions[currentQuestionIndex];
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="text-center space-y-4 max-w-md">
+          <AlertTriangle className="w-12 h-12 text-destructive mx-auto" />
+          <h2 className="text-xl font-semibold">Question Not Found</h2>
+          <p className="text-muted-foreground">The requested question could not be loaded.</p>
+          <Button onClick={() => dispatch(navigateToQuestion(0))}>Reset to First Question</Button>
+        </div>
+      </div>
+    );
+  }
   const questionIds = questions.map((q) => q.id);
   const answeredCount = Object.values(questionStatuses).filter((s) => s === "answered").length;
   const totalSeconds = currentAttempt.duration_minutes ? currentAttempt.duration_minutes * 60 : 0;
@@ -198,6 +235,8 @@ export default function ExamInterfacePage({ params }: ExamInterfacePageProps) {
           </Card>
         </div>
       </div>
+      
+      <SessionFooter currentStep={3} />
     </div>
   );
 }

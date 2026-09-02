@@ -93,9 +93,10 @@ export function AppSidebar() {
 
   return (
     <aside
+      suppressHydrationWarning
       data-collapsed={collapsed}
       className={cn(
-        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex",
+        "group sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex",
         "transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
         collapsed ? "w-[74px]" : "w-64",
       )}
@@ -116,38 +117,32 @@ export function AppSidebar() {
             className="size-9 shrink-0 select-none"
             draggable={false}
           />
-          {!collapsed && (
-            <span className="flex min-w-0 flex-col leading-none">
-              <span className="font-display text-lg font-semibold tracking-tight">Emby</span>
-              <span className="truncate text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                BMS Edition
-              </span>
+          <span className="flex min-w-0 flex-col leading-none group-data-[collapsed=true]:hidden">
+            <span className="font-display text-lg font-semibold tracking-tight">Emby</span>
+            <span className="truncate text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              BMS Edition
             </span>
-          )}
+          </span>
         </Link>
 
-        {!collapsed && (
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label="Collapse sidebar"
-            className="press ml-auto flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
-          >
-            <PanelLeftClose className="size-4" />
-          </button>
-        )}
-      </div>
-
-      {collapsed && (
         <button
           type="button"
           onClick={toggle}
-          aria-label="Expand sidebar"
-          className="press mx-auto mt-3 flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+          aria-label="Collapse sidebar"
+          className="press ml-auto flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground group-data-[collapsed=true]:hidden"
         >
-          <PanelLeftOpen className="size-4" />
+          <PanelLeftClose className="size-4" />
         </button>
-      )}
+      </div>
+
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label="Expand sidebar"
+        className="press mx-auto mt-3 flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground group-data-[collapsed=false]:hidden"
+      >
+        <PanelLeftOpen className="size-4" />
+      </button>
 
       <nav className="scroll-pane flex-1 overflow-y-auto px-3 py-4">
         <NavGroup title="Study" items={STUDY} pathname={pathname} collapsed={collapsed} />
@@ -158,31 +153,29 @@ export function AppSidebar() {
       <UploadProgressStrip />
 
       {/* Streak — a compact badge when collapsed, a card when open */}
-      {collapsed ? (
-        <div className="flex flex-col items-center gap-1 pb-4" title={`${streak}-day streak`}>
-          <Icon3D name="streak" size="sm" />
-          <span className="tabular text-xs font-semibold">{streak}</span>
-        </div>
-      ) : (
-        <div className="card-3d m-3 rounded-2xl p-3.5">
-          <div className="flex items-center gap-2.5">
-            <Icon3D name="streak" size="md" />
-            <div className="leading-tight">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                Streak
-              </p>
-              <p className="font-display text-xl leading-none tabular">
-                {streak} <span className="text-sm font-normal">{streak === 1 ? "day" : "days"}</span>
-              </p>
-            </div>
+      <div className="flex flex-col items-center gap-1 pb-4 group-data-[collapsed=false]:hidden" title={`${streak}-day streak`}>
+        <Icon3D name="streak" size="sm" />
+        <span className="tabular text-xs font-semibold">{streak}</span>
+      </div>
+
+      <div className="card-3d m-3 rounded-2xl p-3.5 group-data-[collapsed=true]:hidden">
+        <div className="flex items-center gap-2.5">
+          <Icon3D name="streak" size="md" />
+          <div className="leading-tight">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Streak
+            </p>
+            <p className="font-display text-xl leading-none tabular">
+              {streak} <span className="text-sm font-normal">{streak === 1 ? "day" : "days"}</span>
+            </p>
           </div>
-          <p className="mt-2.5 text-[12px] leading-snug text-muted-foreground">
-            {streak === 0
-              ? "Study today to start your streak."
-              : "Keep it going — study something today."}
-          </p>
         </div>
-      )}
+        <p className="mt-2.5 text-[12px] leading-snug text-muted-foreground">
+          {streak === 0
+            ? "Study today to start your streak."
+            : "Keep it going — study something today."}
+        </p>
+      </div>
     </aside>
   );
 }
@@ -200,11 +193,9 @@ function NavGroup({
 }) {
   return (
     <>
-      {!collapsed && (
-        <p className="px-3 pb-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-          {title}
-        </p>
-      )}
+      <p className="px-3 pb-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground group-data-[collapsed=true]:hidden">
+        {title}
+      </p>
       <ul className="space-y-0.5">
         {items.map((item) => {
           const active = item.match ? item.match.test(pathname) : pathname === item.href;
@@ -230,13 +221,13 @@ function NavLink({
 }) {
   return (
     <Link
+      suppressHydrationWarning
       href={item.href}
       aria-current={active ? "page" : undefined}
-      // The label is the accessible name when collapsed, and the native tooltip.
       title={collapsed ? item.label : undefined}
       aria-label={collapsed ? item.label : undefined}
       className={cn(
-        "press group relative flex items-center rounded-xl text-sm transition-colors",
+        "press relative flex items-center rounded-xl text-sm transition-colors",
         collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2",
         active
           ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
@@ -253,7 +244,7 @@ function NavLink({
       <span className={cn("shrink-0 transition-opacity", !active && "opacity-70 saturate-[0.6] group-hover:opacity-100 group-hover:saturate-100")}>
         <Icon3D name={item.icon} size="sm" />
       </span>
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      <span className="truncate group-data-[collapsed=true]:hidden">{item.label}</span>
     </Link>
   );
 }

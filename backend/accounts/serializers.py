@@ -53,7 +53,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_streak(self, obj) -> int:
         stats = getattr(obj.user, "stats", None)
-        return getattr(stats, "current_streak", 0) or 0
+        return getattr(stats, "active_streak", 0) or 0
 
     class Meta:
         model = Profile

@@ -393,7 +393,7 @@ def dashboard_snapshot(request):
 
     return Response(
         {
-            "streak": getattr(getattr(request.user, "stats", None), "current_streak", 0) or 0,
+            "streak": getattr(getattr(request.user, "stats", None), "active_streak", 0) or 0,
             "xp": xp.total_xp(request.user),
             "credits": credits.balance(request.user),
             "cards_due": FlashcardProgress.objects.filter(

@@ -93,6 +93,13 @@ class Slide(models.Model):
     file_type = models.CharField(max_length=20, default='pdf')  # pdf, pptx, docx
     page_count = models.IntegerField(default=0)
     
+    # Status tracking for background processing
+    generation_status = models.CharField(
+        max_length=20, 
+        choices=[('pending', 'Pending'), ('in_progress', 'In Progress'), ('completed', 'Completed'), ('failed', 'Failed')], 
+        default='pending'
+    )
+    
     # Metadata
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='uploaded_slides')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -320,6 +327,18 @@ class UserStats(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def active_streak(self):
+        from django.utils import timezone
+        import datetime
+        if not self.last_activity_date:
+            return 0
+            
+        today = timezone.now().date()
+        if self.last_activity_date < today - datetime.timedelta(days=1):
+            return 0
+        return self.current_streak
 
     def __str__(self):
         return f"{self.user.username} - {self.points} points"
@@ -943,6 +962,8 @@ class QuizAttempt(models.Model):
     # Theory evaluation status
     theory_grading_pending = models.BooleanField(default=False)
     theory_grading_completed = models.BooleanField(default=False)
+    
+    analysis_data = models.JSONField(default=dict, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

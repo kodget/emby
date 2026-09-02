@@ -93,7 +93,7 @@ class SlideSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'subject', 'subject_name', 'block', 'block_name',
             'sub_block', 'sub_block_name', 'topic', 'topic_name',
-            'file_url', 'file_type', 'page_count',
+            'file_url', 'file_type', 'page_count', 'generation_status',
             'uploaded_by', 'uploaded_by_name', 'created_at', 'updated_at'
         ]
     
@@ -211,6 +211,7 @@ class UserStatsSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     name = serializers.CharField(source='user.first_name', read_only=True)
     usage = serializers.SerializerMethodField()
+    current_streak = serializers.IntegerField(source='active_streak', read_only=True)
     
     class Meta:
         model = UserStats
@@ -445,6 +446,7 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
     slide_name = serializers.CharField(source='slide.title', read_only=True, allow_null=True)
     responses = QuizAttemptResponseSerializer(many=True, read_only=True)
     questions = serializers.SerializerMethodField()
+    time_taken_minutes = serializers.SerializerMethodField()
     
     class Meta:
         model = QuizAttempt
@@ -455,7 +457,8 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             'started_at', 'submitted_at', 'deadline', 'mcq_score', 'mcq_total',
             'theory_score', 'theory_total', 'overall_percentage',
             'theory_grading_pending', 'theory_grading_completed',
-            'questions', 'responses', 'created_at', 'updated_at'
+            'questions', 'responses', 'time_taken_minutes', 'analysis_data',
+            'created_at', 'updated_at'
         ]
         read_only_fields = [
             'user', 'question_ids', 'status', 'started_at', 'submitted_at',
@@ -483,6 +486,12 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             )
         
         return serializer.data
+    
+    def get_time_taken_minutes(self, obj):
+        if obj.started_at and obj.submitted_at:
+            delta = obj.submitted_at - obj.started_at
+            return delta.total_seconds() / 60.0
+        return None
     
     def validate_configuration(self, value):
         required_fields = ['mcq_count', 'theory_count', 'difficulty']
@@ -577,15 +586,21 @@ class QuizAttemptListSerializer(serializers.ModelSerializer):
     block_name = serializers.CharField(source='block.name', read_only=True, allow_null=True)
     sub_block_name = serializers.CharField(source='sub_block.name', read_only=True, allow_null=True)
     topic_name = serializers.CharField(source='sub_block.name', read_only=True, allow_null=True)
+    time_taken_minutes = serializers.SerializerMethodField()
     
     class Meta:
         model = QuizAttempt
         fields = [
             'id', 'subject_name', 'block_name', 'sub_block_name', 'topic_name', 'exam_type',
             'is_timed', 'status', 'overall_percentage', 'theory_grading_complete',
-            'started_at', 'submitted_at', 'created_at'
+            'started_at', 'submitted_at', 'time_taken_minutes', 'analysis_data', 'created_at'
         ]
 
+    def get_time_taken_minutes(self, obj):
+        if obj.started_at and obj.submitted_at:
+            delta = obj.submitted_at - obj.started_at
+            return delta.total_seconds() / 60.0
+        return None
 
 # -------------------------
 # FLASHCARD SERIALIZERS

@@ -23,28 +23,42 @@ import { Momentum } from "@/components/dashboard/momentum";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { SurfaceSkeleton } from "@/components/ui/surface";
 import { isEmailVerified } from "@/lib/guards";
-import { flashcardApi, statsApi } from "@/lib/api";
+import { flashcardApi, statsApi, learningApi } from "@/lib/api";
 
 const TodaySessionCard = lazy(() =>
-  import("@/components/dashboard/today-session-card").then((m) => ({ default: m.TodaySessionCard })),
+  import("@/components/dashboard/today-session-card").then((m) => ({
+    default: m.TodaySessionCard,
+  })),
 );
 const WeakTopics = lazy(() =>
-  import("@/components/dashboard/weak-topics").then((m) => ({ default: m.WeakTopics })),
+  import("@/components/dashboard/weak-topics").then((m) => ({
+    default: m.WeakTopics,
+  })),
 );
 const UpcomingTests = lazy(() =>
-  import("@/components/dashboard/upcoming-tests").then((m) => ({ default: m.UpcomingTests })),
+  import("@/components/dashboard/upcoming-tests").then((m) => ({
+    default: m.UpcomingTests,
+  })),
 );
 const CoursesProgress = lazy(() =>
-  import("@/components/dashboard/courses-progress").then((m) => ({ default: m.CoursesProgress })),
+  import("@/components/dashboard/courses-progress").then((m) => ({
+    default: m.CoursesProgress,
+  })),
 );
 const Leaderboard = lazy(() =>
-  import("@/components/dashboard/leaderboard").then((m) => ({ default: m.Leaderboard })),
+  import("@/components/dashboard/leaderboard").then((m) => ({
+    default: m.Leaderboard,
+  })),
 );
 const CommunityFeed = lazy(() =>
-  import("@/components/dashboard/community-feed").then((m) => ({ default: m.CommunityFeed })),
+  import("@/components/dashboard/community-feed").then((m) => ({
+    default: m.CommunityFeed,
+  })),
 );
 const ClassInfoWidget = lazy(() =>
-  import("@/components/dashboard/class-info-widget").then((m) => ({ default: m.ClassInfoWidget })),
+  import("@/components/dashboard/class-info-widget").then((m) => ({
+    default: m.ClassInfoWidget,
+  })),
 );
 const ExamCountdownWidget = lazy(() =>
   import("@/components/dashboard/exam-countdown-widget").then((m) => ({
@@ -52,7 +66,9 @@ const ExamCountdownWidget = lazy(() =>
   })),
 );
 const ScheduleModal = lazy(() =>
-  import("@/components/dashboard/schedule-modal").then((m) => ({ default: m.ScheduleModal })),
+  import("@/components/dashboard/schedule-modal").then((m) => ({
+    default: m.ScheduleModal,
+  })),
 );
 const EmailVerificationBanner = lazy(
   () => import("@/components/auth/email-verification-banner"),
@@ -80,18 +96,21 @@ export default function DashboardPage() {
     // Each source is independent: one failing endpoint must not blank the whole rail,
     // so unresolved values stay undefined and render as an em dash.
     (async () => {
-      const [stats, cards] = await Promise.allSettled([
-        statsApi.getMyStats(),
-        flashcardApi.getStats(),
-      ]);
-      if (cancelled) return;
+      try {
+        const snap = await learningApi.getDashboardSnapshot();
+        if (cancelled) return;
 
-      setSnapshot({
-        streak: stats.status === "fulfilled" ? stats.value.current_streak : undefined,
-        xp: stats.status === "fulfilled" ? stats.value.points : undefined,
-        cardsDue: cards.status === "fulfilled" ? (cards.value as any)?.due_count ?? null : null,
-      });
-      setLoading(false);
+        setSnapshot({
+          streak: snap.streak,
+          xp: snap.xp,
+          cardsDue: snap.cards_due,
+          creditsRemaining: snap.credits?.remaining ?? snap.credits,
+        });
+      } catch (err) {
+        console.error("Failed to load dashboard snapshot", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
 
     return () => {
@@ -101,7 +120,9 @@ export default function DashboardPage() {
 
   return (
     <AuthGuard>
-      <Suspense fallback={null}>{showBanner && <EmailVerificationBanner />}</Suspense>
+      <Suspense fallback={null}>
+        {showBanner && <EmailVerificationBanner />}
+      </Suspense>
 
       <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-5 sm:px-6 lg:py-8">
         <DashboardHeader snapshot={snapshot} loading={loading} />

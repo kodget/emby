@@ -31,7 +31,8 @@ from .views import (
     SteeplechaseQuestionViewSet,
     FriendChallengeViewSet,
     BrainBattleViewSet,
-    FlashcardViewSet
+    FlashcardViewSet,
+    StudyProfileViewSet
 )
 from .upload_views import upload_file, delete_file
 from .quiz_views import QuizAttemptViewSet
@@ -41,6 +42,7 @@ from .ai_views import chat_with_slide, generate_resources, textbook_suggestions,
 router = DefaultRouter()
 router.register(r'quiz-attempts', QuizAttemptViewSet, basename='quiz-attempt')
 router.register(r'steeplechase', SteeplechaseQuestionViewSet, basename='steeplechase')
+router.register(r'study-profile', StudyProfileViewSet, basename='study-profile')
 router.register(r'subjects', SubjectViewSet, basename='subject')
 router.register(r'blocks', BlockViewSet, basename='block')
 router.register(r'sub-blocks', SubBlockViewSet, basename='sub-block')
