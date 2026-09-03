@@ -22,7 +22,7 @@ export interface QuizQuestion {
 export interface QuizAttempt {
   id: string;
   exam_type: "practice" | "mock" | "formal";
-  status: "in_progress" | "submitted" | "evaluated";
+  status: "in_progress" | "submitted" | "auto_submitted" | "evaluated";
   is_timed: boolean;
   duration_minutes: number | null;
   started_at: string;
