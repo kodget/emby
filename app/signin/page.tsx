@@ -144,7 +144,7 @@ export default function SignInPage() {
 
     if (!user.onboarding_completed) {
       router.push("/onboarding");
-    } else if (user.role === "class_head" && !user.class_head_verified) {
+    } else if (user.class_role === "class_head" && !user.class_head_verified) {
       router.push("/verification-pending");
     } else {
       router.push("/dashboard");
