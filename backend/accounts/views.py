@@ -483,29 +483,9 @@ def submit_onboarding(request):
                     )
                     profile.class_group = class_group
                     is_new_class = True
-                
-                # Send email with class code to new class head (fail_silently=True
-                # so a broken SMTP config never crashes the onboarding request)
-                try:
-                    if is_new_class:
-                        send_mail(
-                            'Your Class Code - Emby',
-                            f'Congratulations! You are the first class head for {school_name} - {set_name}.\n\nYour class code is: {class_group.code}\n\nShare this code with your classmates to join.\n\nNote: Your account is pending verification. You will be notified once approved.',
-                            settings.DEFAULT_FROM_EMAIL,
-                            [user.email],
-                            fail_silently=True,
-                        )
-                    else:
-                        send_mail(
-                            'Your Class Code - Emby',
-                            f'You have joined as class head for {school_name} - {set_name}.\n\nYour class code is: {class_group.code}\n\nShare this code with your classmates to join.\n\nThere are currently {class_group.class_heads.count()} other class head(s) in this class.\n\nNote: Your account is pending verification. You will be notified once approved.',
-                            settings.DEFAULT_FROM_EMAIL,
-                            [user.email],
-                            fail_silently=True,
-                        )
-                except Exception as e:
-                    print(f"Email sending failed: {e}")
-                
+                # Capture email details — sent AFTER profile.save() below
+                _send_class_code_email = (user.email, class_group.code, school_name, set_name, is_new_class, class_group.class_heads.count())
+
             elif class_code:
                 # Join existing class (class_code is already validated and uppercased by serializer)
                 try:
@@ -518,32 +498,61 @@ def submit_onboarding(request):
                     }, status=status.HTTP_400_BAD_REQUEST)
             else:
                 profile.subscription_tier = subscription_tier
-            
+
+            # ----------------------------------------------------------------
+            # SAVE FIRST — always persist before sending emails.
+            # If email fails the user must not have to redo onboarding.
+            # ----------------------------------------------------------------
             profile.onboarding_completed = True
             profile.save()
-            
+
             # Save onboarding responses
             for response_data in responses:
                 question_id = response_data.get('question_id')
                 answer = response_data.get('answer')
-                
+
                 if question_id and answer:
                     OnboardingResponse.objects.update_or_create(
                         user=user,
                         question_id=question_id,
                         defaults={'answer': answer}
                     )
-            
+
+            # ----------------------------------------------------------------
+            # Send emails AFTER data is safely saved (purely informational)
+            # ----------------------------------------------------------------
+            if role == ClassRole.CLASS_HEAD and '_send_class_code_email' in dir():
+                _email, _code, _school, _set, _is_new, _head_count = _send_class_code_email
+                try:
+                    if _is_new:
+                        send_mail(
+                            'Your Class Code - Emby',
+                            f'Congratulations! You are the first class head for {_school} - {_set}.\n\nYour class code is: {_code}\n\nShare this code with your classmates to join.\n\nNote: Your account is pending verification. You will be notified once approved.',
+                            settings.DEFAULT_FROM_EMAIL,
+                            [_email],
+                            fail_silently=True,
+                        )
+                    else:
+                        send_mail(
+                            'Your Class Code - Emby',
+                            f'You have joined as class head for {_school} - {_set}.\n\nYour class code is: {_code}\n\nShare this code with your classmates to join.\n\nThere are currently {_head_count} other class head(s) in this class.\n\nNote: Your account is pending verification. You will be notified once approved.',
+                            settings.DEFAULT_FROM_EMAIL,
+                            [_email],
+                            fail_silently=True,
+                        )
+                except Exception as e:
+                    print(f"Email sending failed (non-fatal): {e}")
+
             response_data = {
                 'message': 'Onboarding completed successfully',
                 'user': ProfileSerializer(profile).data,
                 'class_code': profile.class_group.code if profile.class_group else None
             }
-            
+
             # Add verification message for class heads
             if role == ClassRole.CLASS_HEAD:
                 response_data['verification_message'] = 'Your class head account is pending verification. You will receive an email once approved.'
-            
+
             return Response(response_data, status=status.HTTP_200_OK)
         
         except Exception as e:
