@@ -203,12 +203,18 @@ FORMATTING:
         """
         empty = {"youtube": [], "textbooks": [], "mcqs": []}
 
+        slide_text = slide_context.get('text', '')
+        if slide_text:
+            slide_text = slide_text[:8000]
+        else:
+            slide_text = 'No text available'
+
         prompt = f"""You are generating study resources for a Nigerian medical student.
 
 SLIDE TITLE: {slide_context.get('title', 'Untitled')}
 COURSE: {slide_context.get('course', 'General')}
 SLIDE TEXT:
-{slide_context.get('text', 'No text available')}
+{slide_text}
 
 TASK: Generate a JSON object with study resources for THIS specific slide.
 

@@ -17,16 +17,19 @@ class AIFlashcardGenerator:
         """
         subject_name = slide.subject.name if slide and slide.subject else "General"
         topic_name = topic.name if topic else (slide.title if slide else "")
-        source = text.strip()[:15000]
+        source = text.strip()[:8000]
         
+        source_context = f"SOURCE MATERIAL:\n{source}\n" if source else ""
+        if slide_image_base64:
+            source_context += "\nAlso refer to the provided image(s) as source material."
+
         prompt = f"""You are a medical educator creating highly effective spaced-repetition flashcards for Nigerian medical students.
         
 SUBJECT: {subject_name}
 TOPIC: {topic_name}
-SOURCE MATERIAL:
-{source}
+{source_context}
 
-TASK: Create exactly {count} flashcards strictly grounded in the SOURCE MATERIAL above.
+TASK: Create exactly {count} flashcards strictly grounded in the source material provided.
 Each flashcard must have a concise 'front' (the question or prompt) and a clear, accurate 'back' (the answer).
 Include a brief 'explanation' for context where appropriate.
 
@@ -46,9 +49,9 @@ Format:
             from curriculum.llm import chat_with_image
             try:
                 if return_usage:
-                    raw, tokens = chat_with_image(prompt=prompt, image_b64=slide_image_base64, max_tokens=4096, return_usage=True)
+                    raw, tokens = chat_with_image(prompt=prompt, image_b64=slide_image_base64, max_tokens=2048, return_usage=True)
                 else:
-                    raw = chat_with_image(prompt=prompt, image_b64=slide_image_base64, max_tokens=4096)
+                    raw = chat_with_image(prompt=prompt, image_b64=slide_image_base64, max_tokens=2048)
             except Exception as e:
                 logger.warning(f"Failed to use vision model, falling back to text: {e}")
                 if return_usage:
