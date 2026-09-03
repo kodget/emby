@@ -1,9 +1,10 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-export type UploadStatus = "uploading" | "processing" | "done" | "error";
+export type UploadStatus = "uploading" | "downloading" | "extracting_text" | "converting_to_jpg" | "generating_quizzes" | "processing" | "completed" | "done" | "error";
 
 export type SlideUpload = {
   id: string;
+  slideId?: string;
   courseId: string;
   moduleId: string;
   // materialId this upload populates (generated on submit)
@@ -59,6 +60,7 @@ export const uploadsSlice = createSlice({
         id: string;
         progress: number;
         status: UploadStatus;
+        slideId?: string;
         pages?: number;
       }>,
     ) {
@@ -66,6 +68,7 @@ export const uploadsSlice = createSlice({
       if (item) {
         item.progress = action.payload.progress;
         item.status = action.payload.status;
+        if (action.payload.slideId) item.slideId = action.payload.slideId;
         if (action.payload.pages !== undefined)
           item.pages = action.payload.pages;
       }

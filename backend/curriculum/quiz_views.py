@@ -46,8 +46,8 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
         user = request.user
         
         # 1. Fetch questions based on source
-        mcq_qs = QuizQuestion.objects.filter(question_type='mcq', difficulty=difficulty)
-        theory_qs = QuizQuestion.objects.filter(question_type='theory', difficulty=difficulty)
+        mcq_qs = QuizQuestion.objects.filter(question_type='mcq')
+        theory_qs = QuizQuestion.objects.filter(question_type='theory')
         
         if source == 'missed_questions':
             missed_q_ids = QuizAttemptResponse.objects.filter(
@@ -72,9 +72,17 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
                 mcq_qs = mcq_qs.filter(source_slide_id=request.data['slide'])
                 theory_qs = theory_qs.filter(source_slide_id=request.data['slide'])
                 
-        # 2. Limit and shuffle
-        mcq_questions = list(mcq_qs.order_by('?')[:mcq_count])
-        theory_questions = list(theory_qs.order_by('?')[:theory_count])
+        # 2. Limit and shuffle with fallback
+        def get_with_fallback(qs, diff, count):
+            primary = list(qs.filter(difficulty=diff).order_by('?')[:count])
+            if len(primary) < count:
+                shortfall = count - len(primary)
+                secondary = list(qs.exclude(difficulty=diff).order_by('?')[:shortfall])
+                primary.extend(secondary)
+            return primary
+
+        mcq_questions = get_with_fallback(mcq_qs, difficulty, mcq_count)
+        theory_questions = get_with_fallback(theory_qs, difficulty, theory_count)
         questions = mcq_questions + theory_questions
         
         if not questions:

@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 
+import dj_database_url
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -157,6 +158,15 @@ if env_bool("USE_SQLITE", False):
                 str(BASE_DIR / "db.sqlite3"),
             ),
         }
+    }
+
+elif os.getenv("DATABASE_URL"):
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=os.getenv("DATABASE_URL"),
+            conn_max_age=60,
+            conn_health_checks=True,
+        )
     }
 
 elif os.getenv("DB_NAME"):

@@ -78,11 +78,9 @@ export function SlideUploadModal() {
     (f: File) => {
       const allowed = [
         "application/pdf",
-        "application/vnd.ms-powerpoint",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
       ];
-      if (!allowed.includes(f.type) && !f.name.match(/\.(pdf|ppt|pptx)$/i)) {
-        setErrorMsg("Only PDF or PowerPoint files are supported.");
+      if (!allowed.includes(f.type) && !f.name.match(/\.(pdf)$/i)) {
+        setErrorMsg("Only PDF files are supported.");
         return;
       }
       setErrorMsg("");
@@ -189,8 +187,9 @@ export function SlideUploadModal() {
       dispatch(
         updateProgress({
           id: uploadId,
-          progress: 100,
-          status: "done",
+          progress: 50,
+          status: "downloading",
+          slideId: slideData.id,
           pages: slideData.page_count || 0,
         }),
       );
@@ -483,7 +482,7 @@ export function SlideUploadModal() {
                       <input
                         ref={inputRef}
                         type="file"
-                        accept=".pdf,.ppt,.pptx"
+                        accept=".pdf"
                         className="sr-only"
                         onChange={(e) =>
                           e.target.files?.[0] && handleFile(e.target.files[0])
@@ -510,7 +509,7 @@ export function SlideUploadModal() {
                             className="size-8 text-muted-foreground"
                           />
                           <p className="text-center text-sm text-muted-foreground">
-                            Drop PDF or PowerPoint here
+                            Drop PDF here
                             <br />
                             <span className="text-primary">
                               or click to browse

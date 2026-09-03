@@ -5,6 +5,8 @@ Handles PDF chunking, embedding generation, and similarity search
 
 import logging
 from typing import List, Dict, Tuple
+import threading
+import concurrent.futures
 
 from django.utils import timezone
 
@@ -23,17 +25,48 @@ class RAGService:
 
     def __init__(self):
         self._model = None
+        self._model_future = None
+        self._model_lock = threading.Lock()
+        self._executor = None
         self.chunk_size = 800  # words per chunk
         self.chunk_overlap = 100  # words overlap between chunks
 
     @property
     def model(self):
-        """Lazy-load the embedding model on first access."""
-        if self._model is None:
-            from sentence_transformers import SentenceTransformer
-            logger.info("Loading embedding model 'all-MiniLM-L6-v2' (first use)...")
-            self._model = SentenceTransformer('all-MiniLM-L6-v2')
-        return self._model
+        """Lazy-load the embedding model on first access with a timeout."""
+        if self._model is not None:
+            return self._model
+            
+        with self._model_lock:
+            if self._model is not None:
+                return self._model
+                
+            if self._model_future is None:
+                def load_model():
+                    from sentence_transformers import SentenceTransformer
+                    logger.info("Loading embedding model 'all-MiniLM-L6-v2' (first use)...")
+                    return SentenceTransformer('all-MiniLM-L6-v2')
+                
+                self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                self._model_future = self._executor.submit(load_model)
+                
+        try:
+            self._model = self._model_future.result(timeout=15)
+            if self._executor:
+                self._executor.shutdown(wait=False)
+                self._executor = None
+            return self._model
+        except concurrent.futures.TimeoutError:
+            logger.warning("Embedding model is taking too long to load. Aborting this request safely.")
+            raise TimeoutError("The AI model is currently booting up. Please try again in a few moments.")
+        except Exception as e:
+            logger.error(f"Failed to load embedding model: {e}")
+            with self._model_lock:
+                self._model_future = None
+                if self._executor:
+                    self._executor.shutdown(wait=False)
+                    self._executor = None
+            raise e
     
     def chunk_text(self, text: str, page_number: int = None) -> List[Dict]:
         """Split text into overlapping chunks"""

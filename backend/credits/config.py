@@ -19,12 +19,13 @@ AI_ACTIONS = {
     "EXPLAIN_SELECTION": AIActionConfig(reserve_tokens=1000, category="INTERACTIVE"),
     "SUGGEST_RESOURCES": AIActionConfig(reserve_tokens=1000, category="INTERACTIVE"),
     "DASHBOARD_MESSAGE": AIActionConfig(reserve_tokens=1000, category="INTERACTIVE"),
-    "GRADE_THEORY": AIActionConfig(reserve_tokens=2000, category="ASSESSMENT"),
-    "GENERATE_FLASHCARDS": AIActionConfig(reserve_tokens=3000, category="GENERATION"),
-    "STUDY_PLAN": AIActionConfig(reserve_tokens=4000, category="PLANNING"),
-    "BRAIN_BATTLE": AIActionConfig(reserve_tokens=4000, category="INTERACTIVE"),
-    "GENERATE_THEORY": AIActionConfig(reserve_tokens=5000, category="GENERATION"),
-    "GENERATE_MCQ": AIActionConfig(reserve_tokens=8000, category="GENERATION"),
+    "GRADE_THEORY": AIActionConfig(reserve_tokens=1000, category="ASSESSMENT"),
+    "GENERATE_FLASHCARDS": AIActionConfig(reserve_tokens=1000, category="GENERATION"),
+    "STUDY_PLAN": AIActionConfig(reserve_tokens=1000, category="PLANNING"),
+    "BRAIN_BATTLE": AIActionConfig(reserve_tokens=1000, category="INTERACTIVE"),
+    "GENERATE_THEORY": AIActionConfig(reserve_tokens=1000, category="GENERATION"),
+    "GENERATE_MCQ": AIActionConfig(reserve_tokens=1000, category="GENERATION"),
+    "GENERATE_RESOURCES": AIActionConfig(reserve_tokens=1000, category="GENERATION"),
 }
 
 # Daily Allowances and Monthly Caps

@@ -60,7 +60,7 @@ def overview(user: User, days: int = 30) -> dict:
 
     return {
         "window_days": days,
-        "has_data": attempted >= MIN_ITEMS_FOR_ACCURACY,
+        "has_data": attempted > 0,
         "attempted": attempted,
         "correct": correct,
         "incorrect": max(0, attempted - correct),

@@ -195,9 +195,16 @@ export default function AchievementsPage() {
                           {ach.badge.rarity}
                         </Badge>
                       )}
-                      <span className="text-xs font-medium text-muted-foreground bg-secondary px-2 py-1 rounded-md">
-                        {100 - ach.percentage}% Remaining
-                      </span>
+                      {ach.percentage === 0 ? (
+                        <span className="text-xs font-medium text-muted-foreground bg-secondary px-2 py-1 rounded-md flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50"></span>
+                          Locked
+                        </span>
+                      ) : (
+                        <span className="text-xs font-medium text-muted-foreground bg-secondary px-2 py-1 rounded-md">
+                          {100 - ach.percentage}% Remaining
+                        </span>
+                      )}
                     </div>
                   </div>
                 </CardContent>

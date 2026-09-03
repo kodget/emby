@@ -656,6 +656,9 @@ def verify_class_head(request):
         profile = Profile.objects.get(user_id=user_id, class_role=ClassRole.CLASS_HEAD)
         
         if approved:
+            if profile.class_head_verified:
+                return Response({'message': 'Class head is already verified'}, status=status.HTTP_200_OK)
+
             # Enforce max 3 class heads limit at the time of verification
             if profile.class_group and profile.class_group.class_heads.count() >= 3:
                 return Response({'error': 'This class already has the maximum of 3 verified class heads.'}, status=status.HTTP_400_BAD_REQUEST)

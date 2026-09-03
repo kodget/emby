@@ -95,7 +95,8 @@ def process_slide_task(self, slide_id: str, local_file_path: str = None):
         result = SlideConversionPipeline.process_slide(
             cloudinary_url=process_url,
             slide_id=slide_id,
-            original_file_type=slide.file_type or 'pdf'
+            original_file_type=slide.file_type or 'pdf',
+            status_obj=status_obj
         )
         
         # Handle result
@@ -143,16 +144,14 @@ def process_slide_task(self, slide_id: str, local_file_path: str = None):
             slide_content.extracted_at = timezone.now()
             slide_content.save()
             
-            # Update processing status
-            status_obj.status = 'completed'
-            status_obj.completed_at = timezone.now()
-            status_obj.error_message = ''
+            # Update processing status to generating quizzes
+            status_obj.status = 'generating_quizzes'
             status_obj.save()
             
             # Queue question generation
             slide.generation_status = 'in_progress'
             slide.save(update_fields=['generation_status'])
-            generate_questions_task.delay(slide_id)
+            generate_question_bank_task.delay(slide_id)
             
             logger.info(f"✓✓✓ SLIDE {slide_id} SUCCESSFULLY PROCESSED & QUESTIONS QUEUED ✓✓✓")
             
@@ -273,173 +272,6 @@ def cleanup_old_temp_files():
     logger.info(f"Cleanup complete: removed {cleaned} old temp directories")
     return {'cleaned': cleaned}
 
-
-@shared_task(bind=True, max_retries=3)
-def generate_questions_task(self, slide_id: str):
-    """
-    Generate questions from slide content across all difficulty levels.
-    """
-    from .models import Slide, SlideContent, QuizQuestion
-    from .services.ai_question_generator import AIQuestionGenerator, Gemini429Exception
-    import uuid
-    
-    logger.info(f"=== QUESTION GENERATION TASK START slide={slide_id} ===")
-    
-    try:
-        slide = Slide.objects.select_related('subject', 'block', 'sub_block', 'topic').get(id=slide_id)
-    except Slide.DoesNotExist:
-        error_msg = f"Slide {slide_id} not found"
-        logger.error(error_msg)
-        return {'success': False, 'slide_id': slide_id, 'error': error_msg}
-    
-    # We no longer fail the entire generation if *some* questions exist.
-    # Instead, we generate the deficit per difficulty level below.
-    
-    try:
-        slide_content = SlideContent.objects.get(slide=slide)
-        text = _extract_text_from_content(slide_content.content_data)
-        
-        if not text or len(text.strip()) < 100:
-            error_msg = f"Insufficient text content for slide {slide_id} ({len(text)} chars)"
-            logger.warning(error_msg)
-            slide.generation_status = 'failed'
-            slide.save(update_fields=['generation_status'])
-            return {
-                'success': False,
-                'slide_id': slide_id,
-                'error': error_msg,
-                'mcq_generated': 0,
-                'theory_generated': 0
-            }
-    except SlideContent.DoesNotExist:
-        error_msg = f"No content found for slide {slide_id}"
-        logger.error(error_msg)
-        slide.generation_status = 'failed'
-        slide.save(update_fields=['generation_status'])
-        return {'success': False, 'slide_id': slide_id, 'error': error_msg}
-    
-    logger.info(f"Generating questions from {len(text)} chars of content for slide '{slide.title}'")
-    
-    configs = [
-        {'difficulty': 'easy', 'mcq': 20, 'theory': 2},
-        {'difficulty': 'medium', 'mcq': 20, 'theory': 2},
-        {'difficulty': 'hard', 'mcq': 10, 'theory': 1}
-    ]
-    
-    saved_mcq = 0
-    saved_theory = 0
-    
-    try:
-        for config in configs:
-            diff = config['difficulty']
-            target_mcq = config['mcq']
-            target_theory = config['theory']
-            
-            existing_mcq = QuizQuestion.objects.filter(source_slide=slide, question_type='mcq', difficulty=diff).count()
-            existing_theory = QuizQuestion.objects.filter(source_slide=slide, question_type='theory', difficulty=diff).count()
-            
-            mcq_c = max(0, target_mcq - existing_mcq)
-            theory_c = max(0, target_theory - existing_theory)
-            
-            if mcq_c > 0:
-                logger.info(f"Generating {mcq_c} MCQ questions for {diff} difficulty...")
-                mcq_questions = AIQuestionGenerator.generate_mcqs_from_text(
-                    text=text,
-                    slide=slide,
-                    topic=slide.topic,
-                    count=mcq_c,
-                    difficulty=diff
-                )
-                for mcq_data in mcq_questions:
-                    try:
-                        QuizQuestion.objects.create(
-                            id=f"q_{uuid.uuid4().hex[:12]}",
-                            question_type='mcq',
-                            difficulty=mcq_data.get('difficulty', diff),
-                            subject=slide.subject,
-                            block=slide.block,
-                            sub_block=slide.sub_block,
-                            question_text=mcq_data['question_text'],
-                            option_a=mcq_data['option_a'],
-                            option_b=mcq_data['option_b'],
-                            option_c=mcq_data['option_c'],
-                            option_d=mcq_data['option_d'],
-                            correct_option=mcq_data['correct_option'],
-                            explanation=mcq_data.get('explanation', ''),
-                            maximum_marks=mcq_data.get('maximum_marks', 1),
-                            source_type='ai_generated',
-                            source_slide=slide,
-                            source_text=text[:1000],
-                        )
-                        saved_mcq += 1
-                    except Exception as e:
-                        logger.error(f"Failed to save MCQ question: {e}")
-            else:
-                logger.info(f"Skipping MCQ generation for {diff} difficulty: {existing_mcq}/{target_mcq} already exist.")
-                        
-            if theory_c > 0:
-                logger.info(f"Generating {theory_c} theory questions for {diff} difficulty...")
-                theory_questions = AIQuestionGenerator.generate_theory_from_text(
-                    text=text,
-                    slide=slide,
-                    topic=slide.topic,
-                    count=theory_c,
-                    difficulty=diff
-                )
-                for theory_data in theory_questions:
-                    try:
-                        QuizQuestion.objects.create(
-                            id=f"q_{uuid.uuid4().hex[:12]}",
-                            question_type='theory',
-                            difficulty=theory_data.get('difficulty', diff),
-                            subject=slide.subject,
-                            block=slide.block,
-                            sub_block=slide.sub_block,
-                            question_text=theory_data['question_text'],
-                            ideal_answer=theory_data.get('ideal_answer', ''),
-                            model_answer=theory_data.get('ideal_answer', ''),
-                            marking_rubric=theory_data.get('marking_rubric', []),
-                            maximum_marks=theory_data.get('maximum_marks', 20),
-                            explanation='',
-                            source_type='ai_generated',
-                            source_slide=slide,
-                            source_text=text[:1000],
-                        )
-                        saved_theory += 1
-                    except Exception as e:
-                        logger.error(f"Failed to save theory question: {e}")
-            else:
-                logger.info(f"Skipping theory generation for {diff} difficulty: {existing_theory}/{target_theory} already exist.")
-                    
-    except Gemini429Exception as e:
-        retry_num = self.request.retries
-        countdown = 60 * (2 ** retry_num)
-        logger.warning(f"Rate limit hit for slide {slide_id}. Retry {retry_num + 1}/{self.max_retries} in {countdown}s")
-        raise self.retry(exc=e, countdown=countdown)
-    except Exception as e:
-        error_msg = f"Error generating questions: {str(e)}"
-        logger.error(error_msg, exc_info=True)
-        slide.generation_status = 'failed'
-        slide.save(update_fields=['generation_status'])
-        return {
-            'success': False,
-            'slide_id': slide_id,
-            'error': error_msg,
-            'mcq_generated': saved_mcq,
-            'theory_generated': saved_theory
-        }
-        
-    slide.generation_status = 'completed'
-    slide.save(update_fields=['generation_status'])
-    
-    logger.info(f"=== QUESTION GENERATION COMPLETE slide={slide_id} MCQ={saved_mcq} Theory={saved_theory} ===")
-    return {
-        'success': True,
-        'slide_id': slide_id,
-        'mcq_generated': saved_mcq,
-        'theory_generated': saved_theory,
-        'total_generated': saved_mcq + saved_theory
-    }
 
 
 @shared_task(bind=True, max_retries=3)
@@ -575,7 +407,7 @@ def generate_flashcards_task(self, attempt_id):
         raise self.retry(exc=e)
 
 @shared_task(bind=True, max_retries=3)
-def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, count: int = 5, transaction_id: str = None):
+def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, count: int = 5, reservation: dict = None, slide_image_base64: str = None):
     """
     Generate flashcards from slide content using AI.
     """
@@ -607,9 +439,10 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
         text = _extract_text_from_content(slide_content.content_data)
         
         if not text or len(text.strip()) < 100:
-            error_msg = f"Insufficient text content for slide {slide_id} ({len(text)} chars)"
-            logger.warning(error_msg)
-            return {'success': False, 'slide_id': slide_id, 'error': error_msg}
+            if not slide_image_base64:
+                error_msg = f"Insufficient text content for slide {slide_id} ({len(text if text else '')} chars) and no image provided"
+                logger.warning(error_msg)
+                return {'success': False, 'slide_id': slide_id, 'error': error_msg}
     except SlideContent.DoesNotExist:
         error_msg = f"No content found for slide {slide_id}"
         logger.error(error_msg)
@@ -621,20 +454,16 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
             slide=slide,
             topic=slide.topic,
             count=count,
+            slide_image_base64=slide_image_base64,
             return_usage=True
         )
-        if transaction_id:
-            CreditManager.commit_usage(
-                user, 
-                {'transaction_id': transaction_id, 'reserved_amount': count * 10}, 
-                tokens
-            )
+        if reservation:
+            CreditManager.commit_usage(user, reservation, tokens)
     except Exception as e:
         error_msg = f"Error generating flashcards: {str(e)}"
         logger.error(error_msg, exc_info=True)
-        if transaction_id:
-            CreditManager.refund_credits(user, count * 10, action="REFUND_FLASHCARD_ERROR", tx_id=transaction_id)
-        # Note: if it's Gemini429Exception, we could retry here if we imported it
+        if reservation:
+            CreditManager.refund_credits(user, reservation['reserved_amount'], action="REFUND_FLASHCARD_ERROR", description=f"Refunded {reservation['reserved_amount']} credits due to flashcard generation error")
         return {'success': False, 'slide_id': slide_id, 'error': error_msg}
     
     saved_count = 0
@@ -694,9 +523,38 @@ def generate_question_bank_task(self, slide_id: str, force: bool = False):
         return {"success": False, "error": "slide not found"}
 
     try:
-        return generate_for_slide(slide, force=force)
+        result = generate_for_slide(slide, force=force)
+        # Update SlideProcessingStatus and slide.generation_status to completed
+        from .models import SlideProcessingStatus
+        from django.utils import timezone
+        try:
+            status_obj = SlideProcessingStatus.objects.get(slide_id=slide_id)
+            status_obj.status = 'completed'
+            status_obj.completed_at = timezone.now()
+            status_obj.error_message = ''
+            status_obj.save(update_fields=['status', 'completed_at', 'error_message'])
+        except SlideProcessingStatus.DoesNotExist:
+            pass
+        # Mark the slide itself as done so the frontend unblocks quiz creation
+        slide.generation_status = 'completed'
+        slide.save(update_fields=['generation_status'])
+        logger.info("generate_question_bank_task: slide %s marked generation_status=completed", slide_id)
+        return result
     except Exception as exc:  # noqa: BLE001
         logger.exception("Question bank generation failed for %s", slide_id)
+        # Update SlideProcessingStatus and slide.generation_status to failed
+        from .models import SlideProcessingStatus
+        from django.utils import timezone
+        try:
+            status_obj = SlideProcessingStatus.objects.get(slide_id=slide_id)
+            status_obj.status = 'failed'
+            status_obj.error_message = str(exc)
+            status_obj.completed_at = timezone.now()
+            status_obj.save(update_fields=['status', 'error_message', 'completed_at'])
+        except SlideProcessingStatus.DoesNotExist:
+            pass
+        slide.generation_status = 'failed'
+        slide.save(update_fields=['generation_status'])
         raise self.retry(exc=exc)
 
 

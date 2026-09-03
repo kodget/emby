@@ -34,7 +34,7 @@ def _strip_json_fences(text) -> str:
     return llm.strip_fences(text)
 
 
-def _generate(parts: list, model=None) -> str:
+def _generate(parts: list, model=None, return_usage: bool = False) -> Any:
     """
     Run a completion against the configured open-weight model.
 
@@ -52,6 +52,7 @@ def _generate(parts: list, model=None) -> str:
             model=model,
             temperature=0.5,
             max_tokens=4096,
+            return_usage=return_usage,
         )
     except llm.LLMError as e:
         text = str(e).lower()
@@ -196,6 +197,7 @@ can be correct, for example by asking which structure is NOT a branch, or by add
 detail that excludes the other candidates.
 
 RESPOND ONLY WITH VALID JSON. NO MARKDOWN CODE BLOCKS. NO PREAMBLE.
+DO NOT use markdown formatting like **bold** or *italics* in your response. Respond in plain text.
 
 Format:
 [
@@ -214,7 +216,7 @@ Format:
 """
             try:
                 raw = _generate([prompt])
-                data = json.loads(_strip_json_fences(raw))
+                data = llm.parse_json(raw, default=[])
                 if not isinstance(data, list):
                     if isinstance(data, dict) and "mcqs" in data:
                         data = data["mcqs"]

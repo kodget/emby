@@ -228,7 +228,7 @@ class PDFToImageConverter:
     @staticmethod
     def convert_pdf_to_images(pdf_path: str, output_dir: str, dpi: int = 150) -> Tuple[bool, List[str]]:
         """
-        Convert PDF pages to PNG images
+        Convert PDF pages to PNG images using PyMuPDF (fitz)
         
         Args:
             pdf_path: Path to PDF file
@@ -239,35 +239,40 @@ class PDFToImageConverter:
             Tuple (success: bool, list of image paths)
         """
         try:
-            from pdf2image import convert_from_path
+            import fitz  # PyMuPDF
             
             os.makedirs(output_dir, exist_ok=True)
             
             logger.info(f"Converting PDF to images: {pdf_path}")
             logger.info(f"DPI: {dpi}, Output dir: {output_dir}")
             
-            # Convert PDF pages to images
-            pages = convert_from_path(pdf_path, dpi=dpi)
-            
+            doc = fitz.open(pdf_path)
             image_paths = []
-            pdf_filename = Path(pdf_path).stem
             
-            logger.info(f"PDF has {len(pages)} pages")
+            logger.info(f"PDF has {len(doc)} pages")
             
-            for page_number, page_image in enumerate(pages, 1):
+            # zoom factor for DPI. fitz default is 72 dpi.
+            zoom = dpi / 72.0
+            mat = fitz.Matrix(zoom, zoom)
+            
+            for page_number in range(len(doc)):
+                page = doc.load_page(page_number)
+                pix = page.get_pixmap(matrix=mat)
+                
                 # Save as PNG
-                image_filename = f"page_{page_number:04d}.png"
+                image_filename = f"page_{page_number + 1:04d}.png"
                 image_path = os.path.join(output_dir, image_filename)
                 
-                page_image.save(image_path, 'PNG')
+                pix.save(image_path)
                 image_paths.append(image_path)
-                logger.info(f"✓ Saved page {page_number}: {image_path} ({page_image.width}x{page_image.height})")
+                logger.info(f"✓ Saved page {page_number + 1}: {image_path} ({pix.width}x{pix.height})")
             
-            logger.info(f"✓ Successfully converted {len(pages)} pages to images")
+            doc.close()
+            logger.info(f"✓ Successfully converted {len(image_paths)} pages to images")
             return True, image_paths
             
         except ImportError:
-            logger.error("pdf2image not installed - install with: pip install pdf2image")
+            logger.error("PyMuPDF (fitz) not installed - install with: pip install PyMuPDF")
             return False, []
         except Exception as e:
             logger.error(f"PDF to image conversion error: {e}")

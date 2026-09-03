@@ -196,7 +196,7 @@ function FlashcardsTab({ slideId }: { slideId: string }) {
     if (!generating) return;
 
     let pollAttempts = 0;
-    const maxPolls = 20; // 1 minute total
+    const maxPolls = 40; // 2 minutes total
 
     const pollForFlashcards = async () => {
       pollAttempts++;
@@ -218,7 +218,7 @@ function FlashcardsTab({ slideId }: { slideId: string }) {
 
     const interval = setInterval(pollForFlashcards, 3000);
     return () => clearInterval(interval);
-  }, [generating]);
+  }, [generating, slideId]);
 
   const handleGenerate = async () => {
     try {
@@ -226,7 +226,13 @@ function FlashcardsTab({ slideId }: { slideId: string }) {
       setError(null);
       
       console.log("?? Starting flashcard generation for slide:", slideId);
-      await aiApi.generateFlashcards(slideId, 5);
+      
+      const currentSlide = slides[slideIndex];
+      const slideImageBase64 = currentSlide?.imageUrl
+        ? await imageUrlToBase64(currentSlide.imageUrl).catch(() => undefined)
+        : undefined;
+        
+      await aiApi.generateFlashcards(slideId, 5, slideImageBase64);
       console.log("?? Generation request sent successfully");
       
     } catch (err: any) {

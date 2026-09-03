@@ -15,15 +15,15 @@ export function FlashcardEmptyState({ mode = "all" }: FlashcardEmptyStateProps) 
           <Zap className="w-9 h-9 text-emerald-400" />
         </div>
         <div>
-          <h3 className="text-2xl font-bold text-white mb-2 flex items-center justify-center gap-2">You're all caught up! <PartyPopper className="w-6 h-6 text-emerald-400" /></h3>
-          <p className="text-white/50 max-w-md">
+          <h3 className="text-2xl font-bold text-foreground mb-2 flex items-center justify-center gap-2">You're all caught up! <PartyPopper className="w-6 h-6 text-emerald-400" /></h3>
+          <p className="text-muted-foreground max-w-md">
             No cards are due for review right now. Come back later, or create new cards to keep learning.
           </p>
         </div>
         <div className="flex gap-3">
           <Link
             href="/flashcards/manage"
-            className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors"
+            className="px-5 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-sm font-medium transition-colors"
           >
             Manage Cards
           </Link>
@@ -44,8 +44,8 @@ export function FlashcardEmptyState({ mode = "all" }: FlashcardEmptyStateProps) 
         <Layers className="w-9 h-9 text-violet-400" />
       </div>
       <div>
-        <h3 className="text-2xl font-bold text-white mb-2">No flashcards yet</h3>
-        <p className="text-white/50 max-w-md">
+        <h3 className="text-2xl font-bold text-foreground mb-2">No flashcards yet</h3>
+        <p className="text-muted-foreground max-w-md">
           Create your first card manually, or take a quiz — cards are automatically
           generated from questions you get wrong.
         </p>
@@ -53,7 +53,7 @@ export function FlashcardEmptyState({ mode = "all" }: FlashcardEmptyStateProps) 
       <div className="flex gap-3">
         <Link
           href="/quiz"
-          className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors"
+          className="px-5 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-sm font-medium transition-colors"
         >
           Take a Quiz
         </Link>

@@ -27,49 +27,6 @@ logger = logging.getLogger(__name__)
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _libreoffice_path() -> str:
-    """Return the soffice executable path, checking common locations."""
-    candidates = [
-        r"C:\Program Files\LibreOffice\program\soffice.exe",
-        r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
-        "/usr/bin/soffice",
-        "/usr/local/bin/soffice",
-        "/Applications/LibreOffice.app/Contents/MacOS/soffice",
-    ]
-    try:
-        cmd = ["where", "soffice"] if os.name == "nt" else ["which", "soffice"]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-        if r.returncode == 0:
-            return r.stdout.strip().splitlines()[0]
-    except Exception:
-        pass
-    for p in candidates:
-        if os.path.exists(p):
-            return p
-    return "soffice"
-
-
-def _convert_to_pdf_via_libreoffice(input_path: str, output_dir: str) -> str:
-    """
-    Use LibreOffice headless to convert input_path → PDF in output_dir.
-    Returns the PDF path on success, raises RuntimeError on failure.
-    """
-    os.makedirs(output_dir, exist_ok=True)
-    soffice = _libreoffice_path()
-    logger.info(f"LibreOffice convert → PDF: {input_path}")
-    result = subprocess.run(
-        [soffice, "--headless", "--convert-to", "pdf", input_path, "--outdir", output_dir],
-        capture_output=True, text=True, timeout=300,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"LibreOffice failed: {result.stderr.strip()}")
-    pdf_path = os.path.join(output_dir, Path(input_path).stem + ".pdf")
-    if not os.path.exists(pdf_path):
-        raise RuntimeError(f"PDF not produced at expected path: {pdf_path}")
-    logger.info(f"✓ LibreOffice produced: {pdf_path}")
-    return pdf_path
-
-
 def _pdf_to_jpg_pages(pdf_path: str, output_dir: str, dpi: int = 150) -> List[str]:
     """
     Render every page of a PDF as a JPEG using PyMuPDF.
@@ -214,6 +171,7 @@ class SlideConversionPipeline:
         cloudinary_url: str,
         slide_id: str,
         original_file_type: str,
+        status_obj=None,
     ) -> Dict[str, Any]:
         result: Dict[str, Any] = {
             "success": False,
@@ -233,6 +191,9 @@ class SlideConversionPipeline:
 
         try:
             # ── 0. Download ──────────────────────────────────────────────────
+            if status_obj:
+                status_obj.status = 'downloading'
+                status_obj.save(update_fields=['status'])
             logger.info(f"Downloading: {cloudinary_url}")
             file_bytes = _download_from_cloudinary(cloudinary_url)
             logger.info(f"Downloaded {len(file_bytes):,} bytes")
@@ -243,20 +204,22 @@ class SlideConversionPipeline:
             with open(original_path, "wb") as fh:
                 fh.write(file_bytes)
 
-            # ── 1. Get a PDF (or use the file directly if already PDF) ───────
-            if ft == "pdf":
-                logger.info("File is already PDF — skipping LibreOffice")
-                pdf_path = original_path
-            else:
-                logger.info(f"Converting {ft.upper()} → PDF via LibreOffice…")
-                pdf_dir = os.path.join(temp_dir, "pdf")
-                pdf_path = _convert_to_pdf_via_libreoffice(original_path, pdf_dir)
+            # ── 1. Verify it's a PDF ───────
+            if ft != "pdf":
+                raise ValueError("Only PDF files are supported.")
+            pdf_path = original_path
 
             # ── 2. Extract text (for RAG) ────────────────────────────────────
+            if status_obj:
+                status_obj.status = 'extracting_text'
+                status_obj.save(update_fields=['status'])
             text_content = _extract_text_from_pdf(pdf_path)
             result["text_content"] = text_content
 
             # ── 3. Render each PDF page → JPG ────────────────────────────────
+            if status_obj:
+                status_obj.status = 'converting_to_jpg'
+                status_obj.save(update_fields=['status'])
             logger.info("Rendering PDF pages → JPG…")
             jpg_dir = os.path.join(temp_dir, "pages")
             jpg_paths = _pdf_to_jpg_pages(pdf_path, jpg_dir, dpi=150)

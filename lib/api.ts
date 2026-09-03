@@ -1557,23 +1557,33 @@ export const aiApi = {
       explanation: string;
     }>;
   }> => {
-    const response = await api.post("/api/ai/generate-mcqs/", {
-      slide_id: slideId,
-    });
+    const response = await api.post(
+      "/api/ai/generate-mcqs/",
+      {
+        slide_id: slideId,
+      },
+      { timeout: 60000 }
+    );
     return response.data;
   },
 
   generateFlashcards: async (
     slideId: string,
     count: number = 5,
+    slideImageBase64?: string
   ): Promise<{
     message: string;
     task_id: string;
   }> => {
-    const response = await api.post("/api/ai/generate-flashcards/", {
-      slide_id: slideId,
-      count: count,
-    });
+    const response = await api.post(
+      "/api/ai/generate-flashcards/",
+      {
+        slide_id: slideId,
+        count: count,
+        slide_image_base64: slideImageBase64,
+      },
+      { timeout: 60000 }
+    );
     return response.data;
   },
 

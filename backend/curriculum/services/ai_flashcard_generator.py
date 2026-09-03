@@ -11,7 +11,7 @@ class AIFlashcardGenerator:
     """
     
     @staticmethod
-    def generate_flashcards_from_text(text: str, slide, topic, count: int, return_usage: bool = False) -> Any:
+    def generate_flashcards_from_text(text: str, slide, topic, count: int, slide_image_base64: str = None, return_usage: bool = False) -> Any:
         """
         Generate flashcards from text.
         """
@@ -31,6 +31,7 @@ Each flashcard must have a concise 'front' (the question or prompt) and a clear,
 Include a brief 'explanation' for context where appropriate.
 
 RESPOND ONLY WITH VALID JSON. NO MARKDOWN CODE BLOCKS. NO PREAMBLE.
+DO NOT use markdown formatting like **bold** or *italics* in your response. Respond in plain text.
 
 Format:
 [
@@ -41,11 +42,27 @@ Format:
   }}
 ]
 """
-        if return_usage:
-            raw, tokens = _generate([prompt], return_usage=True)
+        if slide_image_base64:
+            from curriculum.llm import chat_with_image
+            try:
+                if return_usage:
+                    raw, tokens = chat_with_image(prompt=prompt, image_b64=slide_image_base64, max_tokens=4096, return_usage=True)
+                else:
+                    raw = chat_with_image(prompt=prompt, image_b64=slide_image_base64, max_tokens=4096)
+            except Exception as e:
+                logger.warning(f"Failed to use vision model, falling back to text: {e}")
+                if return_usage:
+                    raw, tokens = _generate([prompt], return_usage=True)
+                else:
+                    raw = _generate([prompt])
         else:
-            raw = _generate([prompt])
-        data = json.loads(_strip_json_fences(raw))
+            if return_usage:
+                raw, tokens = _generate([prompt], return_usage=True)
+            else:
+                raw = _generate([prompt])
+                
+        from curriculum.llm import parse_json
+        data = parse_json(raw, default=[])
         if not isinstance(data, list):
             if isinstance(data, dict) and "flashcards" in data:
                 data = data["flashcards"]

@@ -172,8 +172,7 @@ Evaluate now."""
 
         try:
             raw_response = _generate([prompt])
-            cleaned_json = _strip_json_fences(raw_response)
-            data = json.loads(cleaned_json)
+            data = llm.parse_json(raw_response, default={})
             
             # Extract and validate score
             score = data.get('score', 0)

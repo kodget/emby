@@ -10,6 +10,7 @@ ENDPOINTS:
 """
 
 import logging
+logger = logging.getLogger(__name__)
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -711,19 +712,32 @@ def generate_flashcards(request):
     
     slide_id = request.data.get('slide_id')
     count = request.data.get('count', 5)
+    slide_image_base64 = request.data.get('slide_image_base64')
     
     if not slide_id:
         return Response({'error': 'slide_id is required'}, status=status.HTTP_400_BAD_REQUEST)
         
     try:
+        from django.conf import settings
         from .tasks import generate_ai_flashcards_from_slide_task
-        task = generate_ai_flashcards_from_slide_task.delay(
-            slide_id, request.user.id, int(count), reservation['transaction_id']
-        )
+        
+        if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+            import threading
+            threading.Thread(
+                target=generate_ai_flashcards_from_slide_task.delay,
+                args=(slide_id, request.user.id, int(count), reservation, slide_image_base64),
+                daemon=True
+            ).start()
+            task_id = "local-eager-task"
+        else:
+            task = generate_ai_flashcards_from_slide_task.delay(
+                slide_id, request.user.id, int(count), reservation, slide_image_base64
+            )
+            task_id = task.id
         
         return Response({
             'message': 'Flashcard generation started',
-            'task_id': task.id,
+            'task_id': task_id,
             'balance': CreditManager.get_user_balance(request.user)
         }, status=status.HTTP_202_ACCEPTED)
         

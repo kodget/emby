@@ -66,8 +66,7 @@ def _generate(parts: list, model: Optional[str] = None, return_usage: bool = Fal
                 _as_base64(image["data"]),
                 mime_type=image.get("mime_type", "image/jpeg"),
                 max_tokens=1500,
-                # Vision chat doesn't explicitly have return_usage yet, let me update it too! wait.
-                # I'll just pass return_usage below.
+                return_usage=return_usage,
             )
         except (llm.LLMError, llm.LLMNotConfigured, ValueError) as exc:
             logger.warning("Vision call failed, falling back to slide text: %s", exc)
@@ -124,6 +123,11 @@ YOUR ROLE:
 5. Generate MCQs or summaries when asked
 
 TONE: Warm, encouraging, like a helpful senior colleague. If something is confusing, say so ("Totally normal to find this tricky at first...").
+
+FORMATTING: 
+- Respond in plain text ONLY. 
+- Do NOT use markdown formatting (no asterisks `*` or `**` for bold/italics, no `#` for headings).
+- Use simple paragraphs and standard text formatting so it is easy to read.
 """
 
     def chat(
@@ -236,14 +240,18 @@ Generate: 3 YouTube suggestions, 2 textbook recommendations, 5 MCQs based on thi
             else:
                 raw = _generate(parts)
 
-            # Strip markdown fences if present
+            # Extract JSON more safely, handling preambles or fences
             text = raw.strip()
-            if text.startswith("```"):
-                lines = text.split("\n")
-                # Remove first and last fence lines
-                text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-
-            resources = json.loads(text)
+            
+            # Find the first { and last } to extract just the JSON object
+            start_idx = text.find('{')
+            end_idx = text.rfind('}')
+            
+            if start_idx != -1 and end_idx != -1 and end_idx >= start_idx:
+                json_str = text[start_idx:end_idx+1]
+                resources = json.loads(json_str)
+            else:
+                resources = {}
             # Ensure all keys exist
             resources.setdefault("youtube", [])
             resources.setdefault("textbooks", [])

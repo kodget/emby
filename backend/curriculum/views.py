@@ -1033,6 +1033,13 @@ def suggest_videos(request, slide_id):
         'topic': slide.topic_name,
     }
 
+    try:
+        videos = suggest_related_videos(slide_info)
+        return Response({'videos': videos})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error suggesting videos: {e}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # -------------------------
 # SLIDE DECK VIEWS
@@ -2070,27 +2077,48 @@ class FlashcardViewSet(viewsets.ModelViewSet):
             'topic__sub_block__block', 
             'topic__sub_block__block__subject',
             'topic__block',
-            'topic__block__subject'
+            'topic__block__subject',
+            'sub_block',
+            'sub_block__block',
+            'sub_block__block__subject',
+            'block',
+            'block__subject',
+            'subject'
         ).prefetch_related('progress_records')
         
         for fc in cards:
-            if not fc.topic:
-                continue
-                
-            topic = fc.topic
-            if topic.sub_block:
-                subject_name = topic.sub_block.block.subject.name if topic.sub_block.block and topic.sub_block.block.subject else "Unknown Subject"
-                block_name = topic.sub_block.block.name if topic.sub_block.block else "Unknown Block"
-                sub_block_name = topic.sub_block.name
-                deck_name = f"{subject_name} > {block_name} > {sub_block_name} > {topic.name}"
-            elif topic.block:
-                subject_name = topic.block.subject.name if topic.block.subject else "Unknown Subject"
-                block_name = topic.block.name
-                deck_name = f"{subject_name} > {block_name} > {topic.name}"
+            if fc.topic:
+                topic = fc.topic
+                if topic.sub_block:
+                    subject_name = topic.sub_block.block.subject.name if topic.sub_block.block and topic.sub_block.block.subject else "Unknown Subject"
+                    block_name = topic.sub_block.block.name if topic.sub_block.block else "Unknown Block"
+                    sub_block_name = topic.sub_block.name
+                    deck_name = f"{subject_name} > {block_name} > {sub_block_name} > {topic.name}"
+                elif topic.block:
+                    subject_name = topic.block.subject.name if topic.block.subject else "Unknown Subject"
+                    block_name = topic.block.name
+                    deck_name = f"{subject_name} > {block_name} > {topic.name}"
+                else:
+                    deck_name = topic.name
+                deck_id = f"topic_{topic.id}"
+            elif fc.sub_block:
+                sub_block = fc.sub_block
+                subject_name = sub_block.block.subject.name if sub_block.block and sub_block.block.subject else "Unknown Subject"
+                block_name = sub_block.block.name if sub_block.block else "Unknown Block"
+                deck_name = f"{subject_name} > {block_name} > {sub_block.name}"
+                deck_id = f"sub_block_{sub_block.id}"
+            elif fc.block:
+                block = fc.block
+                subject_name = block.subject.name if block.subject else "Unknown Subject"
+                deck_name = f"{subject_name} > {block.name}"
+                deck_id = f"block_{block.id}"
+            elif fc.subject:
+                deck_name = fc.subject.name
+                deck_id = f"subject_{fc.subject.id}"
             else:
-                deck_name = topic.name
+                deck_name = "General Knowledge"
+                deck_id = "general"
                 
-            deck_id = topic.id
             if deck_id not in decks_dict:
                 decks_dict[deck_id] = {
                     "subject_id": deck_id,
