@@ -48,7 +48,7 @@ def send_verification_email(user, token):
         f'Click this link to verify your email: {verification_link}',
         settings.DEFAULT_FROM_EMAIL,
         [user.email],
-        fail_silently=False,
+        fail_silently=True,
     )
 
 
@@ -300,7 +300,7 @@ def forgot_password(request):
                 f'Click this link to reset your password: {reset_link}\n\nThis link will expire in 1 hour.\n\nIf you did not request this, please ignore this email.',
                 settings.DEFAULT_FROM_EMAIL,
                 [user.email],
-                fail_silently=False,
+                fail_silently=True,
             )
             return Response({
                 'message': 'Password reset email sent. Please check your inbox.'
@@ -470,7 +470,7 @@ def submit_onboarding(request):
                                 f'A new class head has joined your class: {user.get_full_name()} ({user.email})\n\nYour class now has {class_group.class_heads.count() + 1} class head(s).\n\nClass Code: {class_group.code}',
                                 settings.DEFAULT_FROM_EMAIL,
                                 existing_heads_emails,
-                                fail_silently=False,
+                                fail_silently=True,
                             )
                         except Exception as e:
                             print(f"Email sending to existing heads failed: {e}")
@@ -484,7 +484,8 @@ def submit_onboarding(request):
                     profile.class_group = class_group
                     is_new_class = True
                 
-                # Send email with class code to new class head
+                # Send email with class code to new class head (fail_silently=True
+                # so a broken SMTP config never crashes the onboarding request)
                 try:
                     if is_new_class:
                         send_mail(
@@ -492,7 +493,7 @@ def submit_onboarding(request):
                             f'Congratulations! You are the first class head for {school_name} - {set_name}.\n\nYour class code is: {class_group.code}\n\nShare this code with your classmates to join.\n\nNote: Your account is pending verification. You will be notified once approved.',
                             settings.DEFAULT_FROM_EMAIL,
                             [user.email],
-                            fail_silently=False,
+                            fail_silently=True,
                         )
                     else:
                         send_mail(
@@ -500,7 +501,7 @@ def submit_onboarding(request):
                             f'You have joined as class head for {school_name} - {set_name}.\n\nYour class code is: {class_group.code}\n\nShare this code with your classmates to join.\n\nThere are currently {class_group.class_heads.count()} other class head(s) in this class.\n\nNote: Your account is pending verification. You will be notified once approved.',
                             settings.DEFAULT_FROM_EMAIL,
                             [user.email],
-                            fail_silently=False,
+                            fail_silently=True,
                         )
                 except Exception as e:
                     print(f"Email sending failed: {e}")
@@ -678,7 +679,7 @@ def verify_class_head(request):
                     f'Congratulations! Your class head account has been verified.\n\nYou now have full access to all premium features.\n\nYour class code: {profile.class_group.code if profile.class_group else "N/A"}',
                     settings.DEFAULT_FROM_EMAIL,
                     [profile.user.email],
-                    fail_silently=False,
+                    fail_silently=True,
                 )
             except Exception as e:
                 print(f"Email sending failed: {e}")
@@ -694,7 +695,7 @@ def verify_class_head(request):
                             f'{profile.user.get_full_name()} has been verified as a class head for your class.\n\nYour class now has {profile.class_group.class_heads.filter(profile__class_head_verified=True).count()} verified class head(s).',
                             settings.DEFAULT_FROM_EMAIL,
                             other_heads_emails,
-                            fail_silently=False,
+                            fail_silently=True,
                         )
                     except Exception as e:
                         print(f"Email sending to other heads failed: {e}")
@@ -712,7 +713,7 @@ def verify_class_head(request):
                     f'Your class head verification request was not approved.\n\nReason: {rejection_reason}\n\nPlease contact support for more information.',
                     settings.DEFAULT_FROM_EMAIL,
                     [profile.user.email],
-                    fail_silently=False,
+                    fail_silently=True,
                 )
             except Exception as e:
                 print(f"Email sending failed: {e}")
