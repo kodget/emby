@@ -29,7 +29,7 @@ const initialState: NotificationsState = {
 export const fetchNotifications = createAsyncThunk(
   "notifications/fetchNotifications",
   async (unreadOnly?: boolean) => {
-    const url = unreadOnly ? "/learning/notifications/?unread=true" : "/learning/notifications/";
+    const url = unreadOnly ? "/api/learning/notifications/?unread=true" : "/api/learning/notifications/";
     const response = await api.get(url);
     return response.data;
   }
@@ -39,7 +39,7 @@ export const markRead = createAsyncThunk(
   "notifications/markRead",
   async (id?: string) => {
     const payload = id ? { id } : {};
-    const response = await api.post("/learning/notifications/read/", payload);
+    const response = await api.post("/api/learning/notifications/read/", payload);
     return { id, marked_read: response.data.marked_read };
   }
 );
@@ -62,8 +62,11 @@ const notificationsSlice = createSlice({
       })
       .addCase(fetchNotifications.fulfilled, (state, action) => {
         state.status = "succeeded";
-        state.items = action.payload.results;
-        state.unreadCount = action.payload.unread_count;
+        const items = Array.isArray(action.payload) ? action.payload : (action.payload.results || []);
+        state.items = items;
+        state.unreadCount = action.payload.unread_count !== undefined 
+          ? action.payload.unread_count 
+          : items.filter((n: Notification) => !n.read).length;
       })
       .addCase(fetchNotifications.rejected, (state, action) => {
         state.status = "failed";

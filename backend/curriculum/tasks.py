@@ -480,7 +480,7 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
                     'block': slide.block,
                     'sub_block': slide.sub_block,
                     'topic': slide.topic,
-                    'source': 'ai_generated',
+                    'source': 'ai'
                 }
             )
             if created:
@@ -582,7 +582,7 @@ def analyze_quiz_attempt_task(self, attempt_id):
     """
     from .models import QuizAttempt
     from .services.flashcard_generator import generate_flashcards_for_attempt
-    from .llm import get_ai_client
+    from .llm import chat
     import json
     import time
     
@@ -625,8 +625,7 @@ def analyze_quiz_attempt_task(self, attempt_id):
         Return ONLY valid JSON.
         """
         
-        client = get_ai_client()
-        response_text = client.generate_text(prompt, max_tokens=1000)
+        response_text = chat([{"role": "user", "content": prompt}], max_tokens=1000)
         
         # Clean response
         clean_text = response_text.strip()

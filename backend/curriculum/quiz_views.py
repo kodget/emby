@@ -33,15 +33,16 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
         exam_type = request.data.get('exam_type', 'practice')
         
         # Enforce formal assessment rules
-        if exam_type == 'formal_assessment':
+        if exam_type == 'formal' or exam_type == 'formal_assessment':
+            exam_type = 'formal'
             if request.data.get('slide') or request.data.get('topic'):
                 return Response({'error': 'Formal assessments can only be taken at the Block or Subject level.'}, status=status.HTTP_400_BAD_REQUEST)
-            mcq_count = 100
-            theory_count = 10
+            mcq_count = 50
+            theory_count = 5
             request.data['is_timed'] = True
-            request.data['duration_minutes'] = 180
-            config['mcq_count'] = 100
-            config['theory_count'] = 10
+            request.data['duration_minutes'] = 150
+            config['mcq_count'] = 50
+            config['theory_count'] = 5
         
         user = request.user
         
@@ -91,13 +92,21 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
             else:
                 return Response({'error': "No questions found matching your selected criteria. Try selecting a broader topic or difficulty."}, status=status.HTTP_400_BAD_REQUEST)
         
+        is_timed = request.data.get('is_timed', False)
+        duration_minutes = request.data.get('duration_minutes')
+        deadline = None
+        if is_timed and duration_minutes:
+            from datetime import timedelta
+            deadline = timezone.now() + timedelta(minutes=duration_minutes)
+
         # 3. Create the attempt
         attempt = QuizAttempt.objects.create(
             id=f"attempt-{uuid.uuid4().hex[:8]}",
             user=user,
             exam_type=request.data.get('exam_type', 'practice'),
-            is_timed=request.data.get('is_timed', False),
-            duration_minutes=request.data.get('duration_minutes'),
+            is_timed=is_timed,
+            duration_minutes=duration_minutes,
+            deadline=deadline,
             configuration=config,
             status='in_progress',
             question_ids=[q.id for q in questions],
@@ -121,8 +130,8 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
         serializer = QuizAttemptSerializer(attempt)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=['post'])
-    def submit_answer(self, request, pk=None):
+    @action(detail=True, methods=['post'], url_path='answer')
+    def answer(self, request, pk=None):
         attempt = self.get_object()
         if attempt.status != 'in_progress':
             return Response({'error': 'Attempt is not in progress'}, status=status.HTTP_400_BAD_REQUEST)
@@ -148,6 +157,23 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
         )
         
         return Response({'status': 'Answer recorded'})
+
+    @action(detail=True, methods=['post'])
+    def flag(self, request, pk=None):
+        attempt = self.get_object()
+        question_id = request.data.get('question_id')
+        if not question_id:
+            return Response({'error': 'Missing question_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if question_id not in attempt.flagged_questions:
+            attempt.flagged_questions.append(question_id)
+            attempt.save(update_fields=['flagged_questions'])
+            
+        return Response({'status': 'Question flagged'})
+
+    @action(detail=True, methods=['post'])
+    def auto_submit(self, request, pk=None):
+        return self.submit(request, pk)
 
     @action(detail=True, methods=['post'])
     def submit(self, request, pk=None):
@@ -267,13 +293,13 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
             if q:
                 data.append({
                     'id': r['id'],
-                    'question_text': q.get('text', ''),
+                    'question_text': q.get('question_text', ''),
                     'question_type': q.get('question_type', 'mcq'),
                     'selected_option': r.get('selected_option'),
                     'student_answer': r.get('text_answer'),
                     'correct_option': q.get('correct_option'),
-                    'correct_answer': q.get('correct_answer'),
+                    'correct_answer': q.get('model_answer'),
                     'explanation': q.get('explanation'),
-                    'topic': q.get('topic')
+                    'topic': q.get('topic_name')
                 })
         return Response(data)

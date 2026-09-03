@@ -310,8 +310,10 @@ function QuizConfigContent() {
       });
       router.push(`/quiz/attempt/${response.id}`);
     } catch (error: any) {
-      console.error("createQuiz error:", error);
       const data = error.response?.data;
+      if (error.response?.status !== 400) {
+        console.error("createQuiz error:", error);
+      }
       const msg =
         data?.error ||
         data?.detail ||
@@ -712,7 +714,10 @@ function QuizConfigContent() {
                                 exam_type: et.type,
                                 is_timed: et.type !== "practice",
                                 duration_minutes:
-                                  et.type === "formal" ? 180 : 30,
+                                  et.type === "formal" ? 150 : 30,
+                                configuration: et.type === "formal" 
+                                  ? { ...config.configuration, mcq_count: 50, theory_count: 5 }
+                                  : config.configuration,
                               });
                             }}
                           >
@@ -896,6 +901,7 @@ function QuizConfigContent() {
                         max={limits.mcq}
                         min={0}
                         step={1}
+                        disabled={config.exam_type === "formal"}
                       />
                     </div>
                     <div className="space-y-3">
@@ -925,6 +931,7 @@ function QuizConfigContent() {
                         max={limits.theory}
                         min={0}
                         step={1}
+                        disabled={config.exam_type === "formal"}
                       />
                     </div>
                     <div className="p-4 rounded-lg bg-muted/50">
@@ -958,44 +965,46 @@ function QuizConfigContent() {
                           Add time pressure for realistic simulation
                         </div>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={config.is_timed}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            is_timed: e.target.checked,
-                            duration_minutes: e.target.checked ? 30 : undefined,
-                          })
-                        }
-                        className="w-5 h-5 cursor-pointer"
-                      />
-                    </div>
-                    {config.is_timed && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        className="space-y-3"
-                      >
-                        <div className="flex items-center justify-between">
-                          <label className="font-medium">
-                            Duration (minutes)
-                          </label>
-                          <Badge variant="outline">
-                            {config.duration_minutes} min
-                          </Badge>
-                        </div>
-                        <Slider
-                          value={[config.duration_minutes || 30]}
-                          onValueChange={([v]) =>
-                            setConfig({ ...config, duration_minutes: v })
+                        <input
+                          type="checkbox"
+                          checked={config.is_timed}
+                          onChange={(e) =>
+                            setConfig({
+                              ...config,
+                              is_timed: e.target.checked,
+                              duration_minutes: e.target.checked ? (config.exam_type === "formal" ? 150 : 30) : undefined,
+                            })
                           }
-                          max={180}
-                          min={10}
-                          step={5}
+                          disabled={config.exam_type === "formal"}
+                          className="w-5 h-5 cursor-pointer disabled:opacity-50"
                         />
-                      </motion.div>
-                    )}
+                      </div>
+                      {config.is_timed && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          className="space-y-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <label className="font-medium">
+                              Duration (minutes)
+                            </label>
+                            <Badge variant="outline">
+                              {config.duration_minutes} min
+                            </Badge>
+                          </div>
+                          <Slider
+                            value={[config.duration_minutes || (config.exam_type === "formal" ? 150 : 30)]}
+                            onValueChange={([v]) =>
+                              setConfig({ ...config, duration_minutes: v })
+                            }
+                            max={180}
+                            min={10}
+                            step={5}
+                            disabled={config.exam_type === "formal"}
+                          />
+                        </motion.div>
+                      )}
                   </div>
 
                   <div className="flex justify-between pt-4">

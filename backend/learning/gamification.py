@@ -54,6 +54,21 @@ ACHIEVEMENT_DEFINITIONS = [
             "icon": "crown",
         }
     },
+    {
+        "id": "CERTIFIED_SCHOLAR",
+        "name": "Certified Scholar",
+        "description": "Pass a formal assessment with at least 50%.",
+        "category": "QUIZZES",
+        "target_metric": "formal_assessments_passed",
+        "target_value": 1,
+        "badge_id": "b_certified_scholar",
+        "badge": {
+            "name": "Certified Scholar",
+            "description": "Passed a rigorous formal assessment.",
+            "rarity": "EPIC",
+            "icon": "award",
+        }
+    },
     # Flashcards
     {
         "id": "FIRST_REVIEW",
@@ -159,6 +174,11 @@ class AchievementEngine:
         # 1. Determine which metrics just incremented
         if event.activity == ActivityType.QUIZ_COMPLETED:
             updates["quizzes_completed"] = 1
+            if event.metadata and event.metadata.get("exam_type") == "formal":
+                if event.correct_count is not None and event.total_count is not None and event.total_count > 0:
+                    score = event.correct_count / event.total_count
+                    if score >= 0.5:
+                        updates["formal_assessments_passed"] = 1
         elif event.activity == ActivityType.FLASHCARD_REVIEWED:
             # Using total_count from LearningEvent (number of cards reviewed)
             updates["flashcards_reviewed"] = event.total_count or 1

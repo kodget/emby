@@ -184,9 +184,76 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
             </CardContent>
           </Card>
         </motion.div>
+        </motion.div>
+
+        {/* Exam Features Highlights */}
+        {result.exam_type === "mock" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+            <div className="flex flex-wrap items-center justify-center gap-4 py-2">
+              <Badge variant="secondary" className="px-3 py-1.5 text-sm gap-2 bg-amber-50 text-amber-700 border-amber-200">
+                <Clock className="w-4 h-4" /> Timed practice
+              </Badge>
+              <Badge variant="secondary" className="px-3 py-1.5 text-sm gap-2 bg-amber-50 text-amber-700 border-amber-200">
+                <Brain className="w-4 h-4" /> Performance analytics
+              </Badge>
+              <Badge variant="secondary" className="px-3 py-1.5 text-sm gap-2 bg-amber-50 text-amber-700 border-amber-200">
+                <Layers className="w-4 h-4" /> Detailed breakdown
+              </Badge>
+            </div>
+          </motion.div>
+        )}
+        
+        {result.exam_type === "formal" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+            <div className="flex flex-wrap items-center justify-center gap-4 py-2">
+              <Badge variant="secondary" className="px-3 py-1.5 text-sm gap-2 bg-primary/10 text-primary border-primary/20">
+                <CheckCircle className="w-4 h-4" /> Official scoring
+              </Badge>
+              <Badge variant="secondary" className="px-3 py-1.5 text-sm gap-2 bg-primary/10 text-primary border-primary/20">
+                <Trophy className="w-4 h-4" /> Certificate eligible
+              </Badge>
+              <Badge variant="secondary" className="px-3 py-1.5 text-sm gap-2 bg-primary/10 text-primary border-primary/20">
+                <BookOpen className="w-4 h-4" /> Comprehensive report
+              </Badge>
+            </div>
+          </motion.div>
+        )}
 
         {/* AI Performance Analysis (Mock & Formal) */}
-        {result.analysis_data && (result.analysis_data.insights || result.analysis_data.next_steps) && (
+        {!isPremium && (result.exam_type === "mock" || result.exam_type === "formal") ? (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <Card className="border-indigo-200 bg-indigo-50/30 overflow-hidden relative">
+              <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center">
+                <Crown className="w-12 h-12 text-amber-500 mb-4" />
+                <h3 className="text-xl font-bold text-indigo-950 mb-2">Unlock Deep AI Analysis</h3>
+                <p className="text-indigo-800 mb-6 max-w-md">Upgrade to premium to get better analysis of your performance, including key insights and a personalized action plan.</p>
+                <Link href="/premium">
+                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg">
+                    Upgrade to Premium
+                  </Button>
+                </Link>
+              </div>
+              <CardHeader className="opacity-40">
+                <CardTitle className="flex items-center gap-2 text-indigo-900">
+                  <Brain className="w-5 h-5 text-indigo-600" /> AI Performance Analysis
+                </CardTitle>
+                <CardDescription>Detailed insights and recommended next steps</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 opacity-40 blur-sm pointer-events-none">
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-indigo-900 text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-indigo-600" /> Key Insights
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-indigo-200 rounded w-full"></div>
+                    <div className="h-4 bg-indigo-200 rounded w-5/6"></div>
+                    <div className="h-4 bg-indigo-200 rounded w-4/6"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : result.analysis_data && (result.analysis_data.insights || result.analysis_data.next_steps) ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <Card className="border-indigo-200 bg-indigo-50/30">
               <CardHeader>
@@ -219,7 +286,8 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
               </CardContent>
             </Card>
           </motion.div>
-        )}
+        ) : null}
+
 
         {/* Advanced Analytics */}
         {result.topic_breakdown && result.topic_breakdown.length > 0 && (

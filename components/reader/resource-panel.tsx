@@ -153,7 +153,7 @@ export function ResourcePanel({
     );
   }
   if (activeTab === "flashcards") {
-    return <FlashcardsTab slideId={slideId} />;
+    return <FlashcardsTab slideId={slideId} slideImageUrl={slides[slideIndex]?.imageUrl} />;
   }
   return null;
 }
@@ -162,7 +162,7 @@ export function ResourcePanel({
 // Flashcards Tab
 // ─────────────────────────────────────────────────────────────────────────────
 
-function FlashcardsTab({ slideId }: { slideId: string }) {
+function FlashcardsTab({ slideId, slideImageUrl }: { slideId: string, slideImageUrl?: string }) {
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
@@ -171,7 +171,7 @@ function FlashcardsTab({ slideId }: { slideId: string }) {
   // Helper function to fetch flashcards
   const fetchFlashcards = async () => {
     try {
-      const res = await flashcardApi.list({ slide_id: slideId, source: "ai_generated" });
+      const res = await flashcardApi.list({ slide_id: slideId, source: "ai" });
       setFlashcards(res.results);
       return res.results.length > 0;
     } catch (err) {
@@ -227,9 +227,8 @@ function FlashcardsTab({ slideId }: { slideId: string }) {
       
       console.log("?? Starting flashcard generation for slide:", slideId);
       
-      const currentSlide = slides[slideIndex];
-      const slideImageBase64 = currentSlide?.imageUrl
-        ? await imageUrlToBase64(currentSlide.imageUrl).catch(() => undefined)
+      const slideImageBase64 = slideImageUrl
+        ? await imageUrlToBase64(slideImageUrl).catch(() => undefined)
         : undefined;
         
       await aiApi.generateFlashcards(slideId, 5, slideImageBase64);

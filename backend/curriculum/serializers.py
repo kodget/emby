@@ -447,6 +447,7 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
     responses = QuizAttemptResponseSerializer(many=True, read_only=True)
     questions = serializers.SerializerMethodField()
     time_taken_minutes = serializers.SerializerMethodField()
+    time_remaining_seconds = serializers.SerializerMethodField()
     
     class Meta:
         model = QuizAttempt
@@ -457,7 +458,7 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             'started_at', 'submitted_at', 'deadline', 'mcq_score', 'mcq_total',
             'theory_score', 'theory_total', 'overall_percentage',
             'theory_grading_pending', 'theory_grading_completed',
-            'questions', 'responses', 'time_taken_minutes', 'analysis_data',
+            'questions', 'responses', 'time_taken_minutes', 'time_remaining_seconds', 'analysis_data',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
@@ -492,6 +493,20 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             delta = obj.submitted_at - obj.started_at
             return delta.total_seconds() / 60.0
         return None
+        
+    def get_time_remaining_seconds(self, obj):
+        if not obj.is_timed or not obj.deadline:
+            return None
+            
+        if obj.status != 'in_progress':
+            return 0
+            
+        from django.utils import timezone
+        now = timezone.now()
+        if now > obj.deadline:
+            return 0
+            
+        return int((obj.deadline - now).total_seconds())
     
     def validate_configuration(self, value):
         required_fields = ['mcq_count', 'theory_count', 'difficulty']

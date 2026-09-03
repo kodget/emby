@@ -1627,7 +1627,9 @@ export const aiApi = {
       explanation: string;
     }>;
   }> => {
-    const response = await api.post("/api/ai/resources/", data);
+    const response = await api.post("/api/ai/resources/", data, {
+      timeout: 60000,
+    });
     return response.data;
   },
 };

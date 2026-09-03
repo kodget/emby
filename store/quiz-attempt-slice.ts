@@ -240,6 +240,9 @@ const quizAttemptSlice = createSlice({
       .addCase(loadAttempt.fulfilled, (state, action) => {
         state.loading = false;
         state.currentAttempt = action.payload;
+        if (action.payload.status === "submitted" || action.payload.status === "auto_submitted") {
+          state.isSubmitted = true;
+        }
         action.payload.questions.forEach((q) => {
           if (!state.questionStatuses[q.id]) {
             state.questionStatuses[q.id] = "unanswered";

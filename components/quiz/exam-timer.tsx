@@ -37,7 +37,8 @@ export function ExamTimer({ totalSeconds, remainingSeconds, onTick, onExpire, ac
     }
   }, [remainingSeconds, onExpire]);
 
-  const pct = totalSeconds > 0 ? (remainingSeconds / totalSeconds) * 100 : 0;
+  let pct = totalSeconds > 0 ? (remainingSeconds / totalSeconds) * 100 : 0;
+  if (isNaN(pct) || !isFinite(pct)) pct = 0;
   const warn = pct <= 25;
   const danger = pct <= 10;
   const C = 2 * Math.PI * 18;
