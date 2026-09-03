@@ -1,10 +1,19 @@
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from .models import (
     Profile, School, ClassGroup, OnboardingQuestion, 
     OnboardingResponse, Announcement, PaymentTransaction, ExamCountdown
 )
+
+class CustomTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        try:
+            return super().validate(attrs)
+        except User.DoesNotExist:
+            raise AuthenticationFailed("User not found or has been deleted.")
 
 
 class SchoolSerializer(serializers.ModelSerializer):

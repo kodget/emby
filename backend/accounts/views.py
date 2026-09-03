@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
@@ -23,12 +24,22 @@ from .models import (
 )
 from .serializers import (
     SignupSerializer, LoginSerializer, GoogleAuthSerializer,
+    CustomTokenRefreshSerializer,
     ProfileSerializer, UpdateProfileSerializer, OnboardingQuestionSerializer,
     OnboardingResponseSerializer, OnboardingSubmitSerializer,
     JoinClassSerializer, ClassGroupSerializer, AnnouncementSerializer,
     PaymentTransactionSerializer, SchoolSerializer, ExamCountdownSerializer
 )
 
+
+class CustomTokenRefreshView(TokenRefreshView):
+    """
+    A safer TokenRefreshView that uses a custom serializer to catch 
+    User.DoesNotExist errors (which happen if a user's account is deleted
+    from the database while they still have a valid refresh token in the browser).
+    Returns a 401 instead of crashing the server with a 500.
+    """
+    serializer_class = CustomTokenRefreshSerializer
 
 def get_tokens_for_user(user):
     """Generate JWT tokens"""

@@ -1,6 +1,5 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 
 router = DefaultRouter()
@@ -12,8 +11,9 @@ urlpatterns = [
     path('signup/', views.signup, name='signup'),
     path('login/', views.login, name='login'),
     path('google-login/', views.google_login, name='google-login'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    path('token/refresh/', views.CustomTokenRefreshView.as_view(), name='token-refresh'),
     path('verify-email/', views.verify_email, name='verify-email'),
+
     path('resend-verification/', views.resend_verification, name='resend-verification'),
     
     # Password Reset
