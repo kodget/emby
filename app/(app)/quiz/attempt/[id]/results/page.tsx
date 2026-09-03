@@ -184,7 +184,6 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
             </CardContent>
           </Card>
         </motion.div>
-        </motion.div>
 
         {/* Exam Features Highlights */}
         {result.exam_type === "mock" && (
