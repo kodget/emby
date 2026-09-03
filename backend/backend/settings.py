@@ -361,6 +361,7 @@ if os.getenv("EMAIL_HOST_USER"):
     EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
     EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
     EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+    EMAIL_TIMEOUT = 5  # Fail fast to prevent gunicorn worker timeouts
 else:
     # No SMTP configured — print emails to the console instead of crashing
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
