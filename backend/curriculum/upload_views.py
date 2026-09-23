@@ -66,6 +66,13 @@ def _content_looks_valid(ext: str, head: bytes) -> bool:
 @permission_classes([IsAuthenticated])
 def upload_file(request):
     """Upload file to Cloudinary and return URL"""
+    from accounts.permissions import can_upload_slides
+    profile = getattr(request.user, "profile", None)
+    if profile is None or not can_upload_slides(profile):
+        return Response(
+            {"error": "Only class heads and material uploaders can upload files."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     print(f"Upload request received from user: {request.user}")
     print(f"Files in request: {request.FILES}")
     print(f"Data in request: {request.data}")
@@ -145,6 +152,13 @@ def upload_file(request):
 @permission_classes([IsAuthenticated])
 def delete_file(request):
     """Delete file from Cloudinary"""
+    from accounts.permissions import can_upload_slides
+    profile = getattr(request.user, "profile", None)
+    if profile is None or not can_upload_slides(profile):
+        return Response(
+            {"error": "Only class heads and material uploaders can delete files."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     public_id = request.data.get('public_id')
     if not public_id:
         return Response({'error': 'No public_id provided'}, status=status.HTTP_400_BAD_REQUEST)

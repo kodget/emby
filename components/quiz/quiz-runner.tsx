@@ -14,7 +14,7 @@ import {
   Trophy,
   X,
 } from "lucide-react";
-import type { MCQ } from "@/lib/data";
+import type { MCQ } from "@/lib/content-types";
 import { cn } from "@/lib/utils";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { UpgradePrompt } from "@/components/upgrade-prompt";

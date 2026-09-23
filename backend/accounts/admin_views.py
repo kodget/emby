@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from accounts.models import Profile, ClassGroup
 from curriculum.models import Subject, Slide, Quiz, QuizAttempt
 from pastquestions.models import PastQuestionUpload
+from django.core.paginator import Paginator
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
@@ -88,9 +89,16 @@ def get_users(request):
     try:
         from accounts.serializers import ProfileSerializer
         # We fetch all profiles. A robust admin would use pagination.
+        page = max(int(request.query_params.get('page', 1)), 1)
+        limit = min(max(int(request.query_params.get('limit', 50)), 1), 100)
+        search = request.query_params.get('search', '').strip()
         profiles = Profile.objects.select_related('user', 'school', 'class_group').all().order_by('-created_at')
-        serializer = ProfileSerializer(profiles, many=True)
-        return Response(serializer.data)
+        if search:
+            from django.db.models import Q
+            profiles = profiles.filter(Q(user__username__icontains=search) | Q(user__email__icontains=search) | Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search))
+        paginator = Paginator(profiles, limit)
+        rows = paginator.get_page(page)
+        return Response({'results': ProfileSerializer(rows.object_list, many=True).data, 'page': rows.number, 'pages': paginator.num_pages, 'total': paginator.count})
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 
@@ -124,8 +132,15 @@ def get_payments(request):
         from accounts.models import PaymentTransaction
         from accounts.serializers import PaymentTransactionSerializer
         
-        # In a real app we would paginate this
+        page = max(int(request.query_params.get('page', 1)), 1)
+        limit = min(max(int(request.query_params.get('limit', 50)), 1), 100)
+        search = request.query_params.get('search', '').strip()
         payments = PaymentTransaction.objects.select_related('user').all().order_by('-created_at')
+        if search:
+            from django.db.models import Q
+            payments = payments.filter(Q(reference__icontains=search) | Q(user__username__icontains=search) | Q(user__email__icontains=search))
+        paginator = Paginator(payments, limit)
+        payments = paginator.get_page(page)
         
         # Serialize payments, adding user info
         data = []
@@ -147,6 +162,6 @@ def get_payments(request):
                 }
             })
             
-        return Response(data)
+        return Response({'results': data, 'page': payments.number, 'pages': paginator.num_pages, 'total': paginator.count})
     except Exception as e:
         return Response({"error": str(e)}, status=500)

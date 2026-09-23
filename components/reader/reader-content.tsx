@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { AlertTriangle, Highlighter, Sparkles } from "lucide-react";
-import type { ReaderBlock } from "@/lib/data";
+import type { ReaderBlock } from "@/lib/content-types";
 import { SelectableImagePage } from "./selectable-image-page";
 import { SlideViewer } from "./slide-viewer";
 
