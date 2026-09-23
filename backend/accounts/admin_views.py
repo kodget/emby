@@ -21,8 +21,8 @@ def get_analytics(request):
         total_slides = Slide.objects.count() if hasattr(Slide, 'objects') else 0
         total_quizzes = QuizAttempt.objects.count() if hasattr(QuizAttempt, 'objects') else 0
         
-        from django.db.models import Sum
-        from django.db.models.functions import TruncMonth
+        from django.db.models import Sum, Count, Q
+        from django.db.models.functions import TruncMonth, TruncWeek
         from django.utils import timezone
         from datetime import timedelta
         
@@ -43,6 +43,20 @@ def get_analytics(request):
             status='success',
             created_at__gte=now - timedelta(days=365)
         ).aggregate(total=Sum('amount'))['total'] or 0
+
+        revenue_trends = list(
+            PaymentTransaction.objects.filter(status='success', created_at__gte=now - timedelta(days=365))
+            .annotate(period=TruncMonth('created_at'))
+            .values('period').annotate(value=Sum('amount')).order_by('period')
+        )
+        user_growth = list(
+            User.objects.filter(date_joined__gte=now - timedelta(days=90))
+            .annotate(period=TruncWeek('date_joined'))
+            .values('period').annotate(
+                students=Count('id', filter=Q(profile__class_role='student')),
+                teachers=Count('id', filter=Q(profile__class_role__in=['class_head', 'material_uploader'])),
+            ).order_by('period')
+        )
         
         return Response({
             "total_users": total_users,
@@ -53,8 +67,16 @@ def get_analytics(request):
             "total_quizzes_taken": total_quizzes,
             "revenue_summary": {
                 "monthly": monthly_revenue,
-                "yearly": yearly_revenue
-            }
+                "yearly": yearly_revenue,
+            },
+            "revenue_trends": [
+                {"name": row["period"].strftime("%b %Y"), "value": float(row["value"] or 0)}
+                for row in revenue_trends
+            ],
+            "user_growth": [
+                {"name": row["period"].strftime("%b %d"), "students": row["students"], "teachers": row["teachers"]}
+                for row in user_growth
+            ],
         })
     except Exception as e:
         return Response({"error": str(e)}, status=500)
@@ -128,4 +150,3 @@ def get_payments(request):
         return Response(data)
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-

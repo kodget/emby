@@ -95,4 +95,3 @@ export function formatLastAccessed(date: Date): string {
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? "s" : ""} ago`
   return date.toLocaleDateString()
 }
-

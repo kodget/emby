@@ -799,10 +799,13 @@ def pending_class_head_verifications(request):
     
     return Response(ProfileSerializer(pending_profiles, many=True).data)
 
-@api_view(['GET'])
+@api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def get_profile(request):
     """Get current user profile"""
+    if request.method == 'DELETE':
+        request.user.delete()
+        return Response({'message': 'Account deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     profile = request.user.profile
     return Response(ProfileSerializer(profile).data)
 

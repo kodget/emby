@@ -666,6 +666,8 @@ export const adminApi = {
     total_slides: number;
     total_quizzes_taken: number;
     revenue_summary: { monthly: number; yearly: number };
+    revenue_trends: Array<{ name: string; value: number }>;
+    user_growth: Array<{ name: string; students: number; teachers: number }>;
   }> => {
     const response = await api.get("/auth/admin/analytics/");
     return response.data;
@@ -2179,17 +2181,17 @@ export const learningApi = {
     (await api.get("/api/learning/credits/history/")).data,
 
   getCreditPackages: async (): Promise<any[]> => {
-    const res = await api.get("/api/learning/credit-packages/");
+    const res = await api.get("/api/credits/packages/");
     return res.data;
   },
 
   getCreditLots: async (): Promise<any[]> => {
-    const res = await api.get("/api/learning/credit-lots/");
+    const res = await api.get("/api/credits/balance/");
     return res.data;
   },
 
   getCreditTransactions: async (limit = 50): Promise<any[]> => {
-    const res = await api.get("/api/learning/credit-transactions/", {
+    const res = await api.get("/api/credits/history/", {
       params: { limit },
     });
     return res.data;

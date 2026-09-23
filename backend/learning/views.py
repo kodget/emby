@@ -27,6 +27,7 @@ from .models import (
     LearningEvent,
     Notification,
     NotificationPreference,
+    PushSubscription,
     PracticeMode,
     PracticeSession,
     WeakArea,
@@ -338,13 +339,14 @@ def notification_read(request):
     return Response({"marked_read": updated})
 
 
-@api_view(["GET", "PATCH"])
+@api_view(["GET", "PATCH", "POST"])
 @permission_classes([IsAuthenticated])
 def notification_preferences(request):
     prefs, _ = NotificationPreference.objects.get_or_create(user=request.user)
 
-    if request.method == "PATCH":
+    if request.method in ("PATCH", "POST"):
         allowed = {
+            "academic_enabled", "community_enabled", "system_enabled",
             "flashcards_enabled", "planner_enabled", "study_goal_enabled",
             "streak_enabled", "weak_area_enabled", "browser_push_enabled",
             "quiet_hours_start", "quiet_hours_end", "max_per_day",
@@ -356,6 +358,9 @@ def notification_preferences(request):
 
     return Response(
         {
+            "academic_enabled": prefs.academic_enabled,
+            "community_enabled": prefs.community_enabled,
+            "system_enabled": prefs.system_enabled,
             "flashcards_enabled": prefs.flashcards_enabled,
             "planner_enabled": prefs.planner_enabled,
             "study_goal_enabled": prefs.study_goal_enabled,
@@ -657,80 +662,40 @@ def gamification_profile(request):
 
 # ---------------------------------------------------------------------------
 # NOTIFICATIONS
-# ---------------------------------------------------------------------------
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def notification_list(request):
-    """Return the user's notifications."""
-    from .models import Notification
-    unread_only = request.GET.get("unread") == "true"
-    qs = Notification.objects.filter(user=request.user)
-    if unread_only:
-        qs = qs.filter(read=False)
-    
-    qs = qs.order_by("-scheduled_for")[:50]
-    
-    data = []
-    for n in qs:
-        data.append({
-            "id": n.id,
-            "type": n.type,
-            "priority": n.priority,
-            "title": n.title,
-            "body": n.body,
-            "action_url": n.action_url,
-            "payload": n.payload,
-            "read": n.read,
-            "scheduled_for": n.scheduled_for.isoformat() if n.scheduled_for else None,
-            "created_at": n.created_at.isoformat(),
-        })
-    return Response(data)
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def notification_read(request):
-    """Mark a notification (or all) as read."""
-    from .models import Notification
-    from django.utils import timezone
-    notif_id = request.data.get("id")
-    
-    qs = Notification.objects.filter(user=request.user, read=False)
-    if notif_id:
-        qs = qs.filter(id=notif_id)
-        
-    updated = qs.update(read=True, read_at=timezone.now())
-    return Response({"success": True, "updated_count": updated})
-
-@api_view(["GET", "POST"])
-@permission_classes([IsAuthenticated])
-def notification_preferences(request):
-    """Get or update notification preferences."""
-    from .models import NotificationPreference
-    
-    pref, _ = NotificationPreference.objects.get_or_create(user=request.user)
-    
-    if request.method == "POST":
-        for field in [
-            "academic_enabled", "community_enabled", "system_enabled",
-            "flashcards_enabled", "planner_enabled", "study_goal_enabled", "streak_enabled"
-        ]:
-            if field in request.data:
-                setattr(pref, field, bool(request.data[field]))
-        pref.save()
-        
-    return Response({
-        "academic_enabled": pref.academic_enabled,
-        "community_enabled": pref.community_enabled,
-        "system_enabled": pref.system_enabled,
-        "flashcards_enabled": pref.flashcards_enabled,
-        "planner_enabled": pref.planner_enabled,
-        "study_goal_enabled": pref.study_goal_enabled,
-        "streak_enabled": pref.streak_enabled,
-    })
-
-@api_view(["POST"])
+@api_view(["POST", "DELETE"])
 @permission_classes([IsAuthenticated])
 def notification_subscribe(request):
-    """Subscribe a device for push notifications (web push)."""
-    return Response({"success": True})
+    """Subscribe or unsubscribe a device for web push notifications."""
+    if request.method == "POST":
+        endpoint = request.data.get("endpoint")
+        p256dh = request.data.get("p256dh")
+        auth = request.data.get("auth")
+
+        if not endpoint or not p256dh or not auth:
+            return Response(
+                {"error": "endpoint, p256dh, and auth are required"},
+                status=400,
+            )
+
+        sub, created = PushSubscription.objects.update_or_create(
+            user=request.user,
+            endpoint=endpoint,
+            defaults={
+                "p256dh": p256dh,
+                "auth": auth,
+                "user_agent": request.META.get("HTTP_USER_AGENT", "")[:255],
+                "is_active": True,
+            },
+        )
+        return Response({"success": True, "created": created})
+
+    # DELETE — deactivate matching subscription
+    endpoint = request.data.get("endpoint")
+    if not endpoint:
+        return Response({"error": "endpoint is required"}, status=400)
+
+    deleted, _ = PushSubscription.objects.filter(
+        user=request.user, endpoint=endpoint
+    ).delete()
+    return Response({"success": True, "deleted": deleted})

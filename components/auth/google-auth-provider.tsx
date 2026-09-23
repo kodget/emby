@@ -7,12 +7,11 @@ export function GoogleAuthProvider({ children }: { children: React.ReactNode }) 
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""
 
   if (!clientId) {
-    console.warn("Google Client ID not found. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID in .env.local")
-    return <>{children}</>
+    console.warn("Google Client ID not found. Google sign-in will remain unavailable until configured.")
   }
 
   return (
-    <GoogleOAuthProvider clientId={clientId}>
+    <GoogleOAuthProvider clientId={clientId || "not-configured"}>
       {children}
     </GoogleOAuthProvider>
   )

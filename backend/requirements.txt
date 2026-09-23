@@ -135,3 +135,5 @@ zope.interface==8.6
 
 channels_redis==4.2.1
 dj-database-url==3.1.2
+
+pywebpush==2.0.3

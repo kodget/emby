@@ -23,11 +23,11 @@ def send_push_notification_task(notification_id):
         return
 
     # Check if the user has browser_push_enabled
-    prefs = getattr(notification.user, "notification_preferences", None)
+    prefs = getattr(notification.user, "notification_preference", None)
     if prefs and not prefs.browser_push_enabled:
         return
 
-    subscriptions = PushSubscription.objects.filter(user=notification.user)
+    subscriptions = PushSubscription.objects.filter(user=notification.user, is_active=True)
     if not subscriptions.exists():
         return
 
@@ -75,4 +75,3 @@ def build_all_notifications_task():
     logger.info("Starting notification sweep...")
     results = run_for_all()
     logger.info("Notification sweep complete: %s", results)
-

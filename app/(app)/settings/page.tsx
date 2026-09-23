@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Lock, Bell, User, LogOut, Trash2 } from "lucide-react";
 import AuthGuard from "@/components/auth/auth-guard";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { api } from "@/lib/api";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -34,14 +35,8 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchPrefs = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-        const res = await fetch(`${baseUrl}/api/notifications/preferences/`, {
-          headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
+        const { data } = await api.get("/api/learning/notifications/preferences/");
+        if (data) {
           setNotifications({
             academic_enabled: data.academic_enabled,
             community_enabled: data.community_enabled,
@@ -71,22 +66,11 @@ export default function SettingsPage() {
     }
     setLoading(true);
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-      const response = await fetch(
-        `${baseUrl}/api/accounts/change-password/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            old_password: passwordForm.current_password,
-            new_password: passwordForm.new_password,
-          }),
-        },
-      );
-      if (response.ok) {
+      const response = await api.post("/auth/change-password/", {
+        old_password: passwordForm.current_password,
+        new_password: passwordForm.new_password,
+      });
+      if (response.status >= 200 && response.status < 300) {
         alert("Password changed successfully");
         setPasswordForm({
           current_password: "",
@@ -94,8 +78,7 @@ export default function SettingsPage() {
           confirm_password: "",
         });
       } else {
-        const data = await response.json();
-        alert(data.error || "Failed to change password");
+        alert(response.data?.error || "Failed to change password");
       }
     } catch (error) {
       console.error("Failed to change password:", error);
@@ -121,22 +104,9 @@ export default function SettingsPage() {
       return;
     }
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-      const response = await fetch(
-        `${baseUrl}/api/accounts/profile/`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-          },
-        },
-      );
-      if (response.ok) {
-        alert("Account deleted successfully");
-        handleLogout();
-      } else {
-        alert("Failed to delete account");
-      }
+      await api.delete("/auth/profile/");
+      alert("Account deleted successfully");
+      handleLogout();
     } catch (error) {
       console.error("Failed to delete account:", error);
       alert("Failed to delete account");
@@ -429,16 +399,8 @@ export default function SettingsPage() {
                     <button
                       onClick={async () => {
                         try {
-                          const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-                          const res = await fetch(`${baseUrl}/api/notifications/preferences/`, {
-                            method: "PATCH",
-                            headers: {
-                              "Content-Type": "application/json",
-                              Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-                            },
-                            body: JSON.stringify(notifications),
-                          });
-                          if (res.ok) {
+                          const res = await api.patch("/api/learning/notifications/preferences/", notifications);
+                          if (res.status >= 200 && res.status < 300) {
                             alert("Notification preferences saved successfully");
                           } else {
                             alert("Failed to save notification preferences");

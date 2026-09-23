@@ -70,7 +70,7 @@ export function usePushNotifications() {
 
       const subData = JSON.parse(JSON.stringify(sub));
       
-      await api.post("/learning/notifications/subscribe/", {
+      await api.post("/api/learning/notifications/subscribe/", {
         endpoint: subData.endpoint,
         p256dh: subData.keys.p256dh,
         auth: subData.keys.auth,
@@ -91,7 +91,7 @@ export function usePushNotifications() {
       setSubscription(null);
       
       const subData = JSON.parse(JSON.stringify(subscription));
-      await api.delete("/learning/notifications/subscribe/", {
+      await api.delete("/api/learning/notifications/subscribe/", {
         data: { endpoint: subData.endpoint }
       });
       

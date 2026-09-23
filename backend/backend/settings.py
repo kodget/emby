@@ -406,6 +406,8 @@ PAYSTACK_CALLBACK_URL = os.getenv(
 )
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+VAPID_ADMIN_EMAIL = os.getenv("VAPID_ADMIN_EMAIL", DEFAULT_FROM_EMAIL)
 
 
 # ---------------------------------------------------------------------------
