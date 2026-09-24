@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Filter, Ban, MoreVertical } from "lucide-react";
+import { Search, MoreVertical, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 
 export default function UsersAdminPage() {
@@ -16,12 +16,19 @@ export default function UsersAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");
+  const [pendingHeads, setPendingHeads] = useState<UserProfile[]>([]);
+  const [approvingId, setApprovingId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const data = await adminApi.getUsers();
+        const [data, pending] = await Promise.all([
+          adminApi.getUsers(),
+          adminApi.getPendingClassHeadVerifications(),
+        ]);
         setUsers(data);
+        setPendingHeads(pending);
       } catch (err: any) {
         setError(err.message || "Failed to load users");
       } finally {
@@ -30,6 +37,22 @@ export default function UsersAdminPage() {
     };
     fetchUsers();
   }, []);
+
+  const approveClassHead = async (userId: number) => {
+    setApprovingId(userId);
+    setActionError(null);
+    try {
+      await adminApi.verifyClassHead(userId);
+      setPendingHeads((current) => current.filter((user) => user.id !== userId));
+      setUsers((current) => current.map((user) => user.id === userId
+        ? { ...user, class_head_verified: true, class_head_verification_requested: false, can_access_app: true }
+        : user));
+    } catch (err: any) {
+      setActionError(err?.response?.data?.error || err?.message || "Failed to approve class head");
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
@@ -166,6 +189,31 @@ export default function UsersAdminPage() {
           </div>
         </CardContent>
       </Card>
+
+      {pendingHeads.length > 0 && (
+        <Card className="border-amber-200 shadow-sm">
+          <CardHeader>
+            <CardTitle>Pending class-head approvals</CardTitle>
+            <CardDescription>Review and approve class-head accounts waiting for verification.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {actionError && <p className="text-sm text-destructive" role="alert">{actionError}</p>}
+            {pendingHeads.map((user) => (
+              <div key={user.id} className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                <div>
+                  <p className="font-medium">{user.full_name || user.username}</p>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <p className="text-xs text-muted-foreground">{user.school_name || "No school"}</p>
+                </div>
+                <Button onClick={() => approveClassHead(user.id)} disabled={approvingId === user.id}>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  {approvingId === user.id ? "Approving…" : "Approve"}
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

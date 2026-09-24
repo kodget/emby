@@ -658,6 +658,18 @@ export const onboardingApi = {
 // ==================== ADMIN API ====================
 
 export const adminApi = {
+  getPendingClassHeadVerifications: async (): Promise<UserProfile[]> => {
+    const response = await api.get("/auth/class-head/pending/");
+    return response.data;
+  },
+  verifyClassHead: async (userId: number, approved = true, rejectionReason = "") => {
+    const response = await api.post("/auth/class-head/verify/", {
+      user_id: userId,
+      approved,
+      rejection_reason: rejectionReason,
+    });
+    return response.data;
+  },
   getAnalytics: async (): Promise<{
     total_users: number;
     total_premium_users: number;
