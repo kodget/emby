@@ -10,204 +10,62 @@ from .services.ai_theory_evaluator import AITheoryEvaluator, theory_evaluator
 logger = logging.getLogger(__name__)
 
 
+@shared_task(soft_time_limit=450, time_limit=480, ignore_result=True)
+def generate_assessment_draft_task(job_id):
+    from .assessment_drafts import run
+    return run(job_id)
+
+
+@shared_task(ignore_result=True)
+def recover_assessment_drafts_task():
+    from .assessment_drafts import recovery
+    return recovery()
+
+
+@shared_task(soft_time_limit=450, time_limit=480, ignore_result=True)
+def grade_saved_assessment_task(attempt_id):
+    from .assessment_grading import run
+    return run(attempt_id)
+
+
+@shared_task(ignore_result=True)
+def recover_assessment_grading_task():
+    from .assessment_grading import recovery
+    return recovery()
+
+
+@shared_task(ignore_result=True)
+def recover_slide_processing_task():
+    from django.core.management import call_command
+    call_command('recover_slide_processing', '--apply')
+
+
+@shared_task(ignore_result=True)
+def recover_standalone_decks_task():
+    from django.core.management import call_command
+    call_command('recover_standalone_decks', '--apply')
+
+
+@shared_task(soft_time_limit=450, time_limit=480, ignore_result=True)
+def process_standalone_deck_task(deck_id, token=None):
+    from .models import SlideDeck
+    from .views import SlideDeckViewSet
+    deck = SlideDeck.objects.filter(pk=deck_id, class_group__isnull=False, asset__isnull=False).first()
+    if deck is None:
+        logger.warning('Standalone deck recovery skipped for missing or unowned deck.')
+        return
+    SlideDeckViewSet()._process_deck_async(deck, token=token)
+
+
 def _extract_text_from_content(content_data: dict) -> str:
-    """
-    Extract plain text from SlideContent.content_data regardless of structure.
-
-    The pipeline stores content in one of two shapes:
-      - Legacy: {'text': '...'}
-      - Current: {'pages': [{'text_blocks': ['...', ...]}, ...]}
-
-    Returns a single concatenated string suitable for passing to the LLM.
-    """
-    if not content_data:
-        return ''
-
-    # Fast path: top-level text key (legacy / hand-crafted slides)
-    top_text = content_data.get('text', '')
-    if top_text and len(top_text.strip()) >= 50:
-        return top_text.strip()
-
-    # Current path: iterate pages -> text_blocks
-    parts = []
-    for page in content_data.get('pages', []):
-        blocks = page.get('text_blocks', [])
-        if isinstance(blocks, list):
-            for block in blocks:
-                if isinstance(block, str):
-                    parts.append(block.strip())
-                elif isinstance(block, dict):
-                    # Some renderers store {'text': '...'} per block
-                    t = block.get('text', '') or block.get('content', '')
-                    if t:
-                        parts.append(str(t).strip())
-
-    return ' '.join(p for p in parts if p)
+    from .services.document_extraction import content_text
+    return content_text(content_data or {})
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
-def process_slide_task(self, slide_id: str, local_file_path: str = None):
-    """
-    Async task to process a slide after upload
-    
-    PIPELINE: ANY FILE → PPTX → PDF → IMAGES
-    
-    Args:
-        slide_id: ID of the slide to process
-        local_file_path: Optional local path to bypass Cloudinary download
-    """
-    from .models import Slide, SlideProcessingStatus, SlideContent
-    from .services.slide_conversion_pipeline import SlideConversionPipeline
-    import cloudinary.uploader
-    
-    logger.info(f"Received task to process slide: {slide_id}")
-    
-    try:
-        # Get slide
-        try:
-            slide = Slide.objects.get(id=slide_id)
-        except Slide.DoesNotExist:
-            logger.error(f"Slide {slide_id} not found")
-            return {'success': False, 'error': 'Slide not found'}
-        
-        # Get URL to process
-        # Use local file if provided (to bypass Cloudinary 401s), else Cloudinary URL
-        process_url = local_file_path if local_file_path else (slide.file_url if slide.file_url else (slide.file.url if slide.file else None))
-        
-        if not process_url:
-            logger.error(f"Slide {slide_id} has no file URL or path to process")
-            return {'success': False, 'error': 'No file URL found'}
-        
-        # Update status to processing
-        status_obj, _ = SlideProcessingStatus.objects.get_or_create(slide=slide)
-        status_obj.status = 'processing'
-        status_obj.started_at = timezone.now()
-        status_obj.error_message = ''
-        status_obj.save()
-        
-        logger.info(f"=== STARTING SLIDE PROCESSING ===")
-        logger.info(f"Slide ID: {slide_id}")
-        logger.info(f"Title: {slide.title}")
-        logger.info(f"Process URL: {process_url}")
-        logger.info(f"File Type: {slide.file_type}")
-        
-        # Run the conversion pipeline
-        result = SlideConversionPipeline.process_slide(
-            cloudinary_url=process_url,
-            slide_id=slide_id,
-            original_file_type=slide.file_type or 'pdf',
-            status_obj=status_obj
-        )
-        
-        # Handle result
-        if result['success']:
-            logger.info(f"✓ Pipeline completed successfully")
-            
-            # Update slide page count
-            slide.page_count = result['page_count']
-            slide.save(update_fields=['page_count'])
-            
-            # Store images in Cloudinary and get URLs
-            logger.info(f"Uploading {len(result['image_paths'])} images to Cloudinary...")
-            pages = []  # frontend shape: [{page_number, image_url, width, height}]
-
-            for idx, image_path in enumerate(result['image_paths'], 1):
-                try:
-                    cloudinary_result = cloudinary.uploader.upload(
-                        image_path,
-                        folder=f"emby/slides/{slide_id}",
-                        public_id=f"page_{idx:04d}",
-                        resource_type='image',
-                        format='jpg',
-                        quality='auto:best',
-                        timeout=60
-                    )
-                    pages.append({
-                        'page_number': idx,
-                        'image_url': cloudinary_result['secure_url'],
-                        'width': cloudinary_result.get('width', 1280),
-                        'height': cloudinary_result.get('height', 960),
-                    })
-                    logger.info(f"✓ Uploaded page {idx} to Cloudinary")
-                except Exception as e:
-                    logger.error(f"Failed to upload page {idx}: {e}")
-
-            # Store in database
-            slide_content, _ = SlideContent.objects.get_or_create(slide=slide)
-            slide_content.content_data = {
-                'text': result.get('text_content', ''),
-                'pages': pages,
-                'total_pages': len(pages),
-                'page_count': len(pages),
-            }
-            slide_content.is_extracted = True
-            slide_content.extracted_at = timezone.now()
-            slide_content.save()
-            
-            # Update processing status to generating quizzes
-            status_obj.status = 'generating_quizzes'
-            status_obj.save()
-            
-            # Queue question generation
-            slide.generation_status = 'in_progress'
-            slide.save(update_fields=['generation_status'])
-            generate_question_bank_task.delay(slide_id)
-            
-            logger.info(f"✓✓✓ SLIDE {slide_id} SUCCESSFULLY PROCESSED & QUESTIONS QUEUED ✓✓✓")
-            
-            return {
-                'success': True,
-                'slide_id': slide_id,
-                'page_count': result['page_count'],
-                'image_urls': pages
-            }
-        
-        else:
-            # Pipeline failed
-            error_message = result.get('error', 'Unknown error')
-            logger.error(f"✗ Pipeline failed: {error_message}")
-            
-            status_obj.status = 'failed'
-            status_obj.error_message = error_message
-            status_obj.completed_at = timezone.now()
-            status_obj.save()
-            
-            slide.generation_status = 'failed'
-            slide.save(update_fields=['generation_status'])
-            
-            return {
-                'success': False,
-                'slide_id': slide_id,
-                'error': error_message
-            }
-        
-    except Exception as e:
-        logger.error(f"Task error for slide {slide_id}: {e}")
-        import traceback
-        traceback.print_exc()
-        
-        # Update status to failed
-        try:
-            status_obj = SlideProcessingStatus.objects.get(slide_id=slide_id)
-            status_obj.status = 'failed'
-            status_obj.error_message = str(e)
-            status_obj.completed_at = timezone.now()
-            status_obj.save()
-        except:
-            pass
-            
-        try:
-            slide = Slide.objects.get(id=slide_id)
-            slide.generation_status = 'failed'
-            slide.save(update_fields=['generation_status'])
-        except:
-            pass
-        # Retry the task
-        try:
-            raise self.retry(exc=e)
-        except self.MaxRetriesExceededError:
-            logger.error(f"Max retries exceeded for slide {slide_id}")
-            return {'success': False, 'error': f'Max retries exceeded: {str(e)}'}
+@shared_task(soft_time_limit=450, time_limit=480)
+def process_slide_task(slide_id: str, local_file_path: str = None, token=None):
+    from .slide_processing import process
+    return process(slide_id, token=token, local_file_path=local_file_path)
 
 
 @shared_task
@@ -291,6 +149,12 @@ def evaluate_theory_answers_task(self, attempt_id: str):
         logger.error(error_msg)
         return {'success': False, 'attempt_id': attempt_id, 'error': error_msg}
     
+    from .assessment_history import is_historical
+    if is_historical(attempt):
+        return {'success': False, 'error': 'Historical attempts cannot be regraded without original question versions.'}
+    if attempt.assessment_id or attempt.snapshot_class_id:
+        return {'success': False, 'attempt_id': attempt_id, 'error': 'This attempt uses durable saved-rubric grading.'}
+
     theory_responses = QuizAttemptResponse.objects.filter(
         attempt=attempt,
         question__question_type='theory',
@@ -407,106 +271,257 @@ def generate_flashcards_task(self, attempt_id):
         raise self.retry(exc=e)
 
 @shared_task(bind=True, max_retries=3)
-def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, count: int = 5, reservation: dict = None, slide_image_base64: str = None):
+def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, count: int = 5, reservation: dict = None, slide_image_base64: str = None, job_id: str = None):
     """
     Generate flashcards from slide content using AI.
     """
-    from .models import Slide, SlideContent, Flashcard, FlashcardProgress
+    from .models import Slide, Flashcard, FlashcardProgress, FlashcardGenerationJob
     from credits.services import CreditManager
     from .services.ai_flashcard_generator import AIFlashcardGenerator
     from django.contrib.auth import get_user_model
     from django.utils import timezone
+    from django.db import transaction
+    from datetime import timedelta
+    import uuid
+    from .class_access import visible
+    from learning.generation import extracted_source
     User = get_user_model()
     
     logger.info(f"=== AI FLASHCARD GENERATION TASK START slide={slide_id} user={user_id} count={count} ===")
+    job = None
+    processing_token = None
+    if job_id and job is None:
+        with transaction.atomic():
+            job = FlashcardGenerationJob.objects.select_for_update().filter(pk=job_id).first()
+            if job is None:
+                logger.error("Flashcard generation job %s was not found.", job_id)
+                return {'success': False, 'slide_id': slide_id, 'error': 'Generation request was not found.'}
+            if job.status in ('failed', 'completed'):
+                return {
+                    'success': job.status == 'completed',
+                    'slide_id': slide_id,
+                    'generated_count': job.generated_count,
+                    'error': job.error_message or None,
+                }
+            now = timezone.now()
+            if (
+                job.status == 'running'
+                and job.processing_lease_until is not None
+                and job.processing_lease_until > now
+            ):
+                return {'success': True, 'slide_id': slide_id, 'in_progress': True}
+            processing_token = uuid.uuid4()
+            job.status = 'running'
+            job.error_message = ''
+            job.processing_token = processing_token
+            job.processing_lease_until = now + timedelta(minutes=12)
+            job.save(update_fields=[
+                'status', 'error_message', 'processing_token',
+                'processing_lease_until', 'updated_at',
+            ])
+            reservation = job.reservation or reservation
     
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         error_msg = f"User {user_id} not found"
         logger.error(error_msg)
+        if job:
+            job.status = 'failed'
+            job.error_message = 'The account for this generation request is unavailable.'
+            job.completed_at = timezone.now()
+            job.processing_lease_until = None
+            job.processing_token = None
+            job.save(update_fields=[
+                'status', 'error_message', 'completed_at',
+                'processing_lease_until', 'processing_token', 'updated_at',
+            ])
         return {'success': False, 'slide_id': slide_id, 'error': error_msg}
 
-    try:
-        slide = Slide.objects.select_related('subject', 'block', 'sub_block', 'topic').get(id=slide_id)
-    except Slide.DoesNotExist:
-        error_msg = f"Slide {slide_id} not found"
-        logger.error(error_msg)
+    def failed(error_msg):
+        with transaction.atomic():
+            current_job = None
+            if job:
+                current_job = FlashcardGenerationJob.objects.select_for_update().filter(
+                    pk=job.pk,
+                    processing_token=processing_token,
+                    status='running',
+                ).first()
+                if current_job is None:
+                    logger.warning(
+                        "Ignoring failure from superseded flashcard job worker %s",
+                        job.pk,
+                    )
+                    return {'success': False, 'slide_id': slide_id, 'error': 'Generation worker was superseded.'}
+            if reservation:
+                CreditManager.refund_credits(
+                    user, reservation['reserved_amount'], action="REFUND_FLASHCARD_ERROR",
+                    reservation_id=reservation['reservation_id'],
+                )
+            if current_job:
+                current_job.status = 'failed'
+                current_job.error_message = error_msg[:500]
+                current_job.completed_at = timezone.now()
+                current_job.processing_lease_until = None
+                current_job.processing_token = None
+                current_job.save(update_fields=[
+                    'status', 'error_message', 'completed_at',
+                    'processing_lease_until', 'processing_token', 'updated_at',
+                ])
         return {'success': False, 'slide_id': slide_id, 'error': error_msg}
+
+    slide = visible(Slide, user).select_related(
+        'subject', 'block', 'sub_block', 'topic'
+    ).filter(pk=slide_id).first()
+    if slide is None:
+        error_msg = f"Slide {slide_id} not found or is no longer available"
+        logger.warning(error_msg)
+        return failed(error_msg)
+
+    existing_count = Flashcard.objects.filter(
+        user=user, source='ai', source_slide=slide
+    ).count()
+    remaining_count = max(0, count - existing_count)
+    if not remaining_count:
+        with transaction.atomic():
+            current_job = None
+            if job:
+                current_job = FlashcardGenerationJob.objects.select_for_update().filter(
+                    pk=job.pk,
+                    processing_token=processing_token,
+                    status='running',
+                ).first()
+                if current_job is None:
+                    return {'success': False, 'slide_id': slide_id, 'error': 'Generation worker was superseded.'}
+            if reservation:
+                CreditManager.refund_credits(
+                    user, reservation['reserved_amount'], action="REFUND_FLASHCARD_ERROR",
+                    reservation_id=reservation['reservation_id'],
+                )
+            if current_job:
+                current_job.status = 'completed'
+                current_job.generated_count = existing_count
+                current_job.completed_at = timezone.now()
+                current_job.processing_lease_until = None
+                current_job.processing_token = None
+                current_job.save(update_fields=[
+                    'status', 'generated_count', 'completed_at',
+                    'processing_lease_until', 'processing_token', 'updated_at',
+                ])
+        return {
+            'success': True,
+            'slide_id': slide_id,
+            'user_id': user_id,
+            'generated_count': 0,
+            'existing_count': existing_count,
+        }
     
     try:
-        slide_content = SlideContent.objects.get(slide=slide)
-        text = _extract_text_from_content(slide_content.content_data)
-        
-        if not text or len(text.strip()) < 100:
-            if not slide_image_base64:
-                error_msg = f"Insufficient text content for slide {slide_id} ({len(text if text else '')} chars) and no image provided"
-                logger.warning(error_msg)
-                return {'success': False, 'slide_id': slide_id, 'error': error_msg}
-    except SlideContent.DoesNotExist:
-        error_msg = f"No content found for slide {slide_id}"
-        logger.error(error_msg)
-        return {'success': False, 'slide_id': slide_id, 'error': error_msg}
+        text, source_digest = extracted_source(slide.pk)
+    except Exception as e:
+        logger.error("Could not load verified flashcard source for slide %s: %s", slide_id, e, exc_info=True)
+        return failed("Verified source text could not be loaded. Please retry.")
+    if not source_digest or not text:
+        error_msg = f"Complete, verified source text is unavailable for slide {slide_id}; retry extraction first."
+        logger.warning(error_msg)
+        return failed(error_msg)
+    if len(text.strip()) < 100 and not slide_image_base64:
+        error_msg = f"Insufficient text content for slide {slide_id} ({len(text.strip())} chars)."
+        logger.warning(error_msg)
+        return failed(error_msg)
     
     try:
         flashcards_data, tokens = AIFlashcardGenerator.generate_flashcards_from_text(
             text=text,
             slide=slide,
             topic=slide.topic,
-            count=count,
+            count=remaining_count,
             slide_image_base64=slide_image_base64,
             return_usage=True
         )
-        if reservation:
-            CreditManager.commit_usage(user, reservation, tokens)
     except Exception as e:
         error_msg = f"Error generating flashcards: {str(e)}"
         logger.error(error_msg, exc_info=True)
-        if reservation:
-            CreditManager.refund_credits(user, reservation['reserved_amount'], action="REFUND_FLASHCARD_ERROR", description=f"Refunded {reservation['reserved_amount']} credits due to flashcard generation error")
-        return {'success': False, 'slide_id': slide_id, 'error': error_msg}
-    
+        return failed(error_msg)
+    if not flashcards_data:
+        return failed("No flashcards could be generated from this slide.")
+
     saved_count = 0
-    
-    for flashcard_data in flashcards_data:
-        try:
-            flashcard, created = Flashcard.objects.get_or_create(
-                user=user,
-                front=flashcard_data['front'],
-                defaults={
-                    'back': flashcard_data['back'],
-                    'explanation': flashcard_data.get('explanation', ''),
-                    'subject': slide.subject,
-                    'block': slide.block,
-                    'sub_block': slide.sub_block,
-                    'topic': slide.topic,
-                    'source': 'ai'
-                }
-            )
-            if created:
-                saved_count += 1
-                FlashcardProgress.objects.create(
+    try:
+        with transaction.atomic():
+            current_job = None
+            if job:
+                current_job = FlashcardGenerationJob.objects.select_for_update().filter(
+                    pk=job.pk,
+                    processing_token=processing_token,
+                    status='running',
+                ).first()
+                if current_job is None:
+                    return {'success': False, 'slide_id': slide_id, 'error': 'Generation worker was superseded.'}
+            for flashcard_data in flashcards_data:
+                flashcard, created = Flashcard.objects.get_or_create(
+                    user=user,
+                    source='ai',
+                    source_slide=slide,
+                    front=flashcard_data['front'],
+                    defaults={
+                        'back': flashcard_data['back'],
+                        'explanation': flashcard_data.get('explanation', ''),
+                        'subject': slide.subject,
+                        'block': slide.block,
+                        'sub_block': slide.sub_block,
+                        'topic': slide.topic,
+                    }
+                )
+                if created:
+                    saved_count += 1
+                FlashcardProgress.objects.get_or_create(
                     user=user,
                     flashcard=flashcard,
-                    due_date=timezone.now()
+                    defaults={'due_date': timezone.now()},
                 )
-        except Exception as e:
-            logger.error(f"Failed to save AI generated flashcard: {e}")
+            if reservation:
+                CreditManager.commit_usage(user, reservation, tokens)
+            existing_total = Flashcard.objects.filter(
+                user=user, source='ai', source_slide=slide
+            ).count()
+            if current_job:
+                current_job.status = 'completed'
+                current_job.generated_count = existing_total
+                current_job.completed_at = timezone.now()
+                current_job.processing_lease_until = None
+                current_job.processing_token = None
+                current_job.save(update_fields=[
+                    'status', 'generated_count', 'completed_at',
+                    'processing_lease_until', 'processing_token', 'updated_at',
+                ])
+    except Exception as e:
+        error_msg = f"Error saving generated flashcards: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return failed(error_msg)
             
     logger.info(f"=== AI FLASHCARD GENERATION COMPLETE slide={slide_id} saved={saved_count}/{len(flashcards_data)} ===")
     
-    return {
+    result = {
         'success': True,
         'slide_id': slide_id,
         'user_id': user_id,
-        'generated_count': saved_count
+        'generated_count': saved_count,
+        'existing_count': existing_total,
     }
+    return result
 
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=120)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    default_retry_delay=120,
+    soft_time_limit=None,
+    time_limit=None,
+)
 def generate_question_bank_task(self, slide_id: str, force: bool = False):
-    """Fill a slide's question bank with 50 MCQs and 10 theory questions.
+    """Fill a slide's question bank with 15 MCQs (5 easy, 5 medium, 5 hard) and 10 theory questions.
 
     Runs in the background after upload so the uploader never waits on it. The work is
     idempotent and resumable: learning.generation claims a locked job row, counts what
@@ -522,40 +537,9 @@ def generate_question_bank_task(self, slide_id: str, force: bool = False):
         logger.error("generate_question_bank_task: slide %s not found", slide_id)
         return {"success": False, "error": "slide not found"}
 
-    try:
-        result = generate_for_slide(slide, force=force)
-        # Update SlideProcessingStatus and slide.generation_status to completed
-        from .models import SlideProcessingStatus
-        from django.utils import timezone
-        try:
-            status_obj = SlideProcessingStatus.objects.get(slide_id=slide_id)
-            status_obj.status = 'completed'
-            status_obj.completed_at = timezone.now()
-            status_obj.error_message = ''
-            status_obj.save(update_fields=['status', 'completed_at', 'error_message'])
-        except SlideProcessingStatus.DoesNotExist:
-            pass
-        # Mark the slide itself as done so the frontend unblocks quiz creation
-        slide.generation_status = 'completed'
-        slide.save(update_fields=['generation_status'])
-        logger.info("generate_question_bank_task: slide %s marked generation_status=completed", slide_id)
-        return result
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("Question bank generation failed for %s", slide_id)
-        # Update SlideProcessingStatus and slide.generation_status to failed
-        from .models import SlideProcessingStatus
-        from django.utils import timezone
-        try:
-            status_obj = SlideProcessingStatus.objects.get(slide_id=slide_id)
-            status_obj.status = 'failed'
-            status_obj.error_message = str(exc)
-            status_obj.completed_at = timezone.now()
-            status_obj.save(update_fields=['status', 'error_message', 'completed_at'])
-        except SlideProcessingStatus.DoesNotExist:
-            pass
-        slide.generation_status = 'failed'
-        slide.save(update_fields=['generation_status'])
-        raise self.retry(exc=exc)
+    # Status writes belong to the leased generator. A late task must not overwrite
+    # the state published by a newer worker after its lease expires.
+    return generate_for_slide(slide, force=force)
 
 
 @shared_task
@@ -588,6 +572,11 @@ def analyze_quiz_attempt_task(self, attempt_id):
     
     try:
         attempt = QuizAttempt.objects.select_related('user').get(id=attempt_id)
+        from .assessment_history import is_historical
+        if is_historical(attempt):
+            return {'success': False, 'error': 'Historical attempts cannot receive analysis from current question versions.'}
+        if attempt.assessment_id or attempt.snapshot_class_id:
+            return {'success': False, 'error': 'Formal snapshot analysis is not available yet.'}
         
         if attempt.theory_grading_pending:
             logger.info(f"Analyze task for {attempt_id} waiting on theory grading...")

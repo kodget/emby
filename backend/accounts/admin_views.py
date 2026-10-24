@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAdminUser
+from accounts.permissions import IsPlatformAdmin
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from accounts.models import Profile, ClassGroup
@@ -8,11 +8,11 @@ from pastquestions.models import PastQuestionUpload
 from django.core.paginator import Paginator
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsPlatformAdmin])
 def get_analytics(request):
     """
     Returns analytics data for the admin dashboard.
-    Only accessible by users with is_staff or is_superuser.
+    Only accessible by active platform administrators.
     """
     try:
         total_users = User.objects.count()
@@ -83,7 +83,7 @@ def get_analytics(request):
         return Response({"error": str(e)}, status=500)
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsPlatformAdmin])
 def get_users(request):
     """Returns a list of all users for the admin dashboard"""
     try:
@@ -103,7 +103,7 @@ def get_users(request):
         return Response({"error": str(e)}, status=500)
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsPlatformAdmin])
 def get_curriculum(request):
     """Returns a summary of schools, classes, and subjects for the admin dashboard"""
     try:
@@ -125,7 +125,7 @@ def get_curriculum(request):
         return Response({"error": str(e)}, status=500)
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsPlatformAdmin])
 def get_payments(request):
     """Returns a list of all payment transactions for the admin dashboard"""
     try:

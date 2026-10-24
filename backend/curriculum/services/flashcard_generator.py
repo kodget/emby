@@ -120,7 +120,7 @@ def generate_flashcards_for_attempt(attempt_id: str) -> dict:
         "question",
         "question__subject",
         "question__block",
-    ).filter(attempt=attempt)
+    ).filter(attempt=attempt, question__isnull=False)
 
     for response in responses:
         question = response.question

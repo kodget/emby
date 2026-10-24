@@ -22,6 +22,7 @@ import { learningApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type Area = {
+  id: string;
   label: string;
   attempted: number;
   correct: number;
@@ -71,7 +72,7 @@ export function WeakTopics() {
         <Icon3D name="target" size="sm" />
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-[15px] leading-tight">What to revise</h2>
-          <p className="text-[11px] text-muted-foreground">Weakest first</p>
+          <p className="text-[11px] text-muted-foreground">Observed accuracy · last 30 days</p>
         </div>
         {areas.length > 0 && (
           <Link
@@ -88,7 +89,7 @@ export function WeakTopics() {
           <Axo pose="sleeping" size="sm" />
           <p className="text-[13px] leading-snug text-muted-foreground">
             {hasData
-              ? "Not enough answers in any one topic yet to call it weak."
+              ? "No submodule with enough evidence is below 75% accuracy in this period."
               : "Answer a few questions and your weak topics will show up here."}
           </p>
         </div>
@@ -99,7 +100,7 @@ export function WeakTopics() {
             const tone =
               area.mastery < 0.4 ? "weakness" : area.mastery < 0.7 ? "review" : "mastery";
             return (
-              <li key={area.label}>
+              <li key={area.id}>
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="min-w-0 flex-1 truncate text-[13px]">{area.label}</span>
                   <span
@@ -122,7 +123,7 @@ export function WeakTopics() {
                       tone === "mastery" && "bg-mastery",
                     )}
                     initial={{ width: 0 }}
-                    animate={{ width: `${Math.max(4, pct)}%` }}
+                    animate={{ width: `${pct}%` }}
                     transition={{ delay: i * 0.07, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                   />
                 </div>

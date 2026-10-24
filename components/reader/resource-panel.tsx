@@ -10,7 +10,7 @@
  * 4. YouTube links built from query string — no API key needed
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BookOpenText, Loader2, Play, RefreshCw, ChevronRight, ChevronDown } from "lucide-react";
 import { aiApi, flashcardApi, type Flashcard } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ import {
   type MCQResource,
 } from "@/store/slide-store";
 import { imageUrlToBase64 } from "@/lib/slide-image-utils";
+import Link from "next/link";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ResourcePanel
@@ -45,17 +46,22 @@ export function ResourcePanel({
 
   const [localLoading, setLocalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestVersion = useRef(0);
 
   // ── Auto-generate when slide changes ───────────────────────────────────
   useEffect(() => {
     const cached = getResources(slideIndex);
-    if (cached) return; // Already have data — don't re-fetch
-
-    generateResources();
+    setError(null);
+    setLocalLoading(false);
+    if (!cached && activeTab !== "quiz") void generateResources();
+    return () => { requestVersion.current++; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slideIndex]);
+  }, [slideId, slideIndex, activeTab]);
 
   const generateResources = async () => {
+    const version = ++requestVersion.current;
+    const session = sessionStorage.getItem('user');
+    const active = () => version === requestVersion.current && session === sessionStorage.getItem('user');
     setLocalLoading(true);
     setError(null);
 
@@ -68,26 +74,35 @@ export function ResourcePanel({
         ? await imageUrlToBase64(currentSlide.imageUrl).catch(() => undefined)
         : undefined;
 
+      if (!active()) return;
       const data = await aiApi.generateResources({
         slide_id: slideId,
         slide_image_base64: slideImageBase64,
       });
 
       // Cache in global store keyed by slideIndex
+      if (!active()) return;
       setResources(slideIndex, {
         youtube: data.youtube ?? [],
         textbooks: data.textbooks ?? [],
         mcqs: data.mcqs ?? [],
       });
     } catch (err: any) {
+      if (!active()) return;
       console.error("Resource generation failed:", err);
       setError("Failed to generate resources. Tap retry to try again.");
     } finally {
-      setLocalLoading(false);
+      if (active()) setLocalLoading(false);
     }
   };
 
   const resources = getResources(slideIndex);
+
+  if (activeTab === "quiz") return <div className="p-5 space-y-3">
+    <h3 className="font-semibold">Practise this deck</h3>
+    <p className="text-sm text-muted-foreground">Choose a difficulty and up to 20 saved questions from the whole deck. Answers and scores are saved to your attempt.</p>
+    <Link className="text-primary underline" href={`/quiz?slide=${encodeURIComponent(slideId)}`}>Choose practice questions</Link>
+  </div>;
 
   if (localLoading) {
     return (
@@ -141,16 +156,7 @@ export function ResourcePanel({
     return <TextbookTab books={resources.textbooks} />;
   }
   if (activeTab === "videos") {
-    return <VideosTab videos={resources.youtube} selection={selection} />;
-  }
-  if (activeTab === "quiz") {
-    return (
-      <MCQTab
-        mcqs={resources.mcqs}
-        slideIndex={slideIndex}
-        onRegenerate={generateResources}
-      />
-    );
+    return <VideosTab videos={resources.youtube} selection={selection} slideId={slideId} />;
   }
   if (activeTab === "flashcards") {
     return <FlashcardsTab slideId={slideId} slideImageUrl={slides[slideIndex]?.imageUrl} />;
@@ -167,6 +173,9 @@ function FlashcardsTab({ slideId, slideImageUrl }: { slideId: string, slideImage
   const [loading, setLoading] = useState(true);
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [generationJobId, setGenerationJobId] = useState<string | null>(null);
+  const [canGenerateMore, setCanGenerateMore] = useState(false);
+  const generationStorageKey = `flashcard-generation:${slideId}`;
 
   // Helper function to fetch flashcards
   const fetchFlashcards = async () => {
@@ -187,55 +196,84 @@ function FlashcardsTab({ slideId, slideImageUrl }: { slideId: string, slideImage
       await fetchFlashcards();
       setLoading(false);
     };
-    
+    const savedJobId = sessionStorage.getItem(generationStorageKey);
+    if (savedJobId) {
+      setGenerationJobId(savedJobId);
+      setGenerating(true);
+      setCanGenerateMore(true);
+    } else {
+      setGenerationJobId(null);
+      setGenerating(false);
+    }
     loadFlashcards();
-  }, [slideId]);
+  }, [slideId, generationStorageKey]);
 
-  // Polling when generating
   useEffect(() => {
-    if (!generating) return;
+    if (!generating || !generationJobId) return;
 
     let pollAttempts = 0;
     const maxPolls = 40; // 2 minutes total
 
-    const pollForFlashcards = async () => {
+    const pollJobStatus = async () => {
       pollAttempts++;
-      console.log(`Polling for flashcards: attempt ${pollAttempts}`);
-      
-      const found = await fetchFlashcards();
-      if (found) {
-        console.log("? Flashcards found! Stopping generation");
-        setGenerating(false);
-        return;
+      try {
+        const job = await aiApi.getFlashcardGenerationStatus(generationJobId);
+        if (job.status === "completed") {
+          const found = await fetchFlashcards();
+          const shortfall = job.generated_count < job.requested_count;
+          setCanGenerateMore(shortfall);
+          if (shortfall && found) {
+            setError(`Generated ${job.generated_count} of ${job.requested_count} requested cards. Generate the remaining cards to continue.`);
+          } else if (!found) {
+            setCanGenerateMore(true);
+            setError("Generation completed, but no cards were returned. Please retry.");
+          }
+          sessionStorage.removeItem(generationStorageKey);
+          setGenerationJobId(null);
+          setGenerating(false);
+          return;
+        }
+        if (job.status === "failed") {
+          setCanGenerateMore(true);
+          setError(job.error || "Flashcard generation failed. Please retry.");
+          sessionStorage.removeItem(generationStorageKey);
+          setGenerationJobId(null);
+          setGenerating(false);
+          return;
+        }
+      } catch {
+        // Keep polling through temporary network errors; the durable job remains queryable.
       }
-      
+
       if (pollAttempts >= maxPolls) {
-        console.log("? Max polling attempts reached");
-        setError("Flashcard generation timed out. Please try again.");
+        setError("Flashcard generation is taking longer than expected. Check its status or try again later.");
         setGenerating(false);
       }
     };
 
-    const interval = setInterval(pollForFlashcards, 3000);
+    const interval = setInterval(pollJobStatus, 3000);
     return () => clearInterval(interval);
-  }, [generating, slideId]);
+  }, [generating, generationJobId, generationStorageKey]);
 
   const handleGenerate = async () => {
+    if (generationJobId) {
+      setError(null);
+      setGenerating(true);
+      return;
+    }
     try {
       setGenerating(true);
+      setCanGenerateMore(true);
       setError(null);
-      
-      console.log("?? Starting flashcard generation for slide:", slideId);
       
       const slideImageBase64 = slideImageUrl
         ? await imageUrlToBase64(slideImageUrl).catch(() => undefined)
         : undefined;
-        
-      await aiApi.generateFlashcards(slideId, 5, slideImageBase64);
-      console.log("?? Generation request sent successfully");
+      const job = await aiApi.generateFlashcards(slideId, 5, slideImageBase64);
+      sessionStorage.setItem(generationStorageKey, job.job_id);
+      setGenerationJobId(job.job_id);
       
     } catch (err: any) {
-      console.error("? Generation request failed:", err);
       setGenerating(false);
       
       if (err.response?.status === 403) {
@@ -282,6 +320,26 @@ function FlashcardsTab({ slideId, slideImageUrl }: { slideId: string, slideImage
           <p className="text-xs text-center text-muted-foreground mt-4">
             These cards have been added to your daily review queue.
           </p>
+          {canGenerateMore && (
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={generating}
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="size-4" />
+                  Generate remaining cards
+                </>
+              )}
+            </button>
+          )}
         </div>
       ) : (
         <button
@@ -297,7 +355,7 @@ function FlashcardsTab({ slideId, slideImageUrl }: { slideId: string, slideImage
           ) : (
             <>
               <RefreshCw className="size-4" />
-              Generate Flashcards
+              {generationJobId ? "Check generation status" : "Generate Flashcards"}
             </>
           )}
         </button>
@@ -321,9 +379,12 @@ function TextbookTab({ books }: { books: TextbookResource[] }) {
   return (
     <div className="p-5">
       <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-        AI-Recommended Textbooks
+        AI-Suggested References
       </p>
       <h3 className="mt-1 font-serif text-xl">Based on this slide</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Suggestions are not verified editions or direct book links.
+      </p>
 
       <div className="mt-4 space-y-3">
         {books.map((book, idx) => (
@@ -347,6 +408,16 @@ function TextbookTab({ books }: { books: TextbookResource[] }) {
               <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
                 {book.reason}
               </p>
+              <a
+                href={`https://www.google.com/search?tbm=bks&q=${encodeURIComponent(
+                  [book.title, book.author].filter(Boolean).join(" "),
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex min-h-11 items-center text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Search book catalogs
+              </a>
             </div>
           </div>
         ))}
@@ -362,11 +433,64 @@ function TextbookTab({ books }: { books: TextbookResource[] }) {
 function VideosTab({
   videos,
   selection,
+  slideId,
 }: {
   videos: YouTubeResource[];
   selection: string | null;
+  slideId: string;
 }) {
-  if (!videos.length) {
+  const [suggestions, setSuggestions] = useState(videos);
+  const [source, setSource] = useState<"youtube_api" | "ai_suggestions">("ai_suggestions");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const videoRequestVersion = useRef(0);
+
+  const loadVideos = useCallback(async () => {
+    const version = ++videoRequestVersion.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await aiApi.getVideoSuggestions(slideId);
+      if (version !== videoRequestVersion.current) return;
+      if (!Array.isArray(response.videos)) throw new Error("Invalid video suggestion response");
+      setSuggestions(response.videos);
+      setSource(response.source === "youtube_api" ? "youtube_api" : "ai_suggestions");
+    } catch (requestError) {
+      if (version !== videoRequestVersion.current) return;
+      console.error("Failed to load video suggestions:", requestError);
+      setError("Could not load video suggestions. You can retry.");
+    } finally {
+      if (version === videoRequestVersion.current) setLoading(false);
+    }
+  }, [slideId]);
+
+  useEffect(() => {
+    setSuggestions(videos);
+    setSource("ai_suggestions");
+    void loadVideos();
+    return () => { videoRequestVersion.current++; };
+  }, [loadVideos, videos]);
+
+  if (loading && suggestions.length === 0) {
+    return (
+      <div className="flex justify-center p-8" role="status">
+        <Loader2 className="size-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error && suggestions.length === 0) {
+    return (
+      <div className="p-5 text-center">
+        <p role="alert" className="text-sm text-destructive">{error}</p>
+        <button type="button" onClick={loadVideos} className="mt-3 min-h-11 text-sm text-primary underline">
+          Retry video suggestions
+        </button>
+      </div>
+    );
+  }
+
+  if (!suggestions.length) {
     return (
       <div className="p-5 text-center text-sm text-muted-foreground">
         No video suggestions generated.
@@ -377,8 +501,19 @@ function VideosTab({
   return (
     <div className="p-5">
       <p className="text-[11px] font-medium uppercase tracking-widest text-accent">
-        AI-Curated Videos
+        {source === "youtube_api" ? "YouTube video results" : "Video search suggestions"}
       </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {source === "youtube_api"
+          ? "Direct results from YouTube."
+          : "Suggestions open YouTube search results, not a specific verified video."}
+      </p>
+      {error && <p role="alert" className="mt-2 text-xs text-destructive">{error}</p>}
+      {error && (
+        <button type="button" onClick={loadVideos} className="mt-1 min-h-11 text-xs text-primary underline">
+          Retry video suggestions
+        </button>
+      )}
       <h3 className="mt-1 font-serif text-xl">
         {selection ? "Based on your highlight" : "For this slide"}
       </h3>
@@ -389,28 +524,36 @@ function VideosTab({
       )}
 
       <ul className="mt-4 space-y-3">
-        {videos.map((v, idx) => {
-          // Build YouTube search URL from query — no API key needed
-          const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(v.query)}`;
+        {suggestions.map((v, idx) => {
+          const directVideoUrl = source === "youtube_api" ? safeYouTubeVideoUrl(v.url) : null;
+          const targetUrl = directVideoUrl
+            ?? `https://www.youtube.com/results?search_query=${encodeURIComponent(v.query || v.title)}`;
 
           return (
             <li key={idx}>
               <a
-                href={searchUrl}
+                href={targetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex gap-3 rounded-2xl border border-border bg-background p-3 transition-colors hover:border-primary hover:bg-primary/5"
+                className="flex gap-3 rounded-2xl border border-border bg-background p-3 transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="relative flex size-20 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                  <Play className="size-5" />
+                  {source === "youtube_api" && v.thumbnail ? (
+                    <img src={v.thumbnail} alt="" className="size-full rounded-lg object-cover" />
+                  ) : (
+                    <Play className="size-5" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-sm font-medium">{v.title}</p>
+                  {source === "youtube_api" && v.channel && (
+                    <p className="mt-1 text-xs text-muted-foreground">{v.channel}{v.duration ? ` · ${v.duration}` : ""}</p>
+                  )}
                   <p className="mt-1 text-xs text-muted-foreground leading-relaxed line-clamp-2">
                     {v.reason}
                   </p>
                   <p className="mt-1 text-[10px] text-primary">
-                    Search on YouTube →
+                    {directVideoUrl ? "Watch on YouTube" : "Search on YouTube"}
                   </p>
                 </div>
               </a>
@@ -420,6 +563,20 @@ function VideosTab({
       </ul>
     </div>
   );
+}
+
+function safeYouTubeVideoUrl(value?: string) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const isYouTubeHost = ["youtube.com", "www.youtube.com", "youtu.be"].includes(url.hostname);
+    const isVideoPath = url.hostname === "youtu.be"
+      ? url.pathname.length > 1
+      : url.pathname === "/watch" && Boolean(url.searchParams.get("v"));
+    return url.protocol === "https:" && isYouTubeHost && isVideoPath ? url.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

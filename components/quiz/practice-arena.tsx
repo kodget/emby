@@ -38,10 +38,12 @@ export function PracticeArena({
   onMissedQuestions,
   creatingMissed,
   onAdvanced,
+  onPractice,
 }: {
   onMissedQuestions: () => void;
   creatingMissed: boolean;
   onAdvanced: () => void;
+  onPractice: () => void;
 }) {
   const [stats, setStats] = useState<Partial<Stats>>({});
   const [loading, setLoading] = useState(true);
@@ -120,6 +122,7 @@ export function PracticeArena({
       </section>
 
       <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+        <ActionTile icon="quiz" title="Practise one deck" detail="Saved MCQs at your chosen difficulty" onClick={onPractice} />
         <ActionTile
           icon="target"
           title="Your mistakes"
@@ -171,6 +174,15 @@ export function PracticeArena({
         />
       </div>
 
+      <Link href="/quiz/assessments" className="mt-5 block rounded-full border border-border bg-card py-3 text-center text-sm font-medium">
+        Class assessments
+      </Link>
+      <Link href="/quiz/history" className="mt-3 block rounded-full border border-border bg-card py-3 text-center text-sm font-medium">
+        Assessment history
+      </Link>
+      <Link href="/quiz/mock" className="mt-3 block rounded-full border border-border bg-card py-3 text-center text-sm font-medium">
+        Mock exam — course, module or submodule
+      </Link>
       <button
         type="button"
         onClick={onAdvanced}

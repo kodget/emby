@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { isAxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -20,41 +21,125 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import EmailVerificationBanner from "@/components/auth/email-verification-banner";
 import { authApi } from "@/lib/api";
 import type { UserProfile } from "@/lib/api";
+import { useAppDispatch } from "@/store/hooks";
+import { logout, updateUserProfile } from "@/store/user-slice";
 
 export default function VerificationPendingPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [checking, setChecking] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const mounted = useRef(false);
+  const requestInFlight = useRef(false);
 
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const profile = await authApi.getProfile();
-        setUser(profile);
+  const applyProfile = useCallback((profile: UserProfile) => {
+    setUser(profile);
+    sessionStorage.setItem("user", JSON.stringify(profile));
+    const verified = profile.class_role === "class_head" && profile.class_head_verified === true;
+    dispatch(updateUserProfile({
+      id: profile.id.toString(),
+      name: profile.full_name,
+      username: profile.username,
+      email: profile.email,
+      photoUrl: profile.photo_url,
+      school: profile.school_name,
+      setName: profile.set_name,
+      backendRole: profile.class_role,
+      isVerifiedClassHead: verified,
+      isSignedIn: true,
+      isOnboarded: profile.onboarding_completed,
+      streak: profile.streak,
+      subscription: {
+        status: profile.is_premium ? "active" : "free",
+        tier: profile.is_premium ? "premium" : "free",
+        expiresAt: verified ? null : profile.subscription_expires_at,
+      },
+    }));
+    if (!profile.onboarding_completed) router.replace("/onboarding");
+    else if (profile.class_role !== "class_head" || verified) router.replace("/dashboard");
+  }, [dispatch, router]);
 
-        // Update sessionStorage with fresh profile data
-        sessionStorage.setItem("user", JSON.stringify(profile));
+  const handleFailure = useCallback((failure: unknown) => {
+    if (isAxiosError(failure) && failure.response?.status === 401) {
+      router.replace("/signin");
+      return;
+    }
+    const data = isAxiosError(failure) ? failure.response?.data : null;
+    const detail = data?.error || data?.detail;
+    setError(typeof detail === "string" ? detail : "We couldn't reach the server. Your account is still signed in; please try again.");
+  }, [router]);
 
-        // If verified, redirect to dashboard
-        if (profile.class_head_verified) {
-          router.push("/dashboard");
-        }
-      } catch (error) {
-        // If not authenticated, redirect to signin
-        router.push("/signin");
-      } finally {
+  const checkStatus = useCallback(async () => {
+    if (!mounted.current || requestInFlight.current) return;
+    requestInFlight.current = true;
+    setChecking(true);
+    try {
+      const profile = await authApi.getProfile();
+      if (mounted.current) {
+        applyProfile(profile);
+        setError(null);
+      }
+    } catch (failure) {
+      if (mounted.current) handleFailure(failure);
+    } finally {
+      requestInFlight.current = false;
+      if (mounted.current) {
+        setChecking(false);
         setLoading(false);
       }
+    }
+  }, [applyProfile, handleFailure]);
+
+  useEffect(() => {
+    mounted.current = true;
+    if (!sessionStorage.getItem("token")) {
+      router.replace("/signin");
+      return () => { mounted.current = false; };
+    }
+    void checkStatus();
+    const interval = setInterval(() => void checkStatus(), 30000);
+    return () => {
+      mounted.current = false;
+      clearInterval(interval);
     };
+  }, [checkStatus, router]);
 
-    checkStatus();
+  const requestReview = async () => {
+    if (requestInFlight.current) return;
+    requestInFlight.current = true;
+    setSubmitting(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await authApi.requestClassHeadVerification();
+      const profile = result.user ?? await authApi.getProfile();
+      if (mounted.current) {
+        applyProfile(profile);
+        setMessage(result.message);
+      }
+    } catch (failure) {
+      if (mounted.current) handleFailure(failure);
+    } finally {
+      requestInFlight.current = false;
+      if (mounted.current) setSubmitting(false);
+    }
+  };
 
-    // Poll every 30 seconds to check if verified
-    const interval = setInterval(checkStatus, 30000);
-    return () => clearInterval(interval);
-  }, [router]);
+  const signOut = () => {
+    mounted.current = false;
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("refreshToken");
+    sessionStorage.removeItem("user");
+    dispatch(logout());
+    router.replace("/signin");
+  };
 
   if (loading) {
     return (
@@ -64,9 +149,8 @@ export default function VerificationPendingPage() {
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  const pending = user?.class_head_verification_requested === true;
+  const rejected = !!user && !pending && !!user.class_head_rejection_reason;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
@@ -85,16 +169,19 @@ export default function VerificationPendingPage() {
 
         <Card>
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-500/10">
-              <Clock className="h-8 w-8 text-yellow-500" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+              {rejected ? <XCircle className="h-8 w-8 text-destructive" /> : <Clock className="h-8 w-8 text-yellow-500" />}
             </div>
-            <CardTitle className="text-2xl">Verification Pending</CardTitle>
+            <CardTitle className="text-2xl">{pending ? "Verification Pending" : rejected ? "Verification Not Approved" : "Class-Head Verification"}</CardTitle>
             <CardDescription>
-              Your class head account is being reviewed
+              {pending ? "Your class-head application is waiting for review." : rejected ? "Review the reason below before requesting another review." : user ? "Submit your class-head application for review." : "We couldn't load your current verification status."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {user.class_head_rejection_reason ? (
+            {user && !user.email_verified && <EmailVerificationBanner />}
+            {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+            {message && <p className="text-sm text-primary" role="status">{message}</p>}
+            {rejected && user ? (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
                 <AlertDescription>
@@ -103,12 +190,11 @@ export default function VerificationPendingPage() {
                   </p>
                   <p className="text-sm">{user.class_head_rejection_reason}</p>
                   <p className="text-sm mt-2">
-                    Please contact support at support@emby.com for more
-                    information.
+                    You can request another review after addressing this feedback.
                   </p>
                 </AlertDescription>
               </Alert>
-            ) : (
+            ) : pending ? (
               <>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
@@ -142,7 +228,7 @@ export default function VerificationPendingPage() {
                     <div>
                       <p className="font-medium">Email Notification</p>
                       <p className="text-sm text-muted-foreground">
-                        You'll receive an email once your account is verified
+                        We will notify you when a decision has been made. You can also check your status here.
                       </p>
                     </div>
                   </div>
@@ -153,7 +239,7 @@ export default function VerificationPendingPage() {
                     <p className="font-semibold mb-2">What happens next?</p>
                     <ul className="text-sm space-y-1 list-disc list-inside">
                       <li>Our team will verify your class head credentials</li>
-                      <li>You'll receive an email with your class code</li>
+                      <li>Your class code will be included in your approval email</li>
                       <li>
                         Once approved, you'll have full access to all premium
                         features
@@ -165,26 +251,27 @@ export default function VerificationPendingPage() {
                   </AlertDescription>
                 </Alert>
 
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    <strong>Verification typically takes:</strong>
-                  </p>
-                  <p className="text-2xl font-bold">24-48 hours</p>
-                </div>
               </>
-            )}
+            ) : null}
 
             <div className="flex flex-col gap-2">
+              {user && !pending && !user.class_head_verified && (
+                <Button className="w-full" disabled={submitting || checking} onClick={() => void requestReview()}>
+                  {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {submitting ? "Submitting…" : rejected ? "Request another review" : "Request verification"}
+                </Button>
+              )}
+              <Button variant="outline" className="w-full" disabled={checking || submitting} onClick={() => void checkStatus()}>
+                {checking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {checking ? "Checking…" : "Check status"}
+              </Button>
               <Button variant="outline" asChild className="w-full">
                 <Link href="/">Return to Home</Link>
               </Button>
               <Button
                 variant="ghost"
                 className="w-full"
-                onClick={() => {
-                  sessionStorage.clear();
-                  router.push("/signin");
-                }}
+                onClick={signOut}
               >
                 Sign out
               </Button>

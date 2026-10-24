@@ -3,6 +3,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 import cloudinary.uploader
+import logging
+from .class_access import upload_class
+from .private_media import upload_asset, asset_url
+
+logger = logging.getLogger(__name__)
 
 # PRD §11.4 — restrict uploads to a known allow-list and cap the size.
 DOCUMENT_EXTS = {'pdf', 'ppt', 'pptx', 'doc', 'docx'}
@@ -30,9 +35,7 @@ def _ext_of(filename: str) -> str:
 
 
 def _resource_type_for(ext: str) -> str:
-    # Use 'auto' for all document types so Cloudinary serves them with a
-    # publicly accessible URL (raw + free plan = 401 on download).
-    # Images and videos keep their explicit types for CDN optimization.
+    # Detection is independent of access: every type uses authenticated delivery.
     if ext in DOCUMENT_EXTS:
         return 'auto'
     if ext in IMAGE_EXTS:
@@ -65,7 +68,7 @@ def _content_looks_valid(ext: str, head: bytes) -> bool:
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_file(request):
-    """Upload file to Cloudinary and return URL"""
+    """Register a class-owned private asset and return a temporary preview URL."""
     from accounts.permissions import can_upload_slides
     profile = getattr(request.user, "profile", None)
     if profile is None or not can_upload_slides(profile):
@@ -73,19 +76,12 @@ def upload_file(request):
             {"error": "Only class heads and material uploaders can upload files."},
             status=status.HTTP_403_FORBIDDEN,
         )
-    print(f"Upload request received from user: {request.user}")
-    print(f"Files in request: {request.FILES}")
-    print(f"Data in request: {request.data}")
+    owning_class = upload_class(request.user)
     
     if 'file' not in request.FILES:
-        print("ERROR: No file in request")
         return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
     
     file = request.FILES['file']
-    folder = request.data.get('type', 'general')
-
-    print(f"File name: {file.name}, size: {file.size}, type: {file.content_type}")
-    print(f"Folder: {folder}")
 
     # ---- Validation (PRD §11.4) ----
     file_ext = _ext_of(file.name)
@@ -117,41 +113,33 @@ def upload_file(request):
         )
 
     resource_type = _resource_type_for(file_ext)
-    print(f"Using resource_type: {resource_type} (validated .{file_ext}, {len(file_content)} bytes)")
 
     try:
-        print("Attempting Cloudinary upload...")
-
-        result = cloudinary.uploader.upload(
-            file,
-            folder=f"emby/{folder}",
-            resource_type=resource_type,
-            access_mode='public',  # Make files publicly accessible
-            type='upload',  # Ensure it's a regular upload, not authenticated
-            timeout=300
+        asset = upload_asset(
+            file, class_group=owning_class, uploaded_by=request.user,
+            folder='emby/attachments', resource_type=resource_type, timeout=300,
         )
         
-        print(f"Cloudinary upload successful: {result['secure_url']}")
-        
         return Response({
-            'url': result['secure_url'],
-            'public_id': result['public_id'],
+            'url': asset_url(asset),
+            'asset_id': str(asset.pk),
             'filename': file.name,
             'size': file.size,
-            'format': result.get('format'),
-            'resource_type': result.get('resource_type')
-        }, status=status.HTTP_201_CREATED)
+            'format': asset.format,
+            'resource_type': asset.resource_type,
+        }, status=status.HTTP_201_CREATED, headers={'Cache-Control': 'private, no-store'})
     
     except Exception as e:
-        print(f"Upload error: {e}")
-        import traceback
-        traceback.print_exc()
-        return Response({'error': f"Upload failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.warning('Private upload failed (%s)', type(e).__name__)
+        return Response({'error': 'File storage is unavailable. Please try again.'}, status=502)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_file(request):
     """Delete file from Cloudinary"""
+    from .class_access import content_admin
+    if not content_admin(request.user):
+        return Response({'error': 'Delete the class-owned content record instead of an arbitrary storage identifier.'}, status=403)
     from accounts.permissions import can_upload_slides
     profile = getattr(request.user, "profile", None)
     if profile is None or not can_upload_slides(profile):

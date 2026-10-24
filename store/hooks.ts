@@ -8,7 +8,7 @@ export const useAppSelector = <T>(selector: (state: RootState) => T) =>
 /** Returns true if the current user can upload slides/past questions (uploader role or class representative) */
 export function useCanUpload(): boolean {
   return useAppSelector(
-    (s) => s.user.role === "uploader" || s.user.role === "class-rep",
+    (s) => s.user.role === "uploader" || (s.user.role === "class-rep" && s.user.isVerifiedClassHead),
   );
 }
 
@@ -19,3 +19,9 @@ export function useIsVerifiedClassHead(): boolean {
 
 export const useIsClassRep = () =>
   useAppSelector((s) => s.user.role === "class-rep");
+
+/** Reset content views when the signed-in account or class privileges change. */
+export const useContentSessionKey = () => useAppSelector((s) => JSON.stringify([
+  s.user.id, s.user.school, s.user.setName, s.user.isSignedIn,
+  s.user.role, s.user.isVerifiedClassHead,
+]));

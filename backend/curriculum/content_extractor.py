@@ -1,89 +1,40 @@
-"""
-Text content extraction utilities.
-Used for AI features (question generation, AI tutor context).
-For page-image rendering, see slide_renderer.py.
-"""
-
-import io
-import requests
+"""Compatibility entry points backed by complete, page-aware document extraction."""
+from .services.document_extraction import ExtractionError, extract_document, is_complete, normalize_format
 
 
-def extract_text_from_pdf(file_url_or_bytes):
-    """Extract plain text from a PDF. Accepts URL string or raw bytes."""
-    import fitz
-
-    if isinstance(file_url_or_bytes, str):
-        resp = requests.get(file_url_or_bytes, timeout=30)
-        data = resp.content
-    else:
-        data = file_url_or_bytes
-
-    doc = fitz.open(stream=data, filetype="pdf")
-    pages = []
-    for i, page in enumerate(doc, 1):
-        pages.append({"page_number": i, "text": page.get_text()})
-    doc.close()
-    return pages
+def _pages(source, kind):
+    result = extract_document(source, kind)
+    if not is_complete(result):
+        raise ExtractionError('incomplete', result['text_extraction'])
+    return result['pages']
 
 
-def extract_text_from_pptx(file_url_or_bytes):
-    """Extract plain text from a PowerPoint file."""
-    from pptx import Presentation
-
-    if isinstance(file_url_or_bytes, str):
-        resp = requests.get(file_url_or_bytes, timeout=30)
-        data = resp.content
-    else:
-        data = file_url_or_bytes
-
-    prs = Presentation(io.BytesIO(data))
-    pages = []
-    for i, slide in enumerate(prs.slides, 1):
-        texts = [shape.text for shape in slide.shapes if hasattr(shape, "text") and shape.text.strip()]
-        pages.append({"page_number": i, "text": "\n".join(texts)})
-    return pages
+def extract_text_from_pdf(source):
+    return _pages(source, 'pdf')
 
 
-def extract_text_from_docx(file_url_or_bytes):
-    """Extract plain text from a Word document."""
-    from docx import Document
-
-    if isinstance(file_url_or_bytes, str):
-        resp = requests.get(file_url_or_bytes, timeout=30)
-        data = resp.content
-    else:
-        data = file_url_or_bytes
-
-    doc = Document(io.BytesIO(data))
-    text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
-    return [{"page_number": 1, "text": text}]
+def extract_text_from_pptx(source):
+    return _pages(source, 'pptx')
 
 
-def extract_text_from_slide(file_url, file_type):
-    """
-    Extract text from a slide/document for AI processing.
-    Returns list of {"page_number": int, "text": str}.
-    """
-    ft = file_type.lower()
+def extract_text_from_docx(source):
+    return _pages(source, 'docx')
+
+
+def extract_text_from_slide(source, file_type):
+    kind = normalize_format(file_type)
     try:
-        if 'pdf' in ft:
-            return extract_text_from_pdf(file_url)
-        elif 'pptx' in ft or 'presentation' in ft or 'ppt' in ft:
-            return extract_text_from_pptx(file_url)
-        elif 'docx' in ft or 'document' in ft or 'doc' in ft:
-            return extract_text_from_docx(file_url)
-        else:
-            return []
-    except Exception as e:
-        print(f"Text extraction error ({file_type}): {e}")
-        return []
+        return {'pdf': extract_text_from_pdf, 'pptx': extract_text_from_pptx,
+                'docx': extract_text_from_docx}.get(kind, lambda value: _pages(value, kind))(source)
+    except ExtractionError:
+        raise
+    except Exception:
+        raise ExtractionError('invalid_document') from None
 
 
-def get_slide_full_text(file_url, file_type, max_chars=15000):
-    """
-    Return all text from a slide concatenated, capped at max_chars.
-    Used as context when calling the AI.
-    """
-    pages = extract_text_from_slide(file_url, file_type)
-    combined = "\n\n".join(p["text"] for p in pages if p["text"].strip())
-    return combined[:max_chars]
+def get_slide_full_text(source, file_type, max_chars=None):
+    combined = '\n\n'.join(f"[Page {p['page_number']}]\n{p['text']}" for p in
+                           extract_text_from_slide(source, file_type) if p['text'].strip())
+    if max_chars is not None and len(combined) > max_chars:
+        raise ExtractionError('text_limit')
+    return combined

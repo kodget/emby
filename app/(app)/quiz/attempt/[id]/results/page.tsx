@@ -15,12 +15,29 @@ import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { SessionFooter } from "@/components/session-footer";
 
 interface ResultData {
+  historical_read_only?: boolean;
+  history_notice?: string;
+  recorded_result?: { mcq_score: number; mcq_total: number; theory_score: number | string; overall_percentage: number } | null;
+  feedback?: {
+    note: string; mcq: { correct: number; incorrect: number; unanswered: number };
+    difficulty_breakdown: { difficulty: string; correct: number; incorrect: number; unanswered: number; total: number; sufficient_evidence: boolean }[];
+    questions_to_review: { question_id: string; question_number: number; question_text: string; outcome: string;
+      next_step: string; explanation?: string; criteria_to_review?: { criterion: string; marks_allocated: number; marks_awarded: number; feedback: string }[] }[];
+  } | null;
+  assessment?: string | null;
+  answers_released?: boolean;
+  theory_grading_pending?: boolean;
+  grading?: { status: string; can_retry: boolean; completed_questions: number; total_questions: number; retry_after?: string | null } | null;
+  questions?: (MissedQuestion & { option_a?: string; option_b?: string; option_c?: string; option_d?: string })[];
+  responses?: { question: { id: string }; selected_option?: string; text_answer?: string; is_correct?: boolean;
+    ai_score?: number | string | null; ai_evaluation_status?: string; ai_feedback?: { feedback?: string };
+    ai_rubric_breakdown?: { criterion: string; marks_allocated: number; marks_awarded: number; feedback: string }[] }[];
   id: string;
   overall_percentage: number;
   mcq_score: number;
   mcq_total: number;
   total_mcq: number;
-  theory_score: number | null;
+  theory_score: number | string | null;
   theory_total: number;
   total_theory: number;
   status: string;
@@ -32,6 +49,8 @@ interface ResultData {
   passed?: boolean;
   grade?: string;
   analysis_data?: {
+    theory_maximum_marks?: number;
+    total_maximum_marks?: number;
     insights?: string;
     next_steps?: string;
     weakest_topics?: string[];
@@ -44,6 +63,8 @@ interface ResultData {
 }
 
 interface MissedQuestion {
+  maximum_marks?: number;
+  ideal_answer?: string;
   id: string;
   question_text: string;
   question_type: string;
@@ -67,14 +88,22 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
   const [totalMissed, setTotalMissed] = useState(0);
   const [loading, setLoading] = useState(true);
   const [missedError, setMissedError] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
+  const [retrying, setRetrying] = useState(false);
+  const [statusError, setStatusError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
+      setStatusError("");
       // Fetch result first – if this fails, show error
       try {
         const resultRes = await api.get(`/api/quiz-attempts/${attemptId}/result/`);
+        if (cancelled) return;
         setResult(resultRes.data);
       } catch (e) {
+        if (cancelled) return;
+        setStatusError("Could not load the latest result. Please retry.");
         console.error("Failed to load result:", e);
         setLoading(false);
         return;
@@ -83,9 +112,11 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
       // Fetch missed questions independently – failure is non-fatal
       try {
         const missedRes = await api.get(`/api/quiz-attempts/${attemptId}/missed/`);
+        if (cancelled) return;
         setMissed(missedRes.data?.missed_questions ?? []);
         setTotalMissed(missedRes.data?.total_missed ?? missedRes.data?.count ?? 0);
       } catch (e: any) {
+        if (cancelled) return;
         const errData = e.response?.data;
         if (errData?.error) {
           setMissedError(errData.message || errData.error);
@@ -96,7 +127,24 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
       setLoading(false);
     };
     load();
-  }, [attemptId]);
+    return () => { cancelled = true; };
+  }, [attemptId, refresh]);
+
+  useEffect(() => {
+    if (!result?.theory_grading_pending || !result.grading || result.grading.status === "failed") return;
+    const timer = setTimeout(() => setRefresh(value => value + 1), 15000);
+    return () => clearTimeout(timer);
+  }, [result]);
+
+  const retryGrading = async () => {
+    setRetrying(true); setStatusError("");
+    try {
+      await api.post(`/api/quiz-attempts/${attemptId}/retry-grading/`, {});
+      setRefresh(value => value + 1);
+    } catch (error: any) {
+      setStatusError(error.response?.data?.error || "Grading could not be queued. Please try again.");
+    } finally { setRetrying(false); }
+  };
 
   if (loading) {
     return (
@@ -109,7 +157,19 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
     );
   }
 
-  if (!result) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Results not found</div>;
+  if (!result) return <div className="min-h-screen flex flex-col gap-3 items-center justify-center text-muted-foreground"><p role="alert">{statusError || "Results not found"}</p><Button onClick={() => setRefresh(value => value + 1)}>Refresh result</Button></div>;
+
+  if (result.historical_read_only) return <main className="mx-auto max-w-3xl space-y-4 p-6">
+    <h1 className="text-2xl font-bold">Historical assessment record</h1>
+    <p>{result.history_notice}</p>
+    {result.recorded_result ? <p>Previously recorded score: {result.recorded_result.overall_percentage}% (unverified).</p>
+      : <p>This attempt was never submitted.</p>}
+    <p>Available saved responses:</p>
+    {(result.responses || []).map((response, index) => <div key={index} className="rounded border p-3">
+      <p>Response {index + 1}</p><p>{response.text_answer || response.selected_option || "No answer recorded"}</p>
+    </div>)}
+    <Link href="/quiz">Start a new practice or mock exam</Link>
+  </main>;
 
   const score = Math.round(result.overall_percentage ?? 0);
   const isPassing = score >= 50;
@@ -132,6 +192,33 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-accent/10">
       <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
+        {statusError && <p role="alert" className="rounded border border-destructive p-3 text-destructive">{statusError}</p>}
+        {result.feedback && <Card><CardHeader><CardTitle>Study guidance from this paper</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">{result.feedback.note}</p>
+            <p>MCQs: {result.feedback.mcq.correct} correct, {result.feedback.mcq.incorrect} incorrect, {result.feedback.mcq.unanswered} unanswered.</p>
+            {result.feedback.difficulty_breakdown.map(row => <p key={row.difficulty} className="text-sm">
+              {row.difficulty}: {row.correct}/{row.total} correct
+              {!row.sufficient_evidence && " — too few questions to infer a pattern."}
+            </p>)}
+            {!result.feedback.questions_to_review.length && <p>No missed questions or rubric gaps were recorded in this paper. Try a different paper to broaden the evidence.</p>}
+            {result.feedback.questions_to_review.map(row => <div key={row.question_id} className="rounded border p-3 space-y-2">
+              <h3 className="font-medium">Question {row.question_number}: {row.question_text}</h3>
+              <p className="text-sm">Recorded outcome: {row.outcome}</p>
+              {row.explanation && <p className="text-sm">{row.explanation}</p>}
+              {row.criteria_to_review?.map((criterion, index) => <p key={index} className="text-sm">
+                {criterion.criterion}: {criterion.marks_awarded}/{criterion.marks_allocated}. {criterion.feedback}
+              </p>)}
+              <p className="text-sm">{row.next_step}</p>
+            </div>)}
+          </CardContent></Card>}
+        {result.grading && <Card><CardHeader><CardTitle>Written grading</CardTitle></CardHeader><CardContent className="space-y-3">
+          <p role="status">{result.grading.status === "completed" ? "Written grading complete." : result.grading.status === "failed" ? "Grading could not finish. Your answers and completed marks are saved." : result.grading.status === "retry_wait" ? "Grading was interrupted and will retry automatically." : result.grading.status === "running" ? "Your written answers are being graded." : "Your written answers are queued for grading."}</p>
+          <p>{result.grading.completed_questions} of {result.grading.total_questions} written questions graded.</p>
+          <div className="flex gap-3 flex-wrap"><Button variant="outline" disabled={retrying} onClick={() => setRefresh(value => value + 1)}>Refresh result</Button>
+            {result.grading.status === "failed" && <Button disabled={retrying || !result.grading.can_retry} onClick={retryGrading}>Retry grading</Button>}</div>
+          {result.grading.status === "failed" && !result.grading.can_retry && <p className="text-sm text-muted-foreground">Please wait a few minutes, then refresh to retry. Completed questions will keep their marks.</p>}
+        </CardContent></Card>}
 
         {/* Hero Score Card */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -141,8 +228,10 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
                 className={`w-28 h-28 rounded-full mx-auto flex items-center justify-center mb-6 ${scoreBg}`}>
                 {isPassing ? <Trophy className={`w-12 h-12 ${scoreColor}`} /> : <Target className="w-12 h-12 text-rose-500" />}
               </motion.div>
-              <div className={`text-7xl font-bold mb-2 ${scoreColor}`}>{score}%</div>
-              <p className="text-xl font-medium mb-1">{isPassing ? "Well done!" : "Keep practicing!"}</p>
+              <div className={`text-7xl font-bold mb-2 ${scoreColor}`}>{result.theory_grading_pending && !mcqTotal ? "Pending" : `${score}%`}</div>
+              <p className="text-xl font-medium mb-1">{result.theory_grading_pending ? mcqTotal ? "MCQ result only — written grading is pending" : "Written grading is pending" : isPassing ? "Well done!" : "Keep practicing!"}</p>
+              {(result.assessment || result.exam_type === "mock") && !result.theory_grading_pending && result.analysis_data?.total_maximum_marks !== undefined && <p className="text-sm text-muted-foreground">Overall mark: {result.mcq_score + Number(result.theory_score || 0)} / {result.analysis_data.total_maximum_marks}</p>}
+              {result.assessment && !result.answers_released && <p className="mt-3 text-sm text-muted-foreground">Answer keys will be available after your class head closes entries and releases them.</p>}
               <div className="flex items-center justify-center gap-2 text-muted-foreground flex-wrap">
                 {result.subject_name && <span>{result.subject_name}</span>}
                 {result.subject_name && <span>•</span>}
@@ -162,16 +251,16 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
                 <div className="p-3 rounded-xl bg-card border text-center">
                   <div className="text-2xl font-bold text-emerald-600">
                     {theoryTotal > 0
-                      ? (result.theory_score !== null && result.theory_score !== undefined
-                          ? `${result.theory_score}/${theoryTotal}`
+                      ? (!result.theory_grading_pending && result.theory_score !== null && result.theory_score !== undefined
+                          ? `${result.theory_score}/${result.analysis_data?.theory_maximum_marks ?? theoryTotal}`
                           : "Pending")
                       : "—"}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">Theory Score</div>
                 </div>
                 <div className="p-3 rounded-xl bg-card border text-center">
-                  <div className="text-2xl font-bold text-amber-600">{totalMissed}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Missed</div>
+                  <div className="text-2xl font-bold text-amber-600">{result.assessment && !result.answers_released ? "Withheld" : totalMissed}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{result.assessment ? "Missed MCQs" : "Missed"}</div>
                 </div>
                 <div className="p-3 rounded-xl bg-card border text-center">
                   <div className="text-2xl font-bold text-foreground flex items-center justify-center gap-1">
@@ -206,20 +295,20 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
             <div className="flex flex-wrap items-center justify-center gap-4 py-2">
               <Badge variant="secondary" className="px-3 py-1.5 text-sm gap-2 bg-primary/10 text-primary border-primary/20">
-                <CheckCircle className="w-4 h-4" /> Official scoring
+                <CheckCircle className="w-4 h-4" /> One attempt
               </Badge>
               <Badge variant="secondary" className="px-3 py-1.5 text-sm gap-2 bg-primary/10 text-primary border-primary/20">
-                <Trophy className="w-4 h-4" /> Certificate eligible
+                <Clock className="w-4 h-4" /> Class-head time limit
               </Badge>
               <Badge variant="secondary" className="px-3 py-1.5 text-sm gap-2 bg-primary/10 text-primary border-primary/20">
-                <BookOpen className="w-4 h-4" /> Comprehensive report
+                <BookOpen className="w-4 h-4" /> Saved answers
               </Badge>
             </div>
           </motion.div>
         )}
 
         {/* AI Performance Analysis (Mock & Formal) */}
-        {!isPremium && (result.exam_type === "mock" || result.exam_type === "formal") ? (
+        {!isPremium && result.exam_type === "mock" && (result.analysis_data?.insights || result.analysis_data?.next_steps) ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <Card className="border-indigo-200 bg-indigo-50/30 overflow-hidden relative">
               <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center">
@@ -296,7 +385,7 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
                 <CardTitle className="flex items-center gap-2">
                   <Brain className="w-5 h-5 text-primary" /> Performance Analytics
                 </CardTitle>
-                <CardDescription>Detailed breakdown of your performance</CardDescription>
+                <CardDescription>MCQ topic review, including unanswered questions.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -353,7 +442,33 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
           </motion.div>
         )}
 
-        {/* Flashcard Banner — appears when student missed questions */}
+        {(result.exam_type === "practice" || result.exam_type === "mock" || (result.assessment && result.answers_released)) && result.questions && <Card>
+          <CardHeader><CardTitle>Answer review</CardTitle><CardDescription>Your saved answers and the correct answer for each question.</CardDescription></CardHeader>
+          <CardContent className="space-y-5">{result.questions.filter(q => q.question_type === "mcq").map((q, index) => {
+            const response = result.responses?.find(r => r.question?.id === q.id);
+            const option = q[`option_${q.correct_option?.toLowerCase()}` as "option_a" | "option_b" | "option_c" | "option_d"];
+            return <div key={q.id} className="rounded border p-4 space-y-2">
+              <p className="font-medium">{index + 1}. {q.question_text}</p>
+              <p>{!response ? "Unanswered" : response.is_correct ? "Correct" : "Incorrect"} · Your answer: {response?.selected_option ?? "None"}</p>
+              <p>Correct answer: {q.correct_option}{option ? ` — ${option}` : ""}</p>
+              {result.exam_type === "mock" && q.explanation && <p>Explanation: {q.explanation}</p>}
+            </div>;
+          })}</CardContent>
+        </Card>}
+        {(result.assessment || result.exam_type === "mock") && result.questions?.some(q => q.question_type === "theory") && <Card>
+          <CardHeader><CardTitle>Your written answers</CardTitle><CardDescription>{result.theory_grading_pending ? "Grading is pending. These are your saved answers." : "Saved written responses."}</CardDescription></CardHeader>
+          <CardContent className="space-y-5">{result.questions.filter(q => q.question_type === "theory").map(q => {
+            const response = result.responses?.find(r => r.question?.id === q.id);
+            return <div key={q.id} className="space-y-2 rounded border p-4">
+            <p className="font-medium">{q.question_text}</p>
+            <p className="whitespace-pre-wrap">{response?.text_answer || "Unanswered"}</p>
+            <p>{response?.ai_evaluation_status === "completed" ? `Written mark: ${response.ai_score} / ${q.maximum_marks}` : "Mark pending"}</p>
+            {result.answers_released && response?.ai_feedback?.feedback && <p className="whitespace-pre-wrap">Feedback: {response.ai_feedback.feedback}</p>}
+            {result.answers_released && response?.ai_rubric_breakdown?.map((row, i) => <div key={i} className="border-l-2 pl-3 text-sm"><p>{row.criterion}: {row.marks_awarded} / {row.marks_allocated}</p><p>{row.feedback}</p></div>)}
+            {result.answers_released && q.ideal_answer && <p className="whitespace-pre-wrap">Model answer: {q.ideal_answer}</p>}
+          </div>; })}</CardContent>
+        </Card>}
+        {/* Link to review resources; no flashcard creation is implied. */}
         {totalMissed > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
             <div className="rounded-2xl bg-violet-950/60 border border-violet-500/30 px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -362,10 +477,10 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-violet-200 text-sm">
-                  {totalMissed} flashcard{totalMissed !== 1 ? "s" : ""} added to your review queue
+                  Review what you missed
                 </p>
                 <p className="text-violet-300/60 text-xs mt-0.5">
-                  Questions you missed are now in spaced repetition — review them before they fade!
+                  Revisit these questions and use flashcards to practise the underlying concepts.
                 </p>
               </div>
               <Link
@@ -380,7 +495,7 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
         )}
 
         {/* Missed Questions */}
-        {missed.length > 0 && (
+        {result.exam_type !== "practice" && missed.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <Card>
               <CardHeader>
@@ -442,7 +557,7 @@ function ResultsPageContent({ attemptId }: { attemptId: string }) {
         )}
 
         {/* No missed questions - show congrats */}
-        {!loading && missed.length === 0 && totalMissed === 0 && mcqTotal > 0 && (
+        {!loading && !missedError && missed.length === 0 && totalMissed === 0 && mcqTotal > 0 && result.mcq_score === mcqTotal && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <Card className="border-emerald-200 bg-emerald-50/30">
               <CardContent className="pt-6 pb-6 text-center space-y-2">

@@ -20,6 +20,7 @@ export interface QuizQuestion {
 }
 
 export interface QuizAttempt {
+  historical_read_only?: boolean;
   id: string;
   exam_type: "practice" | "mock" | "formal";
   status: "in_progress" | "submitted" | "auto_submitted" | "evaluated";
@@ -32,6 +33,8 @@ export interface QuizAttempt {
   mcq_count: number;
   theory_count: number;
   total_questions: number;
+  responses?: { question: QuizQuestion; selected_option?: string; text_answer?: string; time_taken_seconds?: number }[];
+  flagged_questions?: string[];
   subject_name?: string;
   block_name?: string;
   topic_name?: string;
@@ -45,11 +48,13 @@ export interface QuestionAnswer {
 }
 
 export interface QuizAttemptState {
+  loadRequestId: string | null;
   currentAttempt: QuizAttempt | null;
   currentQuestionIndex: number;
   answers: Record<string, QuestionAnswer>;
   questionStatuses: Record<string, QuestionStatus>;
   timeRemainingSeconds: number | null;
+  timerExpiresAt: number | null;
   timerActive: boolean;
   // Record<string, boolean> instead of Set<string> ? Sets are not JSON-serializable
   visitedQuestions: Record<string, boolean>;
@@ -61,11 +66,13 @@ export interface QuizAttemptState {
 }
 
 const initialState: QuizAttemptState = {
+  loadRequestId: null,
   currentAttempt: null,
   currentQuestionIndex: 0,
   answers: {},
   questionStatuses: {},
   timeRemainingSeconds: null,
+  timerExpiresAt: null,
   timerActive: false,
   visitedQuestions: {},   // plain object ? fully serializable
   loading: false,
@@ -96,7 +103,7 @@ export const saveAnswer = createAsyncThunk(
       await api.post(`/api/quiz-attempts/${attemptId}/answer/`, {
         question_id: answer.question_id,
         selected_option: answer.selected_option || null,
-        text_answer: answer.text_answer || null,
+        text_answer: answer.text_answer ?? null,
         time_taken_seconds: answer.time_taken_seconds,
       });
       return answer;
@@ -108,10 +115,10 @@ export const saveAnswer = createAsyncThunk(
 
 export const flagQuestion = createAsyncThunk(
   "quizAttempt/flagQuestion",
-  async ({ attemptId, questionId }: { attemptId: string; questionId: string }, { rejectWithValue }) => {
+  async ({ attemptId, questionId, isFlagged = true }: { attemptId: string; questionId: string; isFlagged?: boolean }, { rejectWithValue }) => {
     try {
-      await api.post(`/api/quiz-attempts/${attemptId}/flag/`, { question_id: questionId });
-      return questionId;
+      await api.post(`/api/quiz-attempts/${attemptId}/flag/`, { question_id: questionId, is_flagged: isFlagged });
+      return { questionId, isFlagged };
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || "Failed to flag question");
     }
@@ -194,6 +201,8 @@ const quizAttemptSlice = createSlice({
       };
       if (text.trim().length > 0) {
         state.questionStatuses[questionId] = "answered";
+      } else if (state.questionStatuses[questionId] !== "flagged") {
+        state.questionStatuses[questionId] = "unanswered";
       }
     },
 
@@ -209,8 +218,8 @@ const quizAttemptSlice = createSlice({
     },
 
     tickTimer(state) {
-      if (state.timeRemainingSeconds !== null && state.timeRemainingSeconds > 0) {
-        state.timeRemainingSeconds -= 1;
+      if (state.timerExpiresAt !== null) {
+        state.timeRemainingSeconds = Math.max(0, Math.ceil((state.timerExpiresAt - Date.now()) / 1000));
       }
     },
 
@@ -233,11 +242,21 @@ const quizAttemptSlice = createSlice({
 
   extraReducers: (builder) => {
     builder
-      .addCase(loadAttempt.pending, (state) => {
+      .addCase(loadAttempt.pending, (state, action) => {
+        state.loadRequestId = action.meta.requestId;
+        state.timeRemainingSeconds = null;
+        state.timerExpiresAt = null;
+        state.timerActive = false;
+        state.currentAttempt = null;
+        state.answers = {};
+        state.questionStatuses = {};
+        state.currentQuestionIndex = 0;
+        state.isSubmitted = false;
         state.loading = true;
         state.error = null;
       })
       .addCase(loadAttempt.fulfilled, (state, action) => {
+        if (state.loadRequestId !== action.meta.requestId) return;
         state.loading = false;
         state.currentAttempt = action.payload;
         if (action.payload.status === "submitted" || action.payload.status === "auto_submitted") {
@@ -248,8 +267,17 @@ const quizAttemptSlice = createSlice({
             state.questionStatuses[q.id] = "unanswered";
           }
         });
+        action.payload.responses?.forEach(response => {
+          if (!response.question || !action.payload.questions.some(q => q.id === response.question.id)) return;
+          const id = response.question.id;
+          state.answers[id] = { question_id: id, selected_option: response.selected_option,
+            text_answer: response.text_answer, time_taken_seconds: response.time_taken_seconds ?? 0 };
+          state.questionStatuses[id] = response.selected_option || response.text_answer?.trim() ? "answered" : "unanswered";
+        });
+        action.payload.flagged_questions?.forEach(id => { if (state.questionStatuses[id]) state.questionStatuses[id] = "flagged"; });
         if (action.payload.is_timed && action.payload.time_remaining_seconds !== null) {
           state.timeRemainingSeconds = action.payload.time_remaining_seconds;
+          state.timerExpiresAt = Date.now() + action.payload.time_remaining_seconds * 1000;
         }
         // Mark first question as visited
         if (action.payload.questions.length > 0) {
@@ -257,24 +285,34 @@ const quizAttemptSlice = createSlice({
         }
       })
       .addCase(loadAttempt.rejected, (state, action) => {
+        if (state.loadRequestId !== action.meta.requestId) return;
         state.loading = false;
         state.error = action.payload as string;
       });
 
     builder
+      .addCase(saveAnswer.pending, (state) => { state.error = null; })
       .addCase(saveAnswer.fulfilled, (state, action) => {
+        if (state.currentAttempt?.id !== action.meta.arg.attemptId) return;
         const answer = action.payload;
+        if (answer.text_answer !== undefined && state.answers[answer.question_id]?.text_answer !== answer.text_answer) return;
         state.answers[answer.question_id] = answer;
         if (state.questionStatuses[answer.question_id] !== "flagged") {
-          state.questionStatuses[answer.question_id] = "answered";
+          state.questionStatuses[answer.question_id] = answer.selected_option || answer.text_answer?.trim() ? "answered" : "unanswered";
         }
       })
       .addCase(saveAnswer.rejected, (state, action) => {
+        if (state.currentAttempt?.id !== action.meta.arg.attemptId) return;
         state.error = action.payload as string;
       });
 
     builder.addCase(flagQuestion.fulfilled, (state, action) => {
-      state.questionStatuses[action.payload] = "flagged";
+      if (state.currentAttempt?.id !== action.meta.arg.attemptId) return;
+      const { questionId, isFlagged } = action.payload;
+      state.questionStatuses[questionId] = isFlagged ? "flagged" : state.answers[questionId] ? "answered" : "unanswered";
+    });
+    builder.addCase(flagQuestion.rejected, (state, action) => {
+      if (state.currentAttempt?.id === action.meta.arg.attemptId) state.error = action.payload as string;
     });
 
     builder
@@ -283,17 +321,26 @@ const quizAttemptSlice = createSlice({
         state.error = null;
       })
       .addCase(submitAttempt.fulfilled, (state, action) => {
+        if (state.currentAttempt?.id !== action.meta.arg) return;
         state.submitting = false;
         state.isSubmitted = true;
         state.timerActive = false;
         state.resultId = action.payload.id;
       })
       .addCase(submitAttempt.rejected, (state, action) => {
+        if (state.currentAttempt?.id !== action.meta.arg) return;
         state.submitting = false;
         state.error = action.payload as string;
       });
 
+    builder.addCase(autoSubmitAttempt.pending, (state) => { state.submitting = true; state.error = null; });
+    builder.addCase(autoSubmitAttempt.rejected, (state, action) => {
+      if (state.currentAttempt?.id !== action.meta.arg) return;
+      state.submitting = false;
+      state.error = action.payload as string;
+    });
     builder.addCase(autoSubmitAttempt.fulfilled, (state, action) => {
+      if (state.currentAttempt?.id !== action.meta.arg) return;
       state.submitting = false;
       state.isSubmitted = true;
       state.timerActive = false;

@@ -25,6 +25,8 @@ import type { OnboardingQuestion } from "@/lib/api";
 import Link from "next/link";
 import { useAppDispatch } from "@/store/hooks";
 import { updateUserProfile } from "@/store/user-slice";
+import EmailVerificationBanner from "@/components/auth/email-verification-banner";
+import { getStoredProfile } from "@/lib/guards";
 const roles = [
   {
     value: "student",
@@ -84,6 +86,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<OnboardingQuestion[]>([]);
   const [error, setError] = useState("");
+  const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
 
   // Form data
   const [role, setRole] = useState("");
@@ -100,6 +103,7 @@ export default function OnboardingPage() {
       router.push("/signin");
       return;
     }
+    setNeedsEmailVerification(getStoredProfile()?.email_verified === false);
 
     // Fetch onboarding questions
     const fetchQuestions = async () => {
@@ -313,6 +317,7 @@ export default function OnboardingPage() {
 
         <Card>
           <CardContent className="p-6 sm:p-8">
+            {needsEmailVerification && <EmailVerificationBanner />}
             {error && (
               <Alert variant="destructive" className="mb-6">
                 <AlertDescription>{error}</AlertDescription>

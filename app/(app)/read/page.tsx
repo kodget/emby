@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BookOpenText, FileText, Sparkles, Loader2, Clock } from "lucide-react";
+import { useContentSessionKey } from "@/store/hooks";
 import {
   curriculumApi,
   progressApi,
@@ -18,11 +19,18 @@ type RecentSlide = {
 };
 
 export default function ReaderPage() {
+  const sessionKey = useContentSessionKey();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [recentSlides, setRecentSlides] = useState<RecentSlide[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    const session = sessionStorage.getItem("user");
+    const active = () => !cancelled && session === sessionStorage.getItem("user");
+    setSubjects([]); setRecentSlides([]); setLoading(true); setError("");
     async function load() {
       try {
         // Fetch subjects and recent progress in parallel
@@ -31,6 +39,7 @@ export default function ReaderPage() {
           progressApi.getRecentProgress().catch(() => [] as UserProgress[]),
         ]);
 
+        if (!active()) return;
         setSubjects(subjectsData);
 
         // Build last 3 opened slides with their full slide data
@@ -51,17 +60,18 @@ export default function ReaderPage() {
               readUrl: `/read/${courseId}/${slide.id}`,
             });
           }
-          setRecentSlides(items);
+          if (active()) setRecentSlides(items);
         }
       } catch (err) {
-        console.error("Failed to load read page data:", err);
+        if (active()) setError("Could not load your reading library. Please try again.");
       } finally {
-        setLoading(false);
+        if (active()) setLoading(false);
       }
     }
 
     load();
-  }, []);
+    return () => { cancelled = true; };
+  }, [sessionKey, attempt]);
 
   // Subject color palette — cycles if more subjects than colors
   const colors = [
@@ -119,6 +129,11 @@ export default function ReaderPage() {
             <div className="mt-8 flex items-center justify-center gap-2 text-muted-foreground">
               <Loader2 className="size-5 animate-spin" />
               <span className="text-sm">Loading subjects…</span>
+            </div>
+          ) : error ? (
+            <div role="alert" className="mt-8 p-4 text-sm">
+              <p>{error}</p>
+              <button className="mt-3 underline" onClick={() => setAttempt(value => value + 1)}>Try again</button>
             </div>
           ) : subjects.length === 0 ? (
             <div className="mt-8 rounded-2xl border border-dashed border-border bg-muted/20 p-8 text-center">

@@ -1,18 +1,46 @@
 from django.apps import apps
 from django.contrib import admin
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAdminUser
+from accounts.permissions import IsPlatformAdmin
 from rest_framework.response import Response
 from django.core.exceptions import FieldDoesNotExist
 import json
 from django.core.serializers import serialize
 from django.db import models
+from django.db import transaction
 from rest_framework import status
+
+SECRET_FIELDS = {'password', 'email_verification_token', 'password_reset_token'}
+APPROVAL_FIELDS = {
+    'class_head_verified', 'class_head_verification_requested', 'class_head_rejection_reason',
+    'class_head_request_version', 'class_head_reviewed_at', 'class_head_reviewed_by',
+    'class_heads', 'managed_classes',
+}
+
+
+def readonly_names(model):
+    names = SECRET_FIELDS | APPROVAL_FIELDS
+    if model._meta.label_lower == 'accounts.profile':
+        names = names | {'user', 'class_role', 'class_group', 'school', 'set_name'}
+    return names
+
+
+def mutation_error(model, data):
+    fields = {field.name: field for field in model._meta.get_fields()}
+    forbidden = [name for name in data if name in readonly_names(model)
+                 or name not in fields or fields[name].auto_created
+                 or not getattr(fields[name], 'editable', False)]
+    if forbidden:
+        return Response({'error': 'These fields require their dedicated account/approval workflow.',
+                         'fields': sorted(forbidden)}, status=400)
+    return None
 
 def get_model_schema(model):
     """Generate a simple schema dict for a Django model's fields."""
     fields = []
     for f in model._meta.get_fields():
+        if f.name in SECRET_FIELDS:
+            continue
         if f.is_relation and f.many_to_many and not f.related_model:
             continue
             
@@ -22,7 +50,7 @@ def get_model_schema(model):
             "type": f.get_internal_type() if hasattr(f, 'get_internal_type') else 'Relation',
             "is_relation": f.is_relation,
             "auto_created": f.auto_created,
-            "editable": getattr(f, 'editable', False),
+            "editable": bool(getattr(f, 'editable', False) and f.name not in readonly_names(model)),
             "primary_key": getattr(f, 'primary_key', False),
         }
 
@@ -47,7 +75,7 @@ def get_model_schema(model):
     }
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsPlatformAdmin])
 def admin_schema(request):
     """Returns all models registered in the Django admin site and their schemas."""
     # Get all models registered in the default admin site
@@ -71,21 +99,34 @@ def admin_schema(request):
 
 def get_model_from_kwargs(app_label, model_name):
     try:
-        return apps.get_model(app_label, model_name)
+        model = apps.get_model(app_label, model_name)
+        return model if model in admin.site._registry else None
     except LookupError:
         return None
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsPlatformAdmin])
+@transaction.atomic
 def admin_data_list(request, app_label, model_name):
     model = get_model_from_kwargs(app_label, model_name)
     if not model:
         return Response({"error": "Model not found"}, status=status.HTTP_404_NOT_FOUND)
         
+    model_admin = admin.site._registry[model]
+    allowed = (model_admin.has_view_or_change_permission(request) if request.method == 'GET'
+               else model_admin.has_add_permission(request))
+    if not allowed:
+        return Response({'error': 'Model permission required.'}, status=403)
+    if request.method == 'POST':
+        error = mutation_error(model, request.data)
+        if error is not None:
+            return error
     if request.method == 'GET':
-        # Pagination (simplified for now)
-        page = int(request.GET.get('page', 1))
-        limit = int(request.GET.get('limit', 50))
+        try:
+            page = max(1, int(request.GET.get('page', 1)))
+            limit = min(100, max(1, int(request.GET.get('limit', 50))))
+        except (ValueError, TypeError):
+            return Response({'error': 'page and limit must be integers.'}, status=400)
         offset = (page - 1) * limit
         
         queryset = model.objects.all()
@@ -102,7 +143,7 @@ def admin_data_list(request, app_label, model_name):
         for obj in queryset[offset:offset+limit]:
             item = {"id": obj.pk}
             for f in model._meta.get_fields():
-                if f.auto_created and not f.primary_key:
+                if f.name in SECRET_FIELDS or (f.auto_created and not getattr(f, 'primary_key', False)):
                     continue
                 if hasattr(obj, f.name):
                     val = getattr(obj, f.name)
@@ -157,11 +198,13 @@ def admin_data_list(request, app_label, model_name):
                     
             return Response({"id": obj.pk, "status": "created"}, status=status.HTTP_201_CREATED)
         except Exception as e:
+            transaction.set_rollback(True)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsPlatformAdmin])
+@transaction.atomic
 def admin_data_detail(request, app_label, model_name, pk):
     model = get_model_from_kwargs(app_label, model_name)
     if not model:
@@ -171,11 +214,21 @@ def admin_data_detail(request, app_label, model_name, pk):
         obj = model.objects.get(pk=pk)
     except model.DoesNotExist:
         return Response({"error": "Object not found"}, status=status.HTTP_404_NOT_FOUND)
+    model_admin = admin.site._registry[model]
+    permission = {'GET': model_admin.has_view_or_change_permission,
+                  'PUT': model_admin.has_change_permission,
+                  'DELETE': model_admin.has_delete_permission}[request.method]
+    if not permission(request, obj):
+        return Response({'error': 'Model permission required.'}, status=403)
+    if request.method == 'PUT':
+        error = mutation_error(model, request.data)
+        if error is not None:
+            return error
         
     if request.method == 'GET':
         item = {"id": obj.pk}
         for f in model._meta.get_fields():
-            if f.auto_created and not f.primary_key:
+            if f.name in SECRET_FIELDS or (f.auto_created and not getattr(f, 'primary_key', False)):
                 continue
             if hasattr(obj, f.name):
                 val = getattr(obj, f.name)
@@ -194,6 +247,11 @@ def admin_data_detail(request, app_label, model_name, pk):
     elif request.method == 'PUT':
         data = request.data
         try:
+            if model._meta.label_lower == 'auth.user' and 'is_active' in data:
+                from .class_heads import validate_reactivation
+                if type(data['is_active']) is not bool:
+                    return Response({'error': 'is_active must be a JSON boolean.'}, status=400)
+                validate_reactivation(obj.pk, data['is_active'])
             m2m_data = {}
             for f in model._meta.get_fields():
                 if f.name in data:
@@ -215,6 +273,7 @@ def admin_data_detail(request, app_label, model_name, pk):
                     
             return Response({"status": "updated"})
         except Exception as e:
+            transaction.set_rollback(True)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
             
     elif request.method == 'DELETE':

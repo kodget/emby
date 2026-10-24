@@ -12,6 +12,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,6 +21,7 @@ export default function ForgotPasswordPage() {
 
     try {
       const response = await authApi.forgotPassword(email);
+      setMessage(response.message);
       setSuccess(true);
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to send reset email. Please try again.");
@@ -37,10 +39,10 @@ export default function ForgotPasswordPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email</h1>
           <p className="text-gray-600 mb-6">
-            We've sent a password reset link to <strong>{email}</strong>
+            {message}
           </p>
           <p className="text-sm text-gray-500 mb-6">
-            The link will expire in 1 hour. If you don't see the email, check your spam folder.
+            Use the newest link and check its expiry time in the email.
           </p>
           <Link
             href="/signin"

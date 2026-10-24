@@ -15,6 +15,7 @@ apt-get install -y --no-install-recommends \
     libreoffice-impress \
     libreoffice-writer \
     poppler-utils \
+    tesseract-ocr-eng \
     fonts-liberation \
     fonts-dejavu
 echo "LibreOffice installed: $(soffice --version)"
@@ -26,18 +27,9 @@ echo "Installing Python dependencies..."
 pip install -r requirements.txt
 
 # ---------------------------------------------------------------------------
-# 3. Django setup
+# 3. Static assets only. Builds must not change the application database.
 # ---------------------------------------------------------------------------
-echo "Running database migrations..."
-python manage.py migrate --noinput
-
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
-
-echo "Ensuring superuser exists..."
-python manage.py create_admin
-
-echo "Seeding gamification achievements..."
-python manage.py seed_gamification
 
 echo "Build complete!"

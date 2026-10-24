@@ -1,42 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { deckApi, type SlideDeck } from "@/lib/api";
 import { DeckUpload } from "@/components/reader/deck-upload";
 import { Loader2, FileText, Trash2, Eye } from "lucide-react";
+import { useCanUpload, useContentSessionKey } from "@/store/hooks";
 
 export default function DecksPage() {
   const router = useRouter();
+  const sessionKey = useContentSessionKey();
+  const canUpload = useCanUpload();
+  const loadVersion = useRef(0);
   const [decks, setDecks] = useState<SlideDeck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  const loadDecks = async () => {
+  const loadDecks = useCallback(async () => {
+    const version = ++loadVersion.current;
+    const session = sessionStorage.getItem("user");
+    const active = () => version === loadVersion.current && session === sessionStorage.getItem("user");
+    setDecks([]); setError(null);
     try {
       setLoading(true);
       const data = await deckApi.listDecks();
-      setDecks(data);
+      if (active()) setDecks(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load decks");
+      if (active()) setError("Could not load your documents. Please try again.");
     } finally {
-      setLoading(false);
+      if (active()) setLoading(false);
     }
-  };
+  }, [sessionKey]);
 
   useEffect(() => {
     loadDecks();
-  }, []);
+    return () => { loadVersion.current++; };
+  }, [loadDecks]);
 
   const handleDelete = async (deckId: string) => {
     if (!confirm("Delete this deck? This cannot be undone.")) return;
-
+    const session = sessionStorage.getItem("user");
     try {
       await deckApi.deleteDeck(deckId);
-      setDecks(decks.filter((d) => d.id !== deckId));
+      if (session === sessionStorage.getItem("user")) setDecks(current => current.filter((d) => d.id !== deckId));
     } catch (err) {
+      if (session !== sessionStorage.getItem("user")) return;
       setError(
         err instanceof Error ? err.message : "Failed to delete deck"
       );
@@ -73,14 +83,14 @@ export default function DecksPage() {
       <div className="border-b bg-white px-4 py-6 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900">Documents</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Upload and view PDF, PowerPoint, and Word documents
+          View your class's PDF, PowerPoint, and Word documents
         </p>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className={`grid gap-8 ${canUpload ? "lg:grid-cols-3" : ""}`}>
           {/* Upload Section */}
-          <div className="lg:col-span-1">
+          {canUpload && <div className="lg:col-span-1">
             <div className="sticky top-8">
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
                 Upload New Document
@@ -90,7 +100,7 @@ export default function DecksPage() {
                 onError={(err) => setError(err)}
               />
             </div>
-          </div>
+          </div>}
 
           {/* Decks List */}
           <div className="lg:col-span-2">
@@ -99,8 +109,9 @@ export default function DecksPage() {
             </h2>
 
             {error && (
-              <div className="mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-700">
-                {error}
+              <div role="alert" className="mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-700">
+                <p>{error}</p>
+                <button className="mt-3 underline" onClick={loadDecks}>Try again</button>
               </div>
             )}
 
@@ -114,7 +125,7 @@ export default function DecksPage() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
-            ) : decks.length === 0 ? (
+            ) : error ? null : decks.length === 0 ? (
               <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-12 text-center">
                 <FileText className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">

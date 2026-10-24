@@ -16,12 +16,17 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: bash render_build.sh
+    # Paid Render web services support this hook. See docs/PERSISTENCE_RUNBOOK.md
+    # for the manual release step if the existing service does not support it.
+    preDeployCommand: bash render_release.sh
     startCommand: daphne -b 0.0.0.0 -p $PORT backend.asgi:application
     healthCheckPath: /health/
     envVars:
       - key: PYTHON_VERSION
         value: "3.12"
       - key: DEBUG
+        value: "False"
+      - key: USE_SQLITE
         value: "False"
       - key: REDIS_URL
         fromService:
@@ -96,6 +101,8 @@ services:
       - key: PYTHON_VERSION
         value: "3.12"
       - key: DEBUG
+        value: "False"
+      - key: USE_SQLITE
         value: "False"
       - key: REDIS_URL
         fromService:

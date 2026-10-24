@@ -1,0 +1,112 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; padding: 40px; max-width: 900px; margin: 0 auto; color: #333; }
+            h1, h2, h3 { border-bottom: 1px solid #eaecef; padding-bottom: .3em; margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25; color: #111; }
+            code { background-color: rgba(27,31,35,.05); border-radius: 3px; font-size: 85%; margin: 0; padding: .2em .4em; font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace; }
+            pre { background-color: #f6f8fa; border-radius: 6px; font-size: 85%; line-height: 1.45; overflow: auto; padding: 16px; border: 1px solid #e1e4e8; }
+            pre code { background-color: transparent; border: 0; display: inline; padding: 0; }
+            table { border-collapse: collapse; width: 100%; margin-top: 0; margin-bottom: 16px; }
+            table th, table td { border: 1px solid #dfe2e5; padding: 6px 13px; }
+            table th { font-weight: 600; background-color: #f6f8fa; }
+            table tr:nth-child(2n) { background-color: #f6f8fa; }
+            a { color: #0366d6; text-decoration: none; }
+            li { margin-bottom: 0.25em; }
+        </style>
+    </head>
+    <body>
+        <h1>Product Requirements Document (PRD) - Emby Quiz System</h1>
+<h2>1. Product Vision</h2>
+<p>Emby is an intelligent, scalable, and highly interactive educational platform designed to modernize exam preparation. By combining traditional multiple-choice (MCQ) and theory assessments with cutting-edge AI evaluation and Retrieval-Augmented Generation (RAG) study materials, Emby provides students with highly personalized feedback and comprehensive study pathways.</p>
+<h2>2. Target Audience</h2>
+<ul>
+<li><strong>Medical/University Students:</strong> Seeking structured practice (MCQ and Theory) mapped to specific curriculums (Subjects, Blocks, Topics).</li>
+<li><strong>Educators/Administrators:</strong> Creating curriculums, uploading slide decks, and managing student cohorts.</li>
+</ul>
+<h2>3. User Personas</h2>
+<h3>3.1. &quot;The Free-Tier Student&quot;</h3>
+<ul>
+<li>Needs quick, accessible practice before exams.</li>
+<li>Limited to 5 MCQs and 1 Theory question per quiz.</li>
+<li>Value proposition: Experiencing the platform&#39;s core interface and basic AI grading to encourage conversion.</li>
+</ul>
+<h3>3.2. &quot;The Premium Scholar&quot;</h3>
+<ul>
+<li>Requires deep, intensive study sessions.</li>
+<li>Takes full mock exams (100+ MCQs, 10 Theory questions).</li>
+<li>Relies on detailed, AI-generated performance breakdowns, topic-level weaknesses, and recommendations.</li>
+</ul>
+<h3>3.3. &quot;The System Administrator&quot;</h3>
+<ul>
+<li>Manages the platform via a dynamic backend-driven admin dashboard.</li>
+<li>Monitors payments, updates curriculum mapping, and oversees user accounts.</li>
+</ul>
+<h2>4. Key Capabilities &amp; Features</h2>
+<h3>4.1. Core Assessment Engine</h3>
+<ul>
+<li><strong>Configurable Quizzes:</strong> Users can generate quizzes by selecting Subject, Block, Topic, Exam Type (Practice, Mock, Formal), Duration, and Difficulty.</li>
+<li><strong>Hybrid Question Support:</strong> Supports instant-graded MCQs and AI-graded Theory questions.</li>
+<li><strong>Stateful Attempts:</strong> Auto-saving of answers, flagging questions for review, and timed auto-submission.</li>
+<li><strong>Slide Practice Mode:</strong> Contextual questions linked directly to specific study slides.</li>
+</ul>
+<h3>4.2. AI-Powered Evaluation &amp; Analysis</h3>
+<ul>
+<li><strong>Theory Grading:</strong> Asynchronous grading of free-text answers using LLMs, providing a score, correct answer rationale, and personalized feedback.</li>
+<li><strong>Performance Analytics:</strong> Breakdown of performance by topic and difficulty.</li>
+<li><strong>Missed Questions Analysis:</strong> Premium feature offering detailed explanations for incorrect answers to close knowledge gaps.</li>
+</ul>
+<h3>4.3. Subscription &amp; Credit System</h3>
+<ul>
+<li><strong>Tiered Access:</strong> <ul>
+<li><em>Free:</em> Capped quiz sizes, basic grading, limited concurrent quizzes.</li>
+<li><em>Premium:</em> Unlimited concurrent quizzes, large question sets, detailed AI analysis.</li>
+</ul>
+</li>
+<li><strong>Credit Tracking:</strong> Internal system to monitor API/LLM usage to ensure sustainable unit economics per user.</li>
+<li><strong>Automated Payments:</strong> Paystack integration for seamless upgrades and webhook-driven account provisioning.</li>
+</ul>
+<h3>4.4. Administrative Dashboard</h3>
+<ul>
+<li><strong>Dynamic Schema Rendering:</strong> Next.js dashboard that dynamically builds UI panels based on the Django backend schema.</li>
+<li><strong>Full CRUD Operations:</strong> Manage Users, Curriculums, Questions, and Payments directly from the web interface.</li>
+</ul>
+<h2>5. Functional Requirements</h2>
+<h3>5.1. User Authentication</h3>
+<ul>
+<li>Native email/password registration with verification flow.</li>
+<li>Google OAuth integration for frictionless onboarding.</li>
+<li>Password reset and account recovery flows.</li>
+</ul>
+<h3>5.2. Quiz Taking Experience</h3>
+<ul>
+<li>Responsive, distraction-free UI (Next.js + Tailwind).</li>
+<li>Client-side timer synced with server deadlines.</li>
+<li>Offline-resilient local state management (Zustand) with periodic server syncing.</li>
+</ul>
+<h3>5.3. Content Management (RAG)</h3>
+<ul>
+<li>Uploading PDF slide decks and processing them into vector embeddings.</li>
+<li>Extracting text and context to generate relevant study questions.</li>
+</ul>
+<h2>6. Non-Functional Requirements</h2>
+<ul>
+<li><strong>Performance:</strong> Quiz generation must take &lt; 2 seconds. API responses (excluding AI) must be &lt; 200ms.</li>
+<li><strong>Scalability:</strong> Celery workers must autoscale to handle spikes during exam seasons (e.g., thousands of simultaneous theory evaluations).</li>
+<li><strong>Availability:</strong> 99.9% uptime target.</li>
+<li><strong>Security:</strong> Strict separation of tenant data. Webhook endpoints must mathematically verify Paystack signatures. JWT tokens must have short lifespans with secure refresh rotation.</li>
+<li><strong>Responsiveness:</strong> 100% mobile-friendly UI for on-the-go studying.</li>
+</ul>
+<h2>7. Future Roadmap</h2>
+<ul>
+<li><strong>Phase 2:</strong> Gamification (Leaderboards, Streaks, Badges).</li>
+<li><strong>Phase 3:</strong> Collaborative Study Groups and Peer-to-Peer grading.</li>
+<li><strong>Phase 4:</strong> Spaced Repetition System (SRS) integration for missed questions.</li>
+<li><strong>Phase 5:</strong> Native iOS and Android applications.</li>
+</ul>
+
+    </body>
+    </html>
+    

@@ -1,0 +1,6 @@
+# Minimal isolated regression suite; full application dependencies remain pinned
+# in ../requirements.txt. These tests do not load backend/.env or contact services.
+Django==6.0.4
+dj-database-url==3.1.2
+cloudinary==1.44.2
+PyYAML==6.0.3

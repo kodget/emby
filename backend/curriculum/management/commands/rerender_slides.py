@@ -78,13 +78,12 @@ class Command(BaseCommand):
             
             try:
                 # Get file URL
-                file_url = slide.get_file_url
+                from curriculum.private_media import content_file_url
+                file_url = content_file_url(slide)
                 if not file_url:
                     self.stdout.write(self.style.ERROR(f"  ✗ No file URL found"))
                     error_count += 1
                     continue
-                
-                self.stdout.write(f"  File URL: {file_url}")
                 
                 # Render pages
                 self.stdout.write(f"  Rendering pages...")
@@ -111,10 +110,8 @@ class Command(BaseCommand):
                 success_count += 1
                 
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f"  ✗ Error: {str(e)}"))
+                self.stdout.write(self.style.ERROR(f"  ✗ Rendering failed ({type(e).__name__})"))
                 error_count += 1
-                import traceback
-                traceback.print_exc()
         
         # Summary
         self.stdout.write(self.style.SUCCESS(f"\n{'='*60}"))

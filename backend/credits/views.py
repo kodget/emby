@@ -1,11 +1,16 @@
 import requests
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import CreditPackage, CreditLot, CreditTransaction, TransactionType, CreditSource
+from .models import (
+    CreditPackage, CreditLot, CreditPurchase, CreditTransaction,
+    TransactionType, CreditSource,
+)
 from .services import CreditManager
 import logging
 
@@ -57,7 +62,10 @@ def get_packages(request):
 @permission_classes([IsAuthenticated])
 def get_history(request):
     """Get the user's credit transaction history."""
-    limit = int(request.query_params.get('limit', 50))
+    try:
+        limit = min(max(int(request.query_params.get('limit', 50)), 1), 100)
+    except (TypeError, ValueError):
+        return Response({"error": "limit must be a whole number between 1 and 100"}, status=400)
     transactions = CreditTransaction.objects.filter(user=request.user).order_by('-created_at')[:limit]
     data = [
         {
@@ -86,6 +94,9 @@ def init_purchase(request):
         package = CreditPackage.objects.get(id=package_id, is_active=True)
     except CreditPackage.DoesNotExist:
         return Response({"error": "Invalid or inactive credit package"}, status=status.HTTP_404_NOT_FOUND)
+    if package.credits <= 0 or package.price <= 0:
+        logger.error("Credit package %s has a nonpositive price or credit quantity", package.pk)
+        return Response({"error": "Credit package is unavailable"}, status=status.HTTP_409_CONFLICT)
         
     # Total price includes the service fee
     total_price_naira = package.price + EMBY_SERVICE_FEE
@@ -103,6 +114,9 @@ def init_purchase(request):
                 "metadata": {
                     "type": "credit_purchase",
                     "package_id": package.id,
+                    "credits": package.credits,
+                    "amount_kobo": amount_kobo,
+                    "currency": "NGN",
                     "user_id": request.user.id
                 }
             },
@@ -112,11 +126,30 @@ def init_purchase(request):
         result = res.json()
         if not result.get("status"):
             return Response({"error": result.get("message", "Paystack init failed")}, status=status.HTTP_400_BAD_REQUEST)
+
+        provider_data = result.get("data", {})
+        reference = provider_data.get("reference")
+        if not isinstance(reference, str) or not reference or len(reference) > 100:
+            logger.error("Paystack returned an invalid credit purchase reference")
+            return Response(
+                {"error": "Payment gateway returned an invalid purchase reference"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        CreditPurchase.objects.create(
+            reference=reference,
+            user=request.user,
+            package=package,
+            package_id_snapshot=package.pk,
+            package_name=package.name,
+            credits=package.credits,
+            amount_kobo=amount_kobo,
+            currency="NGN",
+        )
             
         return Response({
-            "authorization_url": result["data"]["authorization_url"],
-            "access_code": result["data"]["access_code"],
-            "reference": result["data"]["reference"]
+            "authorization_url": provider_data["authorization_url"],
+            "access_code": provider_data["access_code"],
+            "reference": reference
         })
     except Exception as e:
         logger.error(f"Paystack init error: {e}")
@@ -127,12 +160,20 @@ def init_purchase(request):
 def verify_purchase(request):
     """Verify a Paystack transaction and grant the purchased credits."""
     reference = request.data.get('reference')
-    if not reference:
+    if not isinstance(reference, str) or not reference or len(reference) > 100:
         return Response({"error": "reference is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-    # Prevent double processing
-    if CreditTransaction.objects.filter(reference_id=reference).exists():
-        return Response({"error": "Transaction already verified"}, status=status.HTTP_400_BAD_REQUEST)
+
+    purchase = CreditPurchase.objects.filter(reference=reference, user=request.user).first()
+    if purchase is None:
+        return Response({"error": "Unknown credit purchase"}, status=status.HTTP_404_NOT_FOUND)
+    if purchase.status == CreditPurchase.Status.CREDITED:
+        return Response({
+            "message": "Purchase successful",
+            "credits_added": purchase.credits,
+            "new_balance": CreditManager.get_user_balance(request.user),
+        })
+    if purchase.status != CreditPurchase.Status.PENDING:
+        return Response({"error": "Credit purchase is not eligible for verification"}, status=status.HTTP_409_CONFLICT)
         
     try:
         res = requests.get(
@@ -146,61 +187,84 @@ def verify_purchase(request):
         logger.error(f"Paystack verify error: {e}")
         return Response({"error": "Failed to verify payment with gateway"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+    if not isinstance(result, dict) or not result.get("status"):
+        return Response({"error": "Payment gateway could not verify this transaction"}, status=status.HTTP_502_BAD_GATEWAY)
     paystack_data = result.get("data", {})
+    if not isinstance(paystack_data, dict):
+        return Response({"error": "Payment gateway returned an invalid verification response"}, status=status.HTTP_502_BAD_GATEWAY)
     if paystack_data.get("status") != "success":
         return Response({"error": f"Payment not successful: {paystack_data.get('status')}"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if paystack_data.get("reference") != reference:
+        return Response({"error": "Payment reference does not match"}, status=status.HTTP_400_BAD_REQUEST)
         
     metadata = paystack_data.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return Response({"error": "Payment metadata is invalid"}, status=status.HTTP_400_BAD_REQUEST)
     if metadata.get("type") != "credit_purchase":
         return Response({"error": "Invalid transaction type"}, status=status.HTTP_400_BAD_REQUEST)
         
     # Make sure user matches (security)
     if str(metadata.get("user_id")) != str(request.user.id):
         return Response({"error": "Payment does not belong to this user"}, status=status.HTTP_403_FORBIDDEN)
-        
-    package_id = metadata.get("package_id")
-    try:
-        package = CreditPackage.objects.get(id=package_id)
-    except CreditPackage.DoesNotExist:
-        return Response({"error": "Credit package no longer exists"}, status=status.HTTP_404_NOT_FOUND)
+
+    if str(metadata.get("package_id")) != str(purchase.package_id_snapshot):
+        return Response({"error": "Payment package does not match the purchase"}, status=status.HTTP_400_BAD_REQUEST)
         
     # Verify amount paid
-    expected_kobo = (package.price + EMBY_SERVICE_FEE) * 100
-    paid_kobo = int(paystack_data.get("amount", 0))
-    if paid_kobo < expected_kobo:
-        return Response({"error": "Incomplete payment amount"}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        paid_kobo = int(paystack_data.get("amount", 0))
+    except (TypeError, ValueError):
+        paid_kobo = 0
+    if paid_kobo != purchase.amount_kobo:
+        return Response({"error": "Paid amount does not match the purchase"}, status=status.HTTP_400_BAD_REQUEST)
+    if paystack_data.get("currency") != purchase.currency or metadata.get("currency") != purchase.currency:
+        return Response({"error": "Payment currency does not match the purchase"}, status=status.HTTP_400_BAD_REQUEST)
+    if metadata.get("credits") != purchase.credits or metadata.get("amount_kobo") != purchase.amount_kobo:
+        return Response({"error": "Payment entitlement does not match the purchase"}, status=status.HTTP_400_BAD_REQUEST)
         
-    # Grant credits
     with transaction.atomic():
-        # Double check to avoid race condition
-        if CreditTransaction.objects.filter(reference_id=reference).exists():
-            return Response({"error": "Transaction already verified"}, status=status.HTTP_400_BAD_REQUEST)
-            
+        User.objects.select_for_update().get(pk=request.user.pk)
+        purchase = CreditPurchase.objects.select_for_update().get(pk=purchase.pk)
+        if purchase.status == CreditPurchase.Status.CREDITED:
+            return Response({
+                "message": "Purchase successful",
+                "credits_added": purchase.credits,
+                "new_balance": CreditManager.get_user_balance(request.user),
+            })
+        if purchase.status != CreditPurchase.Status.PENDING:
+            return Response({"error": "Credit purchase is not eligible for verification"}, status=status.HTTP_409_CONFLICT)
+
         balance_before = CreditManager.get_user_balance(request.user)
         
-        # Purchased credits never expire based on models config
         CreditLot.objects.create(
             user=request.user,
+            purchase=purchase,
             source=CreditSource.PURCHASE,
-            original_amount=package.credits,
-            remaining_amount=package.credits,
+            original_amount=purchase.credits,
+            remaining_amount=purchase.credits,
             expires_at=None
         )
         
         CreditTransaction.objects.create(
             user=request.user,
             type=TransactionType.PURCHASE,
-            amount=package.credits,
+            amount=purchase.credits,
             balance_before=balance_before,
-            balance_after=balance_before + package.credits,
+            balance_after=balance_before + purchase.credits,
             action="CREDIT_PURCHASE",
-            description=f"Purchased {package.name} ({package.credits} credits)",
+            description=f"Purchased {purchase.package_name} ({purchase.credits} credits)",
             reference_id=reference,
-            metadata={"paystack_ref": reference, "package_id": package.id}
+            metadata={"paystack_ref": reference, "package_id": purchase.package_id_snapshot},
         )
+
+        purchase.status = CreditPurchase.Status.CREDITED
+        purchase.provider_transaction_id = str(paystack_data.get("id") or "")
+        purchase.verified_at = timezone.now()
+        purchase.save(update_fields=["status", "provider_transaction_id", "verified_at"])
         
     return Response({
         "message": "Purchase successful",
-        "credits_added": package.credits,
-        "new_balance": balance_before + package.credits
+        "credits_added": purchase.credits,
+        "new_balance": balance_before + purchase.credits
     })

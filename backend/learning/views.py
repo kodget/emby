@@ -20,6 +20,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from curriculum.models import SpotStation
+from curriculum.class_access import content_admin, member_class, scoped_optional_parents
 
 from . import analytics, battles, credits, dashboard, events, notifications, practice, selection, xp
 from .models import (
@@ -56,7 +57,7 @@ def practice_options(request):
         {
             "mode": mode,
             "seconds_per_station": practice.SECONDS_PER_STATION,
-            "sections": practice.available_sections(mode),
+            "sections": practice.available_sections(request.user, mode),
             "entitlement": practice.entitlement(request.user, mode),
         }
     )
@@ -80,14 +81,16 @@ def practice_start(request):
     except practice.PracticeError as exc:
         return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
 
-    first = SpotStation.objects.get(id=session.station_ids[0])
+    first = practice.playable_stations(request.user).filter(id=session.station_ids[0]).first()
+    if first is None:
+        return Response({'detail': 'Station no longer available.'}, status=404)
     return Response(
         {
             "session_id": str(session.id),
             "mode": session.mode,
             "total_stations": session.total_stations,
             "seconds_per_station": session.seconds_per_station,
-            "station": practice.station_payload(first, 0, session.total_stations),
+            "station": practice.station_payload(practice.session_station(session, first), 0, session.total_stations),
             "entitlement": practice.entitlement(request.user, mode),
         },
         status=status.HTTP_201_CREATED,
@@ -98,55 +101,42 @@ def practice_start(request):
 @permission_classes([IsAuthenticated])
 def practice_station(request, session_id, index):
     """Fetch one station by position, without any answer data."""
-    session = PracticeSession.objects.filter(id=session_id, user=request.user).first()
+    session = practice.visible_sessions(request.user).filter(id=session_id).first()
     if session is None:
         return Response({"detail": "Session not found"}, status=404)
 
     try:
         index = int(index)
+        if index < 0:
+            raise IndexError
         station_id = session.station_ids[index]
-    except (ValueError, IndexError):
+    except (ValueError, TypeError, IndexError):
         return Response({"detail": "No station at that position"}, status=404)
 
-    station = SpotStation.objects.filter(id=station_id).first()
+    station = practice.playable_stations(request.user).filter(id=station_id).first()
     if station is None:
         return Response({"detail": "Station not found"}, status=404)
 
-    return Response(practice.station_payload(station, index, session.total_stations))
+    return Response(practice.station_payload(practice.session_station(session, station), index, session.total_stations))
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def practice_answer(request, session_id):
     """Submit one station's answers and get the reveal."""
-    session = PracticeSession.objects.filter(id=session_id, user=request.user).first()
+    session = practice.visible_sessions(request.user).filter(id=session_id).first()
     if session is None:
         return Response({"detail": "Session not found"}, status=404)
-
-    supporting = request.data.get("supporting_choice")
-    try:
-        supporting = int(supporting) if supporting is not None else None
-    except (TypeError, ValueError):
-        supporting = None
-
-    tf = request.data.get("true_false_answer")
-    if isinstance(tf, str):
-        tf = tf.lower() in {"true", "1", "yes"}
-
-    try:
-        seconds = int(request.data.get("seconds_taken", 0))
-    except (TypeError, ValueError):
-        seconds = 0
 
     try:
         reveal = practice.submit_attempt(
             session,
             str(request.data.get("station_id") or ""),
-            main_answer=str(request.data.get("main_answer") or ""),
-            supporting_choice=supporting,
-            true_false_answer=tf,
-            seconds_taken=seconds,
-            timed_out=bool(request.data.get("timed_out")),
+            main_answer=request.data.get("main_answer", ""),
+            supporting_choice=request.data.get("supporting_choice"),
+            true_false_answer=request.data.get("true_false_answer"),
+            seconds_taken=request.data.get("seconds_taken", 0),
+            timed_out=request.data.get("timed_out", False),
         )
     except practice.PracticeError as exc:
         return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
@@ -158,19 +148,25 @@ def practice_answer(request, session_id):
 @permission_classes([IsAuthenticated])
 def practice_complete(request, session_id):
     """Finish a round and return the full result breakdown."""
-    session = PracticeSession.objects.filter(id=session_id, user=request.user).first()
+    session = practice.visible_sessions(request.user).filter(id=session_id).first()
     if session is None:
         return Response({"detail": "Session not found"}, status=404)
-    return Response(practice.complete_session(session))
+    try:
+        return Response(practice.complete_session(session))
+    except practice.PracticeError as exc:
+        return Response({'detail': str(exc), 'code': exc.code}, status=exc.status)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def practice_results(request, session_id):
-    session = PracticeSession.objects.filter(id=session_id, user=request.user).first()
+    session = practice.visible_sessions(request.user).filter(id=session_id).first()
     if session is None:
         return Response({"detail": "Session not found"}, status=404)
-    return Response(practice.results(session))
+    try:
+        return Response(practice.results(session))
+    except practice.PracticeError as exc:
+        return Response({'detail': str(exc), 'code': exc.code}, status=exc.status)
 
 
 @api_view(["GET"])
@@ -178,8 +174,8 @@ def practice_results(request, session_id):
 def practice_history(request):
     """Recent rounds, for the practice landing screen."""
     mode = _mode_from(request)
-    rows = PracticeSession.objects.filter(
-        user=request.user, mode=mode, status=PracticeSession.Status.COMPLETED
+    rows = practice.visible_sessions(request.user).filter(
+        mode=mode, status=PracticeSession.Status.COMPLETED
     ).order_by("-completed_at")[:20]
 
     return Response(
@@ -223,42 +219,19 @@ def credit_history(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def weak_areas(request):
-    """What this student should revise, newest evidence weighted most."""
-    scope = (request.query_params.get("scope") or WeakArea.Scope.TOPIC).upper()
+    """Observed accuracy from the same period/evidence as the analytics report."""
+    from .analytics_evidence import Evidence
+    scope = (request.query_params.get('scope') or WeakArea.Scope.TOPIC).upper()
+    if scope not in WeakArea.Scope.values:
+        return Response({'error': 'Choose SUBJECT, BLOCK, SUB_BLOCK or TOPIC.'}, status=400)
     try:
-        limit = min(int(request.query_params.get("limit", 5)), 25)
+        limit = max(1, min(int(request.query_params.get('limit', 5)), 25))
+        days = max(7, min(int(request.query_params.get('days', 30)), 365))
     except (TypeError, ValueError):
-        limit = 5
-
-    weakest = events.weakest(request.user, scope=scope, limit=limit)
-    strongest = events.strongest(request.user, scope=scope, limit=limit)
-
-    def serialise(area: WeakArea) -> dict:
-        return {
-            "id": area.id,
-            "scope": area.scope,
-            "label": area.label,
-            "subject_id": area.subject_id,
-            "block_id": area.block_id,
-            "sub_block_id": area.sub_block_id,
-            "topic_id": area.topic_id,
-            "attempted": area.attempted,
-            "correct": area.correct,
-            "accuracy": round(area.accuracy, 3) if area.accuracy is not None else None,
-            "mastery": round(area.mastery, 3),
-            "priority": area.priority,
-            "last_practised_at": area.last_practised_at,
-        }
-
-    return Response(
-        {
-            "scope": scope,
-            "weakest": [serialise(a) for a in weakest],
-            "strongest": [serialise(a) for a in strongest],
-            # An empty list is a real answer: it means there is not enough evidence yet.
-            "has_data": WeakArea.objects.filter(user=request.user, attempted__gt=0).exists(),
-        }
-    )
+        limit, days = 5, 30
+    result = Evidence(request.user, days).topics(limit=limit, scope=scope)
+    return Response({**result, 'window_days': days, 'has_data': result['tracked_nodes'] > 0,
+                     'note': 'Observed accuracy over this period; at least three scored items per area.'})
 
 
 @api_view(["GET"])
@@ -389,7 +362,7 @@ def dashboard_message(request):
 @permission_classes([IsAuthenticated])
 def dashboard_snapshot(request):
     """The numbers behind the dashboard stat rail, all from real activity."""
-    from curriculum.models import FlashcardProgress
+    from .analytics_evidence import Evidence
 
     mode_counts = {
         mode: practice.entitlement(request.user, mode)
@@ -398,12 +371,10 @@ def dashboard_snapshot(request):
 
     return Response(
         {
-            "streak": getattr(getattr(request.user, "stats", None), "active_streak", 0) or 0,
+            "streak": Evidence(request.user, 7).consistency()['current_streak'],
             "xp": xp.total_xp(request.user),
             "credits": credits.balance(request.user),
-            "cards_due": FlashcardProgress.objects.filter(
-                user=request.user, due_date__lte=timezone.now()
-            ).count(),
+            "cards_due": dashboard.cards_due(request.user),
             "practice": mode_counts,
             "question_coverage": selection.coverage(request.user, question_type="mcq"),
         }
@@ -441,6 +412,49 @@ def analytics_report(request):
 # ---------------------------------------------------------------------------
 # Brain Battle
 # ---------------------------------------------------------------------------
+def _visible_battles(user):
+    from curriculum.models import BrainBattle, Subject, Block, SubBlock, Topic
+    rows = BrainBattle.objects.all()
+    if content_admin(user):
+        return rows
+    group = member_class(user)
+    if group is None:
+        return rows.none()
+    return scoped_optional_parents(rows.filter(class_group=group), user, {
+        "linked_subject": Subject, "linked_block": Block,
+        "linked_sub_block": SubBlock, "linked_topic": Topic,
+    })
+
+
+def _battle_by_code(user, code, *, allow_active_existing=False):
+    cleaned = str(code or "").strip().upper().replace(" ", "").replace("-", "")
+    if not cleaned:
+        raise battles.BattleError("Enter a battle code.", code="missing_code")
+    battle = _visible_battles(user).filter(code=cleaned).first()
+    if battle is None:
+        raise battles.BattleError("Battle not found.", code="not_found", status=404)
+    if battle.status == "completed":
+        raise battles.BattleError("That battle has already finished.", code="finished", status=409)
+    if battle.status == "active":
+        if (
+            allow_active_existing
+            and battle.participants.filter(user=user).exists()
+        ):
+            return battle
+        raise battles.BattleError(
+            "That battle has started and no longer accepts new players.",
+            code="started",
+            status=409,
+        )
+    if not battle.is_joinable:
+        raise battles.BattleError(
+            "That battle has started and no longer accepts new players.",
+            code="started",
+            status=409,
+        )
+    return battle
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def battle_join(request):
@@ -448,9 +462,10 @@ def battle_join(request):
     from curriculum.models import BrainBattle
 
     try:
-        battle, participant, created = battles.join(
-            request.user, str(request.data.get("code") or "")
+        battle = _battle_by_code(
+            request.user, request.data.get("code"), allow_active_existing=True
         )
+        battle, participant, created = battles.join(request.user, battle.code)
     except battles.BattleError as exc:
         return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
 
@@ -475,7 +490,7 @@ def battle_join(request):
 def battle_lookup(request, code):
     """Check a code before committing to join it."""
     try:
-        battle = battles.find_by_code(code)
+        battle = _battle_by_code(request.user, code)
     except battles.BattleError as exc:
         return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
 
@@ -496,7 +511,7 @@ def _participant_battle(request, battle_id):
     """Fetch a battle the caller has actually joined."""
     from curriculum.models import BattleParticipant, BrainBattle
 
-    battle = BrainBattle.objects.filter(id=battle_id).first()
+    battle = _visible_battles(request.user).filter(id=battle_id).first()
     if battle is None:
         return None, Response({"detail": "Battle not found"}, status=404)
     if not BattleParticipant.objects.filter(battle=battle, user=request.user).exists():
@@ -538,13 +553,8 @@ def battle_answer(request, battle_id):
         selected = None
 
     try:
-        seconds = float(request.data.get("seconds_taken", 0) or 0)
-    except (TypeError, ValueError):
-        seconds = 0.0
-
-    try:
         return Response(
-            battles.submit_answer(request.user, battle, index, selected, seconds)
+            battles.submit_answer(request.user, battle, index, selected)
         )
     except battles.BattleError as exc:
         return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
@@ -648,16 +658,15 @@ def gamification_profile(request):
     earned_badges = UserBadge.objects.filter(user=request.user).count()
     completed_achievements = UserAchievement.objects.filter(user=request.user, is_completed=True).count()
     user_xp = total_xp(request.user)
-    stats = getattr(request.user, "stats", None)
-    current_streak = stats.active_streak if stats else 0
-    longest_streak = stats.longest_streak if stats else 0
+    from .progress_evidence import summary
+    progress = summary(request.user)
     
     return Response({
         "xp": user_xp,
         "badges_count": earned_badges,
         "achievements_count": completed_achievements,
-        "current_streak": current_streak,
-        "longest_streak": longest_streak,
+        "current_streak": progress['current_streak'],
+        "longest_streak": progress['longest_streak'],
     })
 
 # ---------------------------------------------------------------------------

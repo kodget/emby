@@ -3,20 +3,22 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
-from .models import QuizAttempt, QuizQuestion, QuizAttemptResponse, UserProgress, Subject, Topic, SubBlock
+from django.db import transaction
+from . import practice_attempts
+from .models import QuizAttempt, QuizQuestion, QuizAttemptResponse
 from .serializers import QuizAttemptSerializer, QuizAttemptCreateSerializer
-from django.db.models import Q
-import uuid
+from .class_access import visible, visible_attempts, ClassContentReferences
 
 class QuizAttemptViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing quiz attempts.
     """
     serializer_class = QuizAttemptSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ClassContentReferences]
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
 
     def get_queryset(self):
-        return QuizAttempt.objects.filter(user=self.request.user)
+        return visible_attempts(self.request.user).order_by('-started_at', '-pk')
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -24,164 +26,58 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
         return QuizAttemptSerializer
 
     def create(self, request, *args, **kwargs):
-        # Determine question source
-        config = request.data.get('configuration', {})
-        source = config.get('question_source', 'hierarchy')
-        mcq_count = config.get('mcq_count', 5)
-        theory_count = config.get('theory_count', 0)
-        difficulty = config.get('difficulty', 'medium')
-        exam_type = request.data.get('exam_type', 'practice')
-        
-        # Enforce formal assessment rules
-        if exam_type == 'formal' or exam_type == 'formal_assessment':
-            exam_type = 'formal'
-            if request.data.get('slide') or request.data.get('topic'):
-                return Response({'error': 'Formal assessments can only be taken at the Block or Subject level.'}, status=status.HTTP_400_BAD_REQUEST)
-            mcq_count = 50
-            theory_count = 5
-            request.data['is_timed'] = True
-            request.data['duration_minutes'] = 150
-            config['mcq_count'] = 50
-            config['theory_count'] = 5
-        
-        user = request.user
-        
-        # 1. Fetch questions based on source
-        mcq_qs = QuizQuestion.objects.filter(question_type='mcq')
-        theory_qs = QuizQuestion.objects.filter(question_type='theory')
-        
-        if source == 'missed_questions':
-            missed_q_ids = QuizAttemptResponse.objects.filter(
-                attempt__user=user, 
-                is_correct=False
-            ).values_list('question_id', flat=True).distinct()
-            mcq_qs = mcq_qs.filter(id__in=missed_q_ids)
-            theory_qs = theory_qs.filter(id__in=missed_q_ids)
-            
-        elif source == 'hierarchy':
-            # Filter by hierarchy
-            if request.data.get('subject'):
-                mcq_qs = mcq_qs.filter(subject_id=request.data['subject'])
-                theory_qs = theory_qs.filter(subject_id=request.data['subject'])
-            if request.data.get('block'):
-                mcq_qs = mcq_qs.filter(block_id=request.data['block'])
-                theory_qs = theory_qs.filter(block_id=request.data['block'])
-            if request.data.get('topic'):
-                mcq_qs = mcq_qs.filter(sub_block_id=request.data['topic'])
-                theory_qs = theory_qs.filter(sub_block_id=request.data['topic'])
-            if request.data.get('slide'):
-                mcq_qs = mcq_qs.filter(source_slide_id=request.data['slide'])
-                theory_qs = theory_qs.filter(source_slide_id=request.data['slide'])
-                
-        # 2. Limit and shuffle with fallback
-        def get_with_fallback(qs, diff, count):
-            primary = list(qs.filter(difficulty=diff).order_by('?')[:count])
-            if len(primary) < count:
-                shortfall = count - len(primary)
-                secondary = list(qs.exclude(difficulty=diff).order_by('?')[:shortfall])
-                primary.extend(secondary)
-            return primary
+        if request.data.get('exam_type') in ('formal', 'formal_assessment'):
+            return Response({'error': 'Choose a published assessment from your class head.',
+                             'code': 'published_assessment_required'}, status=400)
+        if request.data.get('exam_type', 'practice') == 'practice':
+            attempt = practice_attempts.create(request.user, request.data)
+            return Response(QuizAttemptSerializer(attempt, context={'request': request}).data, status=201)
+        if request.data.get('exam_type') == 'mock':
+            from .mock_attempts import create
+            attempt = create(request.user, request.data)
+            return Response(QuizAttemptSerializer(attempt, context={'request': request}).data, status=201)
+        return Response({'error': 'Choose practice, mock or a published class assessment.'}, status=400)
 
-        mcq_questions = get_with_fallback(mcq_qs, difficulty, mcq_count)
-        theory_questions = get_with_fallback(theory_qs, difficulty, theory_count)
-        questions = mcq_questions + theory_questions
-        
-        if not questions:
-            if source == 'missed_questions':
-                return Response({'error': "You don't have any missed questions to review yet! Keep practicing."}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response({'error': "No questions found matching your selected criteria. Try selecting a broader topic or difficulty."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        is_timed = request.data.get('is_timed', False)
-        duration_minutes = request.data.get('duration_minutes')
-        deadline = None
-        if is_timed and duration_minutes:
-            from datetime import timedelta
-            deadline = timezone.now() + timedelta(minutes=duration_minutes)
+    @action(detail=False, methods=['get'], url_path='mock-options')
+    def mock_options(self, request):
+        from .mock_attempts import availability
+        return Response(availability(request.user, request.query_params))
 
-        # 3. Create the attempt
-        attempt = QuizAttempt.objects.create(
-            id=f"attempt-{uuid.uuid4().hex[:8]}",
-            user=user,
-            exam_type=request.data.get('exam_type', 'practice'),
-            is_timed=is_timed,
-            duration_minutes=duration_minutes,
-            deadline=deadline,
-            configuration=config,
-            status='in_progress',
-            question_ids=[q.id for q in questions],
-            mcq_total=len(mcq_questions),
-            theory_total=len(theory_questions)
-        )
-        
-        # Optional fields
-        if request.data.get('subject'):
-            attempt.subject_id = request.data['subject']
-        if request.data.get('block'):
-            attempt.block_id = request.data['block']
-        if request.data.get('sub_block'):
-            attempt.sub_block_id = request.data['sub_block']
-        if request.data.get('topic'):
-            topic_val = request.data['topic']
-            topic_obj = Topic.objects.filter(id=topic_val).first()
-            if topic_obj:
-                attempt.topic = topic_obj
-                if not attempt.sub_block_id and topic_obj.sub_block_id:
-                    attempt.sub_block_id = topic_obj.sub_block_id
-                if not attempt.block_id and topic_obj.block_id:
-                    attempt.block_id = topic_obj.block_id
-            elif SubBlock.objects.filter(id=topic_val).exists():
-                attempt.sub_block_id = topic_val
-        if request.data.get('slide'):
-            attempt.slide_id = request.data['slide']
-            
-        attempt.save()
-
-        # Use the standard QuizAttemptSerializer to return all fields including id
-        serializer = QuizAttemptSerializer(attempt)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    @action(detail=False, methods=['get'], url_path='practice-options')
+    def practice_options(self, request):
+        return Response(practice_attempts.options(request.user, request.query_params.get('slide'),
+                        request.query_params.get('question_source', 'hierarchy')))
 
     @action(detail=True, methods=['post'], url_path='answer')
+    @transaction.atomic
     def answer(self, request, pk=None):
         attempt = self.get_object()
-        if attempt.status != 'in_progress':
-            return Response({'error': 'Attempt is not in progress'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        question_id = request.data.get('question_id')
-        selected_option = request.data.get('selected_option')
-        
-        if not question_id or not selected_option:
-            return Response({'error': 'Missing data'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        try:
-            question = QuizQuestion.objects.get(id=question_id)
-        except QuizQuestion.DoesNotExist:
-            return Response({'error': 'Question not found'}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Determine correct
-        is_correct = (selected_option == question.correct_option)
-        
-        response, created = QuizAttemptResponse.objects.update_or_create(
-            attempt=attempt,
-            question=question,
-            defaults={
-                'selected_option': selected_option,
-                'is_correct': is_correct
-            }
-        )
-        
+        attempt = QuizAttempt.objects.select_for_update().get(pk=attempt.pk)
+        from .attempt_answers import save_answer
+        save_answer(attempt, request.data)
         return Response({'status': 'Answer recorded'})
 
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def flag(self, request, pk=None):
         attempt = self.get_object()
+        attempt = QuizAttempt.objects.select_for_update().get(pk=attempt.pk)
+        from .assessment_history import require_current
+        require_current(attempt)
         question_id = request.data.get('question_id')
+        if attempt.status != 'in_progress' or attempt.is_expired or question_id not in attempt.question_ids:
+            return Response({'error': 'Choose a question in an active attempt.'}, status=400)
         if not question_id:
             return Response({'error': 'Missing question_id'}, status=status.HTTP_400_BAD_REQUEST)
         
-        if question_id not in attempt.flagged_questions:
+        flagged = request.data.get('is_flagged', True)
+        if type(flagged) is not bool:
+            return Response({'error': 'is_flagged must be true or false.'}, status=400)
+        if flagged and question_id not in attempt.flagged_questions:
             attempt.flagged_questions.append(question_id)
-            attempt.save(update_fields=['flagged_questions'])
+        elif not flagged and question_id in attempt.flagged_questions:
+            attempt.flagged_questions.remove(question_id)
+        attempt.save(update_fields=['flagged_questions'])
             
         return Response({'status': 'Question flagged'})
 
@@ -190,111 +86,54 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
         return self.submit(request, pk)
 
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def submit(self, request, pk=None):
         attempt = self.get_object()
-        if attempt.status != 'in_progress':
-            return Response({'error': 'Attempt is not in progress'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        attempt.status = 'submitted'
-        attempt.submitted_at = timezone.now()
-        attempt.save()
-        
-        # Calculate score
-        from .models import QuizQuestion
-        if not attempt.mcq_total and not attempt.theory_total and attempt.question_ids:
-            mcq_qs = QuizQuestion.objects.filter(id__in=attempt.question_ids, question_type='mcq')
-            theory_qs = QuizQuestion.objects.filter(id__in=attempt.question_ids, question_type='theory')
-            total_mcq = mcq_qs.count()
-            total_theory = theory_qs.count()
-        else:
-            total_mcq = attempt.mcq_total
-            total_theory = attempt.theory_total
-
-        responses = attempt.responses.filter(question__question_type='mcq')
-        correct_mcq_count = responses.filter(is_correct=True).count()
-        incorrect_mcq_count = responses.filter(is_correct=False).count()
-        
-        try:
-            from learning.selection import mark_answered, mark_served
-            if attempt.question_ids:
-                mark_served(request.user, attempt.question_ids)
-            for response in responses:
-                mark_answered(request.user, str(response.question_id), response.is_correct)
-        except Exception as e:
-            print("Failed to record question exposure:", e)
-        
-        percentage = (correct_mcq_count / total_mcq * 100) if total_mcq > 0 else 0
-        attempt.mcq_score = correct_mcq_count
-        attempt.mcq_total = total_mcq
-        attempt.theory_total = total_theory
-        attempt.overall_percentage = percentage
-        attempt.save()
-        
-        # Calculate points
-        points_earned = 0
-        try:
-            stats = request.user.stats
-            
-            # Points calculation base
-            base_points = correct_mcq_count
-            
-            if attempt.exam_type == 'formal':
-                base_points -= (incorrect_mcq_count * 0.25)
-                multiplier = 2.0
-            elif attempt.exam_type == 'mock':
-                multiplier = 1.5
-            else:
-                multiplier = 1.0
-                
-            points_earned = max(0, int(base_points * multiplier))
-            stats.points += points_earned
-            stats.quizzes_taken += 1
-            stats.save(update_fields=['points', 'quizzes_taken'])
-        except Exception as e:
-            print("Could not update user stats", e)
-            
-        if attempt.exam_type in ['formal', 'mock']:
-            from curriculum.tasks import analyze_quiz_attempt_task
-            analyze_quiz_attempt_task.delay(attempt.id)
-            
-        try:
-            from learning import events
-            from learning.models import ActivityType
-            
-            duration = 0
-            if getattr(attempt, 'started_at', None) and getattr(attempt, 'submitted_at', None):
-                duration = int((attempt.submitted_at - attempt.started_at).total_seconds())
-                
-            events.record(
-                user=request.user,
-                activity=ActivityType.QUIZ_COMPLETED,
-                subject=getattr(attempt, 'subject', None),
-                correct_count=correct_mcq_count,
-                total_count=total_mcq,
-                duration_seconds=duration,
-                resource_type='QuizAttempt',
-                resource_id=str(attempt.id),
-                metadata={'exam_type': attempt.exam_type}
-            )
-        except Exception as e:
-            print("Failed to record learning event:", e)
-        
-        return Response({
-            'status': 'submitted',
-            'mcq_score': correct_mcq_count,
-            'overall_percentage': percentage,
-            'points_earned': points_earned
-        })
+        attempt = QuizAttempt.objects.select_for_update().get(pk=attempt.pk)
+        if attempt.assessment_id or attempt.snapshot_class_id:
+            from .formal_assessments import submit
+            return Response(submit(attempt))
+        if attempt.question_snapshots:
+            return Response(practice_attempts.submit(attempt))
+        from .assessment_history import require_current
+        require_current(attempt)
 
     @action(detail=True, methods=['get'])
     def result(self, request, pk=None):
         attempt = self.get_object()
+        if attempt.question_snapshots and attempt.status == 'in_progress':
+            return Response({'error': 'Submit the attempt before viewing its result.'}, status=400)
         serializer = self.get_serializer(attempt)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='retry-grading')
+    def retry_grading(self, request, pk=None):
+        from .assessment_grading import retry, public_status
+        attempt = self.get_object()
+        from .assessment_history import require_current
+        require_current(attempt)
+        retry(attempt)
+        return Response({'grading': public_status(attempt)}, status=202)
 
     @action(detail=True, methods=['get'])
     def missed(self, request, pk=None):
         attempt = self.get_object()
+        from .assessment_history import is_historical
+        if is_historical(attempt):
+            return Response({'missed_questions': [], 'total_missed': None,
+                             'historical_read_only': True, 'answers_released': False})
+        if attempt.assessment_id and not attempt.assessment.answers_released_at:
+            return Response({'missed_questions': [], 'total_missed': None,
+                             'answers_released': False})
+        if attempt.status == 'in_progress':
+            return Response({'error': 'Submit the attempt before reviewing answers.'}, status=400)
+        if attempt.question_snapshots:
+            responses = {r.snapshot_question_id or r.question_id: r for r in attempt.responses.all()}
+            data = [dict(q, selected_option=responses[q['id']].selected_option if q['id'] in responses else None)
+                    for q in practice_attempts.public_questions(attempt)
+                    if q['question_type'] == 'mcq'
+                    and (q['id'] not in responses or not responses[q['id']].is_correct)]
+            return Response({'missed_questions': data, 'total_missed': len(data)})
         # Return all responses where MCQ is incorrect or theory was graded < max
         # For simplicity in this endpoint, mostly returning incorrect MCQs for now.
         from curriculum.serializers import QuizAttemptResponseSerializer
@@ -317,3 +156,11 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
                     'topic': q.get('topic_name')
                 })
         return Response(data)
+
+    def destroy(self, request, *args, **kwargs):
+        from .assessment_history import require_current
+        attempt = self.get_object()
+        require_current(attempt)
+        if attempt.assessment_id:
+            return Response({'error': 'Formal attempts are permanent and cannot be deleted or retaken.'}, status=400)
+        return super().destroy(request, *args, **kwargs)

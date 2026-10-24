@@ -5,6 +5,7 @@ export type UploadStatus = "uploading" | "downloading" | "extracting_text" | "co
 export type SlideUpload = {
   id: string;
   slideId?: string;
+  error?: string;
   courseId: string;
   moduleId: string;
   // materialId this upload populates (generated on submit)
@@ -62,12 +63,14 @@ export const uploadsSlice = createSlice({
         status: UploadStatus;
         slideId?: string;
         pages?: number;
+        error?: string;
       }>,
     ) {
       const item = state.items.find((u) => u.id === action.payload.id);
       if (item) {
         item.progress = action.payload.progress;
         item.status = action.payload.status;
+        item.error = action.payload.error;
         if (action.payload.slideId) item.slideId = action.payload.slideId;
         if (action.payload.pages !== undefined)
           item.pages = action.payload.pages;

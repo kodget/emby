@@ -4,15 +4,15 @@ Django settings for the EMBY backend.
 Environment-driven and safe-by-default:
 - Secrets and toggles come from the environment (.env in development).
 - DEBUG defaults to False; production hardening switches on automatically when DEBUG is off.
-- Falls back to SQLite when no database is configured so the project always boots.
+- SQLite fallback is restricted to development; production requires PostgreSQL.
 """
 
 import os
 from pathlib import Path
 from datetime import timedelta
 
-import dj_database_url
 from dotenv import load_dotenv
+from .database_config import database_config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -70,7 +70,7 @@ FRONTEND_URL = os.getenv(
 
 INSTALLED_APPS = [
     "daphne",
-    "django.contrib.admin",
+    "accounts.admin_config.EmbyAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -147,49 +147,10 @@ else:
 
 
 # ---------------------------------------------------------------------------
-# Database — Postgres from env, SQLite fallback
+# Database — persistent PostgreSQL in production, SQLite for development only
 # ---------------------------------------------------------------------------
 
-if env_bool("USE_SQLITE", False):
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": os.getenv(
-                "SQLITE_NAME",
-                str(BASE_DIR / "db.sqlite3"),
-            ),
-        }
-    }
-
-elif os.getenv("DATABASE_URL"):
-    DATABASES = {
-        "default": dj_database_url.config(
-            default=os.getenv("DATABASE_URL"),
-            conn_max_age=60,
-            conn_health_checks=True,
-        )
-    }
-
-elif os.getenv("DB_NAME"):
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DB_NAME"),
-            "USER": os.getenv("DB_USER", ""),
-            "PASSWORD": os.getenv("DB_PASSWORD", ""),
-            "HOST": os.getenv("DB_HOST", "localhost"),
-            "PORT": os.getenv("DB_PORT", "5432"),
-            "CONN_MAX_AGE": 60,
-        }
-    }
-
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+DATABASES = {"default": database_config(os.environ, BASE_DIR, debug=DEBUG)}
 
 
 # ---------------------------------------------------------------------------
@@ -355,6 +316,11 @@ CLOUDINARY_STORAGE = {
 # ---------------------------------------------------------------------------
 # Email (Gmail SMTP)
 # ---------------------------------------------------------------------------
+
+EMAIL_VERIFICATION_MAX_AGE_SECONDS = int(os.getenv("EMAIL_VERIFICATION_MAX_AGE_SECONDS", "86400"))
+EMAIL_VERIFICATION_RESEND_SECONDS = int(os.getenv("EMAIL_VERIFICATION_RESEND_SECONDS", "60"))
+PASSWORD_RESET_TIMEOUT = int(os.getenv("PASSWORD_RESET_TIMEOUT", "3600"))
+PASSWORD_RESET_RESEND_SECONDS = int(os.getenv("PASSWORD_RESET_RESEND_SECONDS", "60"))
 
 if os.getenv("EMAIL_HOST_USER"):
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

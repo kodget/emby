@@ -95,7 +95,8 @@ try:
         try:
             reservation = CreditManager.reserve_credits(test_user, "GENERATE_FLASHCARDS")
             CreditManager.refund_credits(test_user, reservation["reserved_amount"],
-                                         action="REFUND_TEST", tx_id=reservation["transaction_id"])
+                                         action="REFUND_TEST",
+                                         reservation_id=reservation["reservation_id"])
             check("Credit reservation + refund cycle works", True,
                   f"Reserved & refunded {reservation['reserved_amount']} credits")
         except InsufficientCreditsError as e:

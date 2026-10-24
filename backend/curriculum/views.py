@@ -4,7 +4,11 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from accounts.permissions import IsClassHeadOrReadOnly
+from .content_permissions import CanWriteUploadedContent, PlatformAdminWritesOnly
+from .class_access import visible, upload_class, ClassContentReferences, require_visible, visible_quizzes, visible_attempts
+from .private_media import upload_asset, discard_new_asset, content_file_url, page_payloads, PrivateMediaResponseMixin
 from django.db.models import Q, Sum
+from django.db import transaction
 from django.utils import timezone
 from datetime import date, timedelta
 from .models import (
@@ -45,17 +49,23 @@ class SubjectViewSet(viewsets.ModelViewSet):
     """List all subjects"""
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
-    permission_classes = [IsClassHeadOrReadOnly]
+    permission_classes = [IsAuthenticated, IsClassHeadOrReadOnly]
+
+    def get_queryset(self):
+        return visible(Subject, self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(class_group=upload_class(self.request.user))
 
 
 class BlockViewSet(viewsets.ModelViewSet):
     """List blocks, optionally filtered by subject"""
     queryset = Block.objects.all()
     serializer_class = BlockSerializer
-    permission_classes = [IsClassHeadOrReadOnly]
+    permission_classes = [IsAuthenticated, IsClassHeadOrReadOnly, ClassContentReferences]
     
     def get_queryset(self):
-        queryset = Block.objects.all()
+        queryset = visible(Block, self.request.user)
         subject_id = self.request.query_params.get('subject', None)
         if subject_id:
             queryset = queryset.filter(subject_id=subject_id)
@@ -66,10 +76,10 @@ class SubBlockViewSet(viewsets.ModelViewSet):
     """List sub-blocks, optionally filtered by block"""
     queryset = SubBlock.objects.all()
     serializer_class = SubBlockSerializer
-    permission_classes = [IsClassHeadOrReadOnly]
+    permission_classes = [IsAuthenticated, IsClassHeadOrReadOnly, ClassContentReferences]
     
     def get_queryset(self):
-        queryset = SubBlock.objects.all()
+        queryset = visible(SubBlock, self.request.user)
         block_id = self.request.query_params.get('block', None)
         if block_id:
             queryset = queryset.filter(block_id=block_id)
@@ -80,10 +90,10 @@ class TopicViewSet(viewsets.ModelViewSet):
     """List topics, optionally filtered by block"""
     queryset = Topic.objects.all()
     serializer_class = TopicSerializer
-    permission_classes = [IsClassHeadOrReadOnly]
+    permission_classes = [IsAuthenticated, IsClassHeadOrReadOnly, ClassContentReferences]
     
     def get_queryset(self):
-        queryset = Topic.objects.all()
+        queryset = visible(Topic, self.request.user)
         block_id = self.request.query_params.get('block', None)
         sub_block_id = self.request.query_params.get('sub_block', None)
         if block_id:
@@ -93,14 +103,14 @@ class TopicViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class SlideViewSet(viewsets.ModelViewSet):
+class SlideViewSet(PrivateMediaResponseMixin, viewsets.ModelViewSet):
     """CRUD operations for slides (PDF/PPT/DOCX only)"""
     queryset = Slide.objects.all()
     serializer_class = SlideSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanWriteUploadedContent, ClassContentReferences]
     
     def get_queryset(self):
-        queryset = Slide.objects.all()
+        queryset = visible(Slide, self.request.user)
         subject_id = self.request.query_params.get('subject', None)
         block_id = self.request.query_params.get('block', None)
         topic_id = self.request.query_params.get('topic', None)
@@ -111,117 +121,74 @@ class SlideViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(block_id=block_id)
         if topic_id:
             queryset = queryset.filter(topic_id=topic_id)
+        sub_block_id = self.request.query_params.get('sub_block')
+        if sub_block_id:
+            queryset = queryset.filter(sub_block_id=sub_block_id)
         return queryset
     
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['post'])
     def upload_and_process(self, request):
-        """
-        Upload a file and create a Slide object.
-        
-        This endpoint:
-        1. Uploads file to Cloudinary
-        2. Creates Slide object with the file
-        3. Triggers async processing via signal
-        
-        Expected request:
-        - MultipartForm with 'file', 'title', and optional 'subject_id', 'block_id', 'sub_block_id', 'topic_id'
-        """
         import uuid
         import cloudinary.uploader
-        from .utils.file_type_detector import FileTypeDetector
-        
-        # Get file from request
-        if 'file' not in request.FILES:
-            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        file_obj = request.FILES['file']
-        title = request.data.get('title', file_obj.name)
-        
-        # Detect file type
-        file_type = FileTypeDetector.detect_file_type(file_obj.name, method='auto')
-        if not file_type:
-            return Response(
-                {'error': f'Unsupported file type. Supported: pdf, pptx, ppt, docx'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+        from cloudinary import CloudinaryResource
+        from django.db import transaction
+        from rest_framework.exceptions import ValidationError
+        from .models import SlideProcessingStatus
+        from .slide_uploads import validate_slide_file, dispatch_slide_processing
+
+        file_obj = request.FILES.get('file')
+        if file_obj is None:
+            raise ValidationError({'file': 'Select a file to upload.'})
+        file_type = validate_slide_file(file_obj)
+        metadata = {'title': request.data.get('title', file_obj.name), 'file_type': file_type}
+        for name in ('subject', 'block', 'sub_block', 'topic'):
+            value = request.data.get(name)
+            if value not in (None, '', 'null', 'undefined', 'None'):
+                metadata[name] = value
+        serializer = self.get_serializer(data=metadata)
+        serializer.is_valid(raise_exception=True)
+        owning_class = upload_class(request.user)
+
+        from rest_framework.exceptions import APIException
+        from .upload_receipts import execute_upload, StorageUnavailable
+
+        def create(staged):
+            try:
+                asset = upload_asset(file_obj, class_group=owning_class, uploaded_by=request.user,
+                    folder='emby/slides_original', resource_type='auto', timeout=60)
+            except Exception as exc:
+                logger.warning('Slide storage failed (%s)', type(exc).__name__)
+                raise StorageUnavailable()
+            staged.append(asset)
+            slide = serializer.save(id=f'slide_{uuid.uuid4().hex}', uploaded_by=request.user,
+                class_group=owning_class, asset=asset, file_url='', file=None)
+            SlideProcessingStatus.objects.create(slide=slide, status='pending')
+            transaction.on_commit(lambda: dispatch_slide_processing(slide.pk), robust=True)
+            return slide
+
         try:
-            import uuid
-            import cloudinary.uploader
-            
-            print(f"Uploading file directly to Cloudinary: {file_obj.name}")
-            
-            file_obj.seek(0)
-            
-            # Upload to Cloudinary instead of saving locally
-            upload_result = cloudinary.uploader.upload(
-                file_obj,
-                folder="emby/slides_original",
-                resource_type="auto",
-                timeout=60
-            )
-            
-            file_url = upload_result.get("secure_url")
-            print(f"✓ File uploaded to Cloudinary: {file_url}")
-            
-            # Create Slide object
-            slide_id = f"slide_{str(uuid.uuid4())[:8]}"
-            
-            def clean_id(val):
-                if not val or val in ('null', 'undefined', 'None', ''):
-                    return None
-                return val
-            
-            subject_id = clean_id(request.data.get('subject'))
-            block_id = clean_id(request.data.get('block'))
-            sub_block_id = clean_id(request.data.get('sub_block'))
-            topic_id = clean_id(request.data.get('topic'))
-            
-            # The frontend appends the sub_block ID to 'topic' if no topic was chosen.
-            # We clear it here so it doesn't try to link a Topic to a SubBlock ID (which causes an FK error).
-            if topic_id == sub_block_id:
-                topic_id = None
-            
-            slide = Slide.objects.create(
-                id=slide_id,
-                title=title,
-                file_type=file_type,
-                file_url=file_url,  # Store Cloudinary URL
-                uploaded_by=request.user,
-                subject_id=subject_id,
-                block_id=block_id,
-                sub_block_id=sub_block_id,
-                topic_id=topic_id,
-            )
-            
-            print(f"✓ Slide created: {slide.id}")
-            # Trigger process_slide_task to extract text and render images to Cloudinary
-            from .tasks import process_slide_task
-            process_slide_task.delay(slide.id)
-            
-            serializer = self.get_serializer(slide)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
-        except Exception as e:
-            print(f"Error uploading file: {e}")
-            import traceback
-            traceback.print_exc()
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+            slide, _ = execute_upload(user=request.user, request_id=request.data.get('request_id'),
+                kind='slide', metadata={**metadata, 'class_group': str(owning_class.pk)}, upload=file_obj,
+                create=create, queryset=self.get_queryset())
+        except APIException:
+            raise
+        except Exception as exc:
+            logger.warning('Slide record save failed (%s)', type(exc).__name__)
+            return Response({'error': 'Could not save this upload. Please try again.'}, status=503)
+        return Response(self.get_serializer(slide).data, status=status.HTTP_201_CREATED)
+
     def perform_create(self, serializer):
-        slide = serializer.save(uploaded_by=self.request.user)
-        print(f"Slide {slide.id} created. Triggering processing pipeline...")
-        # Signal fires automatically via post_save → see signals.py
+        serializer.save(uploaded_by=self.request.user, class_group=upload_class(self.request.user))
 
 
-class MaterialViewSet(viewsets.ModelViewSet):
+class MaterialViewSet(PrivateMediaResponseMixin, viewsets.ModelViewSet):
     """CRUD operations for materials (videos, images, PDFs, past questions, etc.)"""
     queryset = Material.objects.all()
     serializer_class = MaterialSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanWriteUploadedContent, ClassContentReferences]
     
     def get_queryset(self):
-        queryset = Material.objects.all()
+        queryset = visible(Material, self.request.user)
         subject_id = self.request.query_params.get('subject', None)
         block_id = self.request.query_params.get('block', None)
         topic_id = self.request.query_params.get('topic', None)
@@ -252,7 +219,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Only class heads and material uploaders can upload materials")
         
-        serializer.save(uploaded_by=self.request.user)
+        serializer.save(uploaded_by=self.request.user, class_group=upload_class(self.request.user))
 
 
 # -------------------------
@@ -261,10 +228,12 @@ class MaterialViewSet(viewsets.ModelViewSet):
 class UserProgressViewSet(viewsets.ModelViewSet):
     """Track user progress on slides"""
     serializer_class = UserProgressSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ClassContentReferences]
     
     def get_queryset(self):
-        return UserProgress.objects.filter(user=self.request.user)
+        rows = visible(UserProgress, self.request.user).filter(user=self.request.user)
+        slide = self.request.query_params.get('slide')
+        return rows.filter(slide_id=slide) if slide else rows
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -277,43 +246,11 @@ class UserProgressViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     @action(detail=False, methods=['post'])
+    @transaction.atomic
     def update_progress(self, request):
-        """Update progress for a slide"""
-        slide_id = request.data.get('slide_id')
-        current_page = request.data.get('current_page', 1)
-        total_pages = request.data.get('total_pages', 0)
-        time_spent = request.data.get('time_spent_minutes', 0)
-        
-        progress, created = UserProgress.objects.get_or_create(
-            user=request.user,
-            slide_id=slide_id,
-            defaults={'total_pages': total_pages}
-        )
-        
-        progress.current_page = current_page
-        progress.total_pages = total_pages
-        progress.time_spent_minutes += time_spent
-        progress.completed = current_page >= total_pages
-        progress.save()
-        
-        # Update daily study session
-        if time_spent > 0:
-            today = date.today()
-            session, _ = DailyStudySession.objects.get_or_create(
-                user=request.user,
-                date=today
-            )
-            session.minutes_studied += time_spent
-            session.sessions_count += 1
-            session.save()
-            
-            # Update user stats
-            stats, _ = UserStats.objects.get_or_create(user=request.user)
-            stats.total_study_minutes += time_spent
-            stats.save()
-        
-        serializer = self.get_serializer(progress)
-        return Response(serializer.data)
+        from .course_reading import save
+        progress = save(request.user, request.data)
+        return Response(self.get_serializer(progress).data)
 
     @action(detail=False, methods=['get'])
     def subject_progress(self, request):
@@ -361,7 +298,7 @@ class ScheduleItemViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return ScheduleItem.objects.filter(user=self.request.user)
+        return visible(ScheduleItem, self.request.user).filter(user=self.request.user)
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -369,7 +306,7 @@ class ScheduleItemViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def today(self, request):
         """Get today's schedule"""
-        today = date.today()
+        today = timezone.localdate()
         items = self.get_queryset().filter(scheduled_date=today)
         serializer = self.get_serializer(items, many=True)
         return Response(serializer.data)
@@ -377,7 +314,7 @@ class ScheduleItemViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def upcoming(self, request):
         """Get upcoming schedule (next 7 days)"""
-        today = date.today()
+        today = timezone.localdate()
         next_week = today + timedelta(days=7)
         items = self.get_queryset().filter(
             scheduled_date__gte=today,
@@ -387,53 +324,40 @@ class ScheduleItemViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def complete(self, request, pk=None):
-        """Mark a planner item complete and record it as real study activity.
+        """Persist a checklist completion and its activity together, once."""
+        from learning import events
+        from learning.models import ActivityType
 
-        Completing a planned session is a learning event like any other, so it feeds the
-        same stream that drives study time, streaks, analytics and XP. Without this the
-        planner was a checklist that no other part of the app could see.
-        """
-        item = self.get_object()
-        already_done = item.completed
+        item = self.get_queryset().select_for_update(of=('self',)).get(pk=self.get_object().pk)
+        if not item.completed:
+            item.completed = True
+            item.completed_at = timezone.now()
+            item.save(update_fields=['completed', 'completed_at', 'updated_at'])
+            # An estimate is a planning aid, not elapsed study time. Reading,
+            # practice, and explicit study logs record the time actually reported.
+            events.record(
+                request.user, ActivityType.PLANNER_TASK_COMPLETED,
+                subject=item.slide.subject if item.slide_id else None,
+                block=item.block, sub_block=item.sub_block,
+                duration_seconds=0, resource_type='schedule_item', resource_id=str(item.id),
+                occurred_at=item.completed_at,
+                metadata={'activity_type': item.activity_type, 'title': item.title,
+                          'estimated_minutes': item.estimated_minutes},
+            )
+        return Response(self.get_serializer(item).data)
 
-        item.completed = True
-        item.completed_at = timezone.now()
-        item.save()
-
-        if not already_done:
-            # Only the first completion counts; re-completing must not pay out twice.
-            try:
-                from learning import events
-                from learning.models import ActivityType
-
-                events.record(
-                    request.user,
-                    ActivityType.PLANNER_TASK_COMPLETED,
-                    block=item.block,
-                    sub_block=item.sub_block,
-                    duration_seconds=max(0, int(item.estimated_minutes or 0)) * 60,
-                    resource_type='schedule_item',
-                    resource_id=str(item.id),
-                    metadata={'activity_type': item.activity_type, 'title': item.title},
-                )
-            except Exception:
-                # A planner tick must never fail because analytics had a problem.
-                logger.exception('Could not record planner completion for item %s', item.id)
-
-        serializer = self.get_serializer(item)
-        return Response(serializer.data)
-    
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def uncomplete(self, request, pk=None):
-        """Mark schedule item as incomplete"""
-        item = self.get_object()
-        item.completed = False
-        item.completed_at = None
-        item.save()
-        
-        serializer = self.get_serializer(item)
-        return Response(serializer.data)
+        """Undo the checklist tick without deleting history or replaying rewards."""
+        item = self.get_queryset().select_for_update(of=('self',)).get(pk=self.get_object().pk)
+        if item.completed:
+            item.completed = False
+            item.completed_at = None
+            item.save(update_fields=['completed', 'completed_at', 'updated_at'])
+        return Response(self.get_serializer(item).data)
 
 
 # -------------------------
@@ -467,58 +391,20 @@ class UserStatsViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'])
     def award_points(self, request):
-        """Award points to user"""
-        points = request.data.get('points', 0)
-        reason = request.data.get('reason', '')
-        
-        stats, created = UserStats.objects.get_or_create(user=request.user)
-        stats.points += points
-        stats.save()
-        
-        # Update rank based on points
-        all_stats = UserStats.objects.order_by('-points')
-        for idx, stat in enumerate(all_stats, 1):
-            stat.rank = idx
-            stat.save(update_fields=['rank'])
-        
-        serializer = self.get_serializer(stats)
-        return Response(serializer.data)
-    
+        """Points are awarded by verified server-side activity, never client totals."""
+        return Response({'error': 'Points are awarded automatically for completed activities.'}, status=403)
+
     @action(detail=False, methods=['post'])
+    @transaction.atomic
     def update_streak(self, request):
-        """Update user's streak"""
-        stats, created = UserStats.objects.get_or_create(user=request.user)
-        today = date.today()
-        
-        if stats.last_activity_date:
-            days_diff = (today - stats.last_activity_date).days
-            
-            if days_diff == 0:
-                # Same day, no change
-                pass
-            elif days_diff == 1:
-                # Consecutive day, increment streak
-                stats.current_streak += 1
-                if stats.current_streak > stats.longest_streak:
-                    stats.longest_streak = stats.current_streak
-            else:
-                # Streak broken
-                stats.current_streak = 1
-        else:
-            # First activity
-            stats.current_streak = 1
-            stats.longest_streak = 1
-        
-        stats.last_activity_date = today
-        stats.save()
-        
-        # Update profile streak
+        """Refresh derived streaks; opening the app is not learning activity."""
+        from learning import events
+        events.lock_stats(request.user)
+        events._touch_streak(request.user)
+        stats = request.user.stats
         if hasattr(request.user, 'profile'):
-            request.user.profile.streak = stats.current_streak
-            request.user.profile.save()
-        
-        serializer = self.get_serializer(stats)
-        return Response(serializer.data)
+            type(request.user.profile).objects.filter(pk=request.user.profile.pk).update(streak=stats.active_streak)
+        return Response(self.get_serializer(stats).data)
 
 
 # -------------------------
@@ -527,13 +413,29 @@ class UserStatsViewSet(viewsets.ModelViewSet):
 class CommunityPostViewSet(viewsets.ModelViewSet):
     """Community posts and feed"""
     serializer_class = CommunityPostSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ClassContentReferences]
     
     def get_queryset(self):
-        return CommunityPost.objects.all()
+        from .class_access import content_admin, member_class
+
+        queryset = CommunityPost.objects.all()
+        if content_admin(self.request.user):
+            return queryset
+        group = member_class(self.request.user)
+        if group is None:
+            return queryset.none()
+        # Preserve the post's class even if its author subsequently moves classes.
+        # Old unassigned posts and inconsistent links are not a shared feed.
+        queryset = queryset.filter(class_group=group)
+        for field, model in (('slide', Slide), ('sub_block', SubBlock), ('topic', Topic)):
+            queryset = queryset.filter(
+                Q(**{field + '__isnull': True}) |
+                Q(**{field + '__in': visible(model, self.request.user)})
+            )
+        return queryset
     
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user=self.request.user, class_group=upload_class(self.request.user))
     
     def update(self, request, *args, **kwargs):
         """Update post - only owner can edit"""
@@ -646,25 +548,30 @@ class CommunityPostViewSet(viewsets.ModelViewSet):
 class UpcomingTestViewSet(viewsets.ModelViewSet):
     """Upcoming tests and exams"""
     serializer_class = UpcomingTestSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsClassHeadOrReadOnly, ClassContentReferences]
     
     def get_queryset(self):
-        return UpcomingTest.objects.filter(test_date__gte=date.today())
+        return visible(UpcomingTest, self.request.user).filter(test_date__gte=date.today())
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def get_slide_content(request, slide_id):
     """Get rendered slide pages as images."""
     try:
-        slide = Slide.objects.get(id=slide_id)
+        slide = visible(Slide, request.user).get(id=slide_id)
     except Slide.DoesNotExist:
         return Response({'error': 'Slide not found'}, status=status.HTTP_404_NOT_FOUND)
 
     slide_content, _ = SlideContent.objects.get_or_create(slide=slide)
+    from .content_permissions import can_reprocess_upload
+    extraction_info = {
+        'text_extraction': (slide_content.content_data or {}).get('text_extraction', {'status': 'unverified'}),
+        'can_reprocess': can_reprocess_upload(request.user, slide),
+    }
     
     # Return cached if available — check both 'pages' exists and has content
     cached_pages = slide_content.content_data.get('pages', []) if slide_content.content_data else []
@@ -674,8 +581,9 @@ def get_slide_content(request, slide_id):
             'slide_id': slide.id,
             'title': slide.title,
             'total_pages': total,
-            'pages': cached_pages,
-        })
+            'pages': page_payloads(cached_pages, slide.class_group_id),
+            **extraction_info,
+        }, headers={'Cache-Control': 'private, no-store'})
 
     # Render on-demand if not cached
     file_url = slide.get_file_url
@@ -685,12 +593,27 @@ def get_slide_content(request, slide_id):
     from .slide_renderer import render_slide_pages
     try:
         content = render_slide_pages(file_url, slide.file_type, slide.id)
-        
-        slide_content.content_data = content
-        slide_content.is_extracted = content['total_pages'] > 0
-        slide_content.extraction_error = ''
-        slide_content.extracted_at = timezone.now()
-        slide_content.save()
+        from django.db import transaction
+        from .services.document_extraction import is_complete, ERRORS
+        with transaction.atomic():
+            slide_content = SlideContent.objects.select_for_update().get(slide=slide)
+            previous = slide_content.content_data or {}
+            # OCR may have completed while images were rendering. Preserve its text.
+            if (is_complete(previous) and previous['text_extraction'].get('source_sha256') ==
+                    content.get('text_extraction', {}).get('source_sha256')):
+                text_pages = {p['page_number']: p for p in previous['pages']}
+                for page in content['pages']:
+                    extracted = text_pages[page['page_number']]
+                    for key in ('text', 'extraction_status', 'extraction_method', 'error_code'):
+                        page[key] = extracted[key]
+                content['text_extraction'] = previous['text_extraction']
+                content['text'] = previous.get('text', '')
+            content = {**previous, **content}
+            slide_content.content_data = content
+            slide_content.is_extracted = content['total_pages'] > 0
+            slide_content.extraction_error = '' if is_complete(content) else ERRORS['incomplete']
+            slide_content.extracted_at = timezone.now()
+            slide_content.save()
         
         if content['total_pages'] > 0:
             Slide.objects.filter(id=slide.id).update(page_count=content['total_pages'])
@@ -699,86 +622,28 @@ def get_slide_content(request, slide_id):
             'slide_id': slide.id,
             'title': slide.title,
             'total_pages': content['total_pages'],
-            'pages': content['pages'],
-        })
+            'pages': page_payloads(content['pages'], slide.class_group_id),
+            **extraction_info,
+            'text_extraction': content.get('text_extraction', {'status': 'unverified'}),
+        }, headers={'Cache-Control': 'private, no-store'})
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return Response({'error': f'Rendering failed: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.warning('Slide rendering failed (%s)', type(e).__name__)
+        return Response({'error': 'Rendering failed. Please retry.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # -------------------------
 # QUIZ SYSTEM
 # -------------------------
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def generate_quiz(request):
-    """Generate a quiz based on subject/block/topic"""
-    user = request.user
-    profile = user.profile
-    
-    quiz_type = request.data.get('quiz_type', 'mcq')  # mcq or theory
-    subject_id = request.data.get('subject')
-    block_id = request.data.get('block')
-    topic_id = request.data.get('topic')
-    num_questions = int(request.data.get('num_questions', 10))
-    
-    # Check premium limits
-    if quiz_type == 'theory' and not profile.is_premium:
-        return Response(
-            {'error': 'Theory questions are only available for Premium users. Upgrade to access up to 10 theory questions.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
-    
-    if quiz_type == 'mcq':
-        if not profile.is_premium and num_questions > 10:
-            return Response(
-                {'error': 'Free users can access up to 10 MCQ questions. Upgrade to Premium for up to 100 questions.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        if profile.is_premium and num_questions > 100:
-            num_questions = 100
-    else:  # theory
-        if num_questions > 10:
-            num_questions = 10
-    
-    # Build query filter
-    filters = Q(question_type=quiz_type)
-    if subject_id:
-        filters &= Q(subject_id=subject_id)
-    if block_id:
-        filters &= Q(block_id=block_id)
-    if topic_id:
-        filters &= Q(sub_block_id=topic_id)
-    
-    # Get questions
-    questions = list(QuizQuestion.objects.filter(filters).order_by('?')[:num_questions])
-    
-    if not questions:
-        return Response(
-            {'error': 'No questions available for this selection. Try a different topic or wait for more questions to be added.'},
-            status=status.HTTP_404_NOT_FOUND
-        )
-    
-    # Create quiz
-    import uuid
-    quiz = Quiz.objects.create(
-        id=str(uuid.uuid4())[:8],
-        user=user,
-        quiz_type=quiz_type,
-        subject_id=subject_id,
-        block_id=block_id,
-        sub_block_id=topic_id,
-        total_questions=len(questions)
-    )
-    quiz.questions.set(questions)
-    
-    serializer = QuizSerializer(quiz)
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    """Retired unscoped creator; existing legacy history remains readable."""
+    return Response({'error': 'Open Practice and select one deck to start a saved-bank quiz.',
+                     'code': 'use_deck_practice', 'url': '/quiz'}, status=410)
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def submit_quiz_answer(request):
     """Submit an answer to a quiz question"""
     quiz_id = request.data.get('quiz_id')
@@ -788,8 +653,10 @@ def submit_quiz_answer(request):
     time_taken = int(request.data.get('time_taken_seconds', 0))
     
     try:
-        quiz = Quiz.objects.get(id=quiz_id, user=request.user)
-        question = QuizQuestion.objects.get(id=question_id)
+        quiz = visible_quizzes(request.user).get(id=quiz_id)
+        question = visible(QuizQuestion, request.user).get(id=question_id)
+        if not quiz.questions.filter(pk=question.pk).exists():
+            return Response({'error': 'Question does not belong to this quiz.'}, status=400)
         
         # Check if already answered
         answer, created = QuizAnswer.objects.get_or_create(
@@ -838,11 +705,11 @@ def submit_quiz_answer(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def complete_quiz(request, quiz_id):
     """Mark quiz as complete and calculate score"""
     try:
-        quiz = Quiz.objects.get(id=quiz_id, user=request.user)
+        quiz = visible_quizzes(request.user).get(id=quiz_id)
         
         if quiz.completed:
             return Response({'error': 'Quiz already completed'}, status=status.HTTP_400_BAD_REQUEST)
@@ -879,10 +746,10 @@ def complete_quiz(request, quiz_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def get_quiz_history(request):
     """Get user's quiz history"""
-    quizzes = Quiz.objects.filter(user=request.user, completed=True).order_by('-completed_at')[:20]
+    quizzes = visible_quizzes(request.user).filter(completed=True).order_by('-completed_at')[:20]
     serializer = QuizSerializer(quizzes, many=True)
     return Response(serializer.data)
 
@@ -891,87 +758,54 @@ def get_quiz_history(request):
 # STUDY TIME TRACKING
 # -------------------------
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def get_weekly_study_data(request):
-    """Get study time data for the past 7 days"""
-    today = date.today()
-    week_ago = today - timedelta(days=6)
-    
-    # Get all sessions for the past 7 days
-    sessions = DailyStudySession.objects.filter(
-        user=request.user,
-        date__gte=week_ago,
-        date__lte=today
-    ).order_by('date')
-    
-    # Create a dict with all 7 days
-    week_data = {}
-    for i in range(7):
-        day = week_ago + timedelta(days=i)
-        week_data[day] = {
-            'day': day.strftime('%a'),
-            'date': day.isoformat(),
-            'minutes': 0,
-            'sessions': 0
-        }
-    
-    # Fill in actual data
-    for session in sessions:
-        week_data[session.date]['minutes'] = session.minutes_studied
-        week_data[session.date]['sessions'] = session.sessions_count
-    
-    # Convert to list and calculate total
-    data_list = list(week_data.values())
-    total_minutes = sum(d['minutes'] for d in data_list)
-    
-    return Response({
-        'week_data': data_list,
-        'total_minutes': total_minutes,
-        'total_hours': total_minutes // 60,
-        'remaining_minutes': total_minutes % 60
-    })
+    """Use the same accepted evidence and local seven-day window as analytics."""
+    from learning.analytics_evidence import Evidence
+    evidence = Evidence(request.user, 7)
+    data = [dict(row, day=date.fromisoformat(row['date']).strftime('%a')) for row in evidence.daily()]
+    total = evidence.overview()['study_minutes']
+    return Response({'week_data': data, 'total_minutes': total,
+                     'total_hours': int(total // 60), 'remaining_minutes': round(total % 60, 2)})
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
+@transaction.atomic
 def log_study_time(request):
-    """Manually log study time"""
-    minutes = request.data.get('minutes', 0)
-    study_date = request.data.get('date', date.today().isoformat())
-    
-    if minutes <= 0:
-        return Response(
-            {'error': 'Minutes must be greater than 0'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    try:
-        study_date = date.fromisoformat(study_date)
-    except ValueError:
-        return Response(
-            {'error': 'Invalid date format. Use YYYY-MM-DD'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    # Update daily session
-    session, _ = DailyStudySession.objects.get_or_create(
-        user=request.user,
-        date=study_date
-    )
-    session.minutes_studied += minutes
-    session.sessions_count += 1
-    session.save()
-    
-    # Update user stats
-    stats, _ = UserStats.objects.get_or_create(user=request.user)
-    stats.total_study_minutes += minutes
-    stats.save()
-    
-    return Response({
-        'message': 'Study time logged successfully',
-        'total_today': session.minutes_studied,
-        'total_overall': stats.total_study_minutes
-    })
+    """Persist a validated manual log; retries with the same request ID count once."""
+    from datetime import datetime, time
+    from rest_framework import serializers
+    from learning import events
+    from learning.models import ActivityType, LearningEvent
+    from learning.analytics_evidence import Evidence, minutes as as_minutes
+
+    class Input(serializers.Serializer):
+        minutes = serializers.IntegerField(min_value=1, max_value=1440)
+        date = serializers.DateField(required=False)
+        request_id = serializers.UUIDField(required=False)
+
+    data = Input(data=request.data)
+    data.is_valid(raise_exception=True)
+    now = timezone.now()
+    request_id = data.validated_data.get('request_id')
+    key = f'manual:{request_id}' if request_id else ''
+    events.lock_stats(request.user)
+    previous = LearningEvent.objects.filter(user=request.user, idempotency_key=key).first() if key else None
+    default_date = date.fromisoformat(previous.metadata['date']) if previous else timezone.localdate(now)
+    study_date = data.validated_data.get('date', default_date)
+    if study_date > timezone.localdate(now):
+        raise serializers.ValidationError({'date': 'Study time cannot be logged in the future.'})
+    at = now if study_date == timezone.localdate(now) else timezone.make_aware(datetime.combine(study_date, time.min))
+    events.record(request.user, ActivityType.STUDY_SESSION_COMPLETED,
+        duration_seconds=data.validated_data['minutes'] * 60, occurred_at=at,
+        resource_type='manual_study', metadata={'date': study_date.isoformat(), 'manual': True},
+        idempotency_key=key, award_xp=False)
+    evidence = Evidence(request.user, 7, now=now)
+    day_seconds = sum(row['seconds'] for row in evidence.rows if timezone.localdate(row['at']) == study_date)
+    return Response({'message': 'Study time logged successfully',
+                     'total_today': as_minutes(day_seconds),
+                     'total_overall': as_minutes(sum(row['seconds'] for row in evidence.rows))})
 
 
 # -------------------------
@@ -979,7 +813,7 @@ def log_study_time(request):
 # -------------------------
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def ai_tutor(request):
     """
     AI tutor chat endpoint.
@@ -995,7 +829,7 @@ def ai_tutor(request):
     slide_id = request.data.get('slide_id')
     if slide_id:
         try:
-            slide = Slide.objects.get(id=slide_id)
+            slide = visible(Slide, request.user).get(id=slide_id)
             sc = SlideContent.objects.filter(slide=slide, is_extracted=True).first()
             if sc and sc.content_data.get('pages'):
                 # Extract text from text_blocks for context
@@ -1015,11 +849,11 @@ def ai_tutor(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def suggest_videos(request, slide_id):
     """AI suggests 3 best related videos for a slide."""
     try:
-        slide = Slide.objects.get(id=slide_id)
+        slide = visible(Slide, request.user).get(id=slide_id)
     except Slide.DoesNotExist:
         return Response({'error': 'Slide not found'}, status=status.HTTP_404_NOT_FOUND)
     
@@ -1044,7 +878,7 @@ def suggest_videos(request, slide_id):
 # -------------------------
 # SLIDE DECK VIEWS
 # -------------------------
-class SlideDeckViewSet(viewsets.ModelViewSet):
+class SlideDeckViewSet(PrivateMediaResponseMixin, viewsets.ModelViewSet):
     """
     ViewSet for managing slide decks (uploaded documents).
     
@@ -1055,20 +889,34 @@ class SlideDeckViewSet(viewsets.ModelViewSet):
     - Delete a deck
     """
     serializer_class = SlideDeckSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanWriteUploadedContent, ClassContentReferences]
     lookup_field = 'id'
+
+    @action(detail=True, methods=['get', 'post'], url_path='reading-progress', permission_classes=[IsAuthenticated])
+    def reading_progress(self, request, id=None):
+        from . import deck_reading
+        deck = self.get_object()  # Current class authorization applies to every read and write.
+        return Response(deck_reading.payload(request.user, deck) if request.method == 'GET'
+                        else deck_reading.save(request.user, deck, request.data))
     
     def get_queryset(self):
         """Get decks uploaded by current user"""
-        return SlideDeck.objects.filter(
-            uploaded_by=self.request.user
-        ).order_by('-created_at')
+        return visible(SlideDeck, self.request.user).order_by('-created_at')
     
     def get_serializer_class(self):
         """Use lightweight serializer for list view"""
         if self.action == 'list':
             return SlideDeckListSerializer
         return SlideDeckSerializer
+
+    @action(detail=True, methods=['get', 'post'], url_path='question-bank')
+    def question_bank(self, request, id=None):
+        from learning.deck_banks import deck_bank_status, prepare_deck_bank
+        deck = self.get_object()
+        if request.method == 'GET':
+            return Response(deck_bank_status(deck, request.user))
+        queued, result = prepare_deck_bank(deck.pk, request.user, request.data)
+        return Response({**result, 'queued': queued}, status=202 if queued else 200)
     
     def create(self, request, *args, **kwargs):
         """
@@ -1103,150 +951,47 @@ class SlideDeckViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Detect file type
-        from .services.converter import FileTypeDetector
-        file_type = FileTypeDetector.detect_file_type(file_obj.name)
+        from .slide_uploads import validate_slide_file
+        file_type = validate_slide_file(file_obj)
         
-        if not file_type:
-            return Response(
-                {'error': f'Unsupported file type. Supported: pdf, pptx, ppt, docx'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Create SlideDeck record
         import uuid
-        deck_id = f"deck_{str(uuid.uuid4())[:8]}"
-        
-        # Upload to Cloudinary via model
-        try:
-            from cloudinary.uploader import upload_large
-            
-            # Read file content
-            file_obj.seek(0)
-            file_content = file_obj.read()
-            
-            # Upload to Cloudinary
-            result = upload_large(
-                file_content,
-                resource_type='auto',
-                public_id=f"{deck_id}_{file_obj.name}",
-                folder='slide_uploads'
-            )
-            
-            deck = SlideDeck.objects.create(
-                id=deck_id,
-                title=title,
-                file_type=file_type,
-                file_size=file_obj.size,
-                original_file=result['public_id'],
-                uploaded_by=request.user,
-                processing_status='pending'
-            )
-            
-            # Trigger async processing (will implement with Celery later)
-            # For now, will be synchronous
-            self._process_deck_async(deck)
-            
-            serializer = self.get_serializer(deck)
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
-        
-        except Exception as e:
-            return Response(
-                {'error': f'Upload failed: {str(e)}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    
-    def _process_deck_async(self, deck):
-        """Process deck (convert and render)"""
-        try:
-            from .services.converter import SlideConverter, FileTypeDetector
-            import os
-            
-            # Update status to processing
-            deck.processing_status = 'processing'
-            deck.save()
-            
-            # Get file from Cloudinary
-            from cloudinary.utils import cloudinary_url
-            file_url, _ = cloudinary_url(deck.original_file, resource_type='auto')
-            
-            # Download file temporarily
-            import requests
-            import tempfile
-            
-            response = requests.get(file_url)
-            if response.status_code != 200:
-                raise Exception("Failed to download file from Cloudinary")
-            
-            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{deck.file_type}") as tmp_file:
-                tmp_file.write(response.content)
-                tmp_file_path = tmp_file.name
-            
+        from rest_framework.exceptions import APIException, ValidationError
+        from .upload_receipts import execute_upload, StorageUnavailable
+        owning_class = upload_class(request.user)
+        if not isinstance(title, str) or not title.strip() or len(title) > 200:
+            raise ValidationError({'title': 'Enter a title of 1 to 200 characters.'})
+
+        def create(staged):
             try:
-                # Convert document
-                success, result = SlideConverter.convert_document(
-                    tmp_file_path,
-                    deck.file_type,
-                    deck.id
-                )
-                
-                if not success:
-                    raise Exception(result.get('error', 'Unknown error'))
-                
-                # Save rendered pages to database
-                for page_number, image_path in enumerate(result['slide_images'], 1):
-                    try:
-                        # Upload image to Cloudinary
-                        from cloudinary.uploader import upload
-                        
-                        img_result = upload(
-                            image_path,
-                            resource_type='image',
-                            public_id=f"{deck.id}_slide_{page_number:04d}",
-                            folder=f'slide_renders/{deck.id}'
-                        )
-                        
-                        # Get image dimensions
-                        from PIL import Image
-                        img = Image.open(image_path)
-                        width, height = img.size
-                        
-                        # Create SlidePage record
-                        SlidePage.objects.create(
-                            deck=deck,
-                            slide_number=page_number,
-                            image=img_result['public_id'],
-                            width=width,
-                            height=height
-                        )
-                    
-                    except Exception as e:
-                        import logging
-                        logger = logging.getLogger(__name__)
-                        logger.error(f"Failed to save page {page_number}: {e}")
-                
-                # Update deck with completion status
-                deck.page_count = result['page_count']
-                deck.processing_status = 'completed'
-                deck.save()
-                
-            finally:
-                # Clean up temp file
-                if os.path.exists(tmp_file_path):
-                    os.remove(tmp_file_path)
-        
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Deck processing error: {e}")
-            
-            deck.processing_status = 'failed'
-            deck.processing_error = str(e)
-            deck.save()
-    
+                asset = upload_asset(file_obj, class_group=owning_class, uploaded_by=request.user,
+                    resource_type='auto', folder='emby/decks', timeout=300)
+            except Exception:
+                raise StorageUnavailable()
+            staged.append(asset)
+            return SlideDeck.objects.create(id=f'deck_{uuid.uuid4().hex}', title=title,
+                file_type=file_type, file_size=file_obj.size, original_file='', asset=asset,
+                uploaded_by=request.user, class_group=owning_class, processing_status='pending')
+
+        try:
+            deck, replayed = execute_upload(user=request.user, request_id=request.data.get('request_id'),
+                kind='deck', metadata={'title': title, 'file_type': file_type, 'class_group': str(owning_class.pk)},
+                upload=file_obj, create=create, queryset=self.get_queryset())
+            # The original and receipt are committed before conversion. Interrupted
+            # conversions are recoverable without uploading another original.
+            if not replayed:
+                self._process_deck_async(deck)
+            return Response(self.get_serializer(deck).data, status=status.HTTP_201_CREATED)
+        except APIException:
+            raise
+        except Exception as exc:
+            logger.warning('Deck upload failed (%s)', type(exc).__name__)
+            return Response({'error': 'Could not store this document. Please try again.'}, status=502)
+
+    def _process_deck_async(self, deck, token=None):
+        from .deck_processing import process
+        process(deck.pk, token=token)
+        deck.refresh_from_db()
+
     @action(detail=True, methods=['get'])
     def pages(self, request, id=None):
         """Get all pages of a slide deck"""
@@ -1301,14 +1046,8 @@ class SlideDeckViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # Delete from Cloudinary
-        try:
-            from cloudinary.api import delete_resources_by_prefix
-            delete_resources_by_prefix(f'slide_renders/{deck_id}')
-            delete_resources_by_prefix(f'slide_uploads/{deck_id}')
-        except:
-            pass
-        
+        # Private assets are retained for the registry's separate orphan reconciliation.
+        # A deck ID is not authority to delete arbitrary provider prefixes.
         # Delete from database (pages auto-deleted via CASCADE)
         deck.delete()
         
@@ -1324,38 +1063,36 @@ class SlideDeckViewSet(viewsets.ModelViewSet):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def generate_questions_from_slide_view(request, slide_id):
-    """
-    Auto-generate MCQ and theory questions from a slide.
-    Body: {num_mcq (default 5), num_theory (default 3)}
-    Only class heads and material uploaders can trigger this.
-    """
-    from accounts.permissions import can_upload_slides
-
-    profile = getattr(request.user, 'profile', None)
-    if profile is None or not can_upload_slides(profile):
-        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-
-    try:
-        slide = Slide.objects.get(id=slide_id)
-    except Slide.DoesNotExist:
-        return Response({'error': 'Slide not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    from .question_generator import generate_questions_from_slide
-    num_mcq = int(request.data.get('num_mcq', 5))
-    num_theory = int(request.data.get('num_theory', 3))
-
-    result = generate_questions_from_slide(slide, num_mcq=num_mcq, num_theory=num_theory)
-    return Response(result, status=status.HTTP_201_CREATED if not result.get('error') else status.HTTP_400_BAD_REQUEST)
+    """Persist a bank-generation request; provider work always runs in a worker."""
+    from .content_permissions import can_reprocess_upload
+    from learning.generation_dispatch import request_generation
+    from learning.models import QuestionGenerationJob
+    slide = visible(Slide, request.user).filter(pk=slide_id).first()
+    if slide is None:
+        return Response({'error': 'Slide not found'}, status=404)
+    if not can_reprocess_upload(request.user, slide):
+        return Response({'error': 'You cannot generate questions for this upload.'}, status=403)
+    force = request.data.get('force', False)
+    if type(force) is not bool:
+        return Response({'error': 'force must be a boolean.'}, status=400)
+    if 'num_mcq' in request.data or 'num_theory' in request.data:
+        return Response({'error': 'Bank generation uses the configured bank targets, not quiz attempt counts.'}, status=400)
+    queued = request_generation(slide, force=force)
+    job = QuestionGenerationJob.objects.get(slide=slide)
+    return Response({'slide_id': slide.pk, 'queued': queued, 'status': job.status,
+                     'mcq_target': job.mcq_target, 'theory_target': job.theory_target,
+                     'mcq_generated': job.mcq_generated, 'theory_generated': job.theory_generated,
+                     'error': job.error}, status=202 if queued else 200)
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def ai_study_recommendations(request):
     """Return study session context for the 5-step dynamic session."""
     from curriculum.models import SlidePage, Topic, ScheduleItem, FlashcardProgress, QuizAttempt, UserProgress
-    from learning.models import WeakArea
+    from learning.analytics_evidence import Evidence
     from django.utils import timezone
     from datetime import timedelta
 
@@ -1364,24 +1101,25 @@ def ai_study_recommendations(request):
 
     # 1. Flashcards due
     flashcards_due = FlashcardProgress.objects.filter(
-        user=request.user, 
+        user=request.user, flashcard__in=visible(Flashcard, request.user),
         due_date__lte=now
     ).count()
 
     # 2. Practice Topic (Weakest area)
-    weak_area = WeakArea.objects.filter(user=request.user).order_by('mastery').first()
-    practice_topic = weak_area.topic.name if weak_area and weak_area.topic else "General Review"
+    evidence = Evidence(request.user, 30)
+    weak_area = next(iter(evidence.topics()['weakest']), None)
+    practice_topic = weak_area['label'] if weak_area else 'General Review'
     
     # 3. Slide to read (next unread slide)
     completed_slides = list(UserProgress.objects.filter(
         user=request.user, completed=True
     ).values_list('slide_id', flat=True))
-    next_slide = Slide.objects.exclude(id__in=completed_slides).first()
+    next_slide = visible(Slide, request.user).exclude(id__in=completed_slides).first()
     slide_to_read = {"id": next_slide.id, "title": next_slide.title} if next_slide else None
 
     # 4. Stale slides (read > 1 week ago)
     one_week_ago = now - timedelta(days=7)
-    stale_progress = UserProgress.objects.filter(
+    stale_progress = visible(UserProgress, request.user).filter(
         user=request.user, completed=True, last_accessed__lte=one_week_ago
     ).select_related('slide').order_by('last_accessed')[:3]
     
@@ -1390,7 +1128,7 @@ def ai_study_recommendations(request):
     ]
 
     # 5. Study Plan Items (Tasks for today)
-    schedule_qs = ScheduleItem.objects.filter(
+    schedule_qs = visible(ScheduleItem, request.user).filter(
         user=request.user,
         scheduled_date=today,
         completed=False
@@ -1405,18 +1143,12 @@ def ai_study_recommendations(request):
             'status': 'completed' if item['completed'] else 'pending'
         })
 
-    # Also include recent missed questions count for the dashboard
-    recent_attempt = QuizAttempt.objects.filter(
-        user=request.user, 
-        submitted_at__isnull=False
-    ).order_by('-submitted_at').first()
-    
-    missed_count = 0
+    # Use saved objective results, including unanswered MCQs. Historical analysis
+    # narratives are not evidence for current recommendations.
+    completed = [row for row in evidence.rows if row['kind'] in ('practice', 'mock', 'formal')]
+    latest = max(completed, key=lambda row: row['at'], default=None)
+    missed_count = latest['attempted'] - latest['correct'] if latest else 0
     insights = None
-    if recent_attempt:
-        missed_count = recent_attempt.responses.filter(is_correct=False, question__question_type='mcq').count()
-        if recent_attempt.analysis_data:
-            insights = recent_attempt.analysis_data.get('insights')
 
     return Response({
         "slide_to_read": slide_to_read,
@@ -1454,11 +1186,11 @@ def has_premium_access(user):
     return can_access_premium_features(profile)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def get_textbook_suggestions(request):
     """Get AI-generated textbook suggestions for a slide"""
     from .ai_service import ai_service
-    from .content_extractor import get_slide_full_text
+    from .content_extractor import get_slide_full_text, ExtractionError
     import json
     
     if not has_premium_access(request.user):
@@ -1477,18 +1209,14 @@ def get_textbook_suggestions(request):
         
         # Get slide
         try:
-            slide = Slide.objects.get(id=slide_id)
+            slide = visible(Slide, request.user).get(id=slide_id)
         except Slide.DoesNotExist:
             return Response({
                 'error': 'Slide not found'
             }, status=status.HTTP_404_NOT_FOUND)
         
         # Extract slide content from PDF/PPTX/DOCX
-        file_url = None
-        if slide.file:
-            file_url = slide.file.url
-        elif slide.file_url:
-            file_url = slide.file_url
+        file_url = content_file_url(slide)
         
         slide_content = ""
         if file_url:
@@ -1511,6 +1239,8 @@ def get_textbook_suggestions(request):
             'subject': subject
         })
         
+    except ExtractionError as exc:
+        return Response({'error': str(exc), 'text_extraction': exc.report}, status=409)
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -1520,11 +1250,11 @@ def get_textbook_suggestions(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def get_video_suggestions(request):
     """Get AI-generated video suggestions for a slide"""
     from .ai_service import ai_service
-    from .content_extractor import get_slide_full_text
+    from .content_extractor import get_slide_full_text, ExtractionError
     
     if not has_premium_access(request.user):
         return Response({
@@ -1542,18 +1272,14 @@ def get_video_suggestions(request):
         
         # Get slide
         try:
-            slide = Slide.objects.get(id=slide_id)
+            slide = visible(Slide, request.user).get(id=slide_id)
         except Slide.DoesNotExist:
             return Response({
                 'error': 'Slide not found'
             }, status=status.HTTP_404_NOT_FOUND)
         
         # Extract slide content from PDF/PPTX/DOCX
-        file_url = None
-        if slide.file:
-            file_url = slide.file.url
-        elif slide.file_url:
-            file_url = slide.file_url
+        file_url = content_file_url(slide)
         
         slide_content = ""
         if file_url:
@@ -1576,6 +1302,8 @@ def get_video_suggestions(request):
             'subject': subject
         })
         
+    except ExtractionError as exc:
+        return Response({'error': str(exc), 'text_extraction': exc.report}, status=409)
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -1585,11 +1313,11 @@ def get_video_suggestions(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def generate_slide_mcqs(request):
     """Generate AI-powered MCQs from slide content"""
     from .ai_service import ai_service
-    from .content_extractor import get_slide_full_text
+    from .content_extractor import get_slide_full_text, ExtractionError
     
     if not has_premium_access(request.user):
         return Response({
@@ -1607,18 +1335,14 @@ def generate_slide_mcqs(request):
         
         # Get slide
         try:
-            slide = Slide.objects.get(id=slide_id)
+            slide = visible(Slide, request.user).get(id=slide_id)
         except Slide.DoesNotExist:
             return Response({
                 'error': 'Slide not found'
             }, status=status.HTTP_404_NOT_FOUND)
         
         # Extract slide content from PDF/PPTX/DOCX
-        file_url = None
-        if slide.file:
-            file_url = slide.file.url
-        elif slide.file_url:
-            file_url = slide.file_url
+        file_url = content_file_url(slide)
         
         slide_content = ""
         if file_url:
@@ -1642,6 +1366,8 @@ def generate_slide_mcqs(request):
             'subject': subject
         })
         
+    except ExtractionError as exc:
+        return Response({'error': str(exc), 'text_extraction': exc.report}, status=409)
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -1658,7 +1384,7 @@ def generate_slide_mcqs(request):
 # SLIDE PROCESSING VIEWS
 # -------------------------
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([CanWriteUploadedContent, ClassContentReferences])
 def reprocess_slide(request, slide_id):
     """
     Reprocess a specific slide (useful for failed slides)
@@ -1669,25 +1395,23 @@ def reprocess_slide(request, slide_id):
         
         # Get the slide
         try:
-            slide = Slide.objects.get(id=slide_id)
+            slide = visible(Slide, request.user).get(id=slide_id)
         except Slide.DoesNotExist:
             return Response({
                 'error': f'Slide {slide_id} not found'
             }, status=status.HTTP_404_NOT_FOUND)
-        
-        # Reset processing status
-        status_obj, created = SlideProcessingStatus.objects.get_or_create(slide=slide)
-        status_obj.status = 'pending'
-        status_obj.error_message = ''
-        status_obj.content_extracted = False
-        status_obj.rag_processed = False
-        status_obj.is_chunked = False
-        status_obj.is_embedded = False
-        status_obj.save()
-        
-        # Queue for reprocessing
-        task = process_slide_task.delay(slide_id)
-        
+        if not CanWriteUploadedContent().has_object_permission(request, None, slide):
+            return Response({'error': 'You cannot reprocess this upload.'}, status=403)
+
+        from .slide_processing import reserve
+        from .slide_uploads import dispatch_slide_processing
+        token = reserve(slide_id, manual=True)
+        if token is None:
+            return Response({'error': 'This document is already being processed.'}, status=409)
+        task = dispatch_slide_processing(slide_id, token)
+        if task is None:
+            return Response({'error': 'Processing could not be queued. Please retry.'}, status=500)
+
         return Response({
             'message': f'Slide {slide_id} queued for reprocessing',
             'task_id': task.id,
@@ -1696,12 +1420,12 @@ def reprocess_slide(request, slide_id):
         
     except Exception as e:
         return Response({
-            'error': str(e)
+            'error': 'Processing could not be queued. Please retry.'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([CanWriteUploadedContent, ClassContentReferences])
 def reprocess_failed_slides(request):
     """
     Reprocess all slides that previously failed
@@ -1711,8 +1435,9 @@ def reprocess_failed_slides(request):
         from .tasks import process_slide_task
         
         # Get all failed slides
-        failed_statuses = SlideProcessingStatus.objects.filter(status='failed')
-        failed_slide_ids = [status.slide_id for status in failed_statuses]
+        failed_statuses = visible(SlideProcessingStatus, request.user).filter(status='failed')
+        failed_slide_ids = [entry.slide_id for entry in failed_statuses.select_related('slide')
+                           if CanWriteUploadedContent().has_object_permission(request, None, entry.slide)]
         
         if not failed_slide_ids:
             return Response({
@@ -1724,14 +1449,14 @@ def reprocess_failed_slides(request):
         queued_tasks = []
         for slide_id in failed_slide_ids:
             try:
-                # Reset status
-                status_obj = SlideProcessingStatus.objects.get(slide_id=slide_id)
-                status_obj.status = 'pending'
-                status_obj.error_message = ''
-                status_obj.save()
-                
-                # Queue task
-                task = process_slide_task.delay(slide_id)
+                from .slide_processing import reserve
+                from .slide_uploads import dispatch_slide_processing
+                token = reserve(slide_id, manual=True)
+                if token is None:
+                    continue
+                task = dispatch_slide_processing(slide_id, token)
+                if task is None:
+                    continue
                 queued_tasks.append({
                     'slide_id': slide_id,
                     'task_id': task.id
@@ -1753,7 +1478,7 @@ def reprocess_failed_slides(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def slide_processing_status(request, slide_id):
     """
     Get processing status for a specific slide
@@ -1762,18 +1487,21 @@ def slide_processing_status(request, slide_id):
         from .models import Slide, SlideProcessingStatus
         
         try:
-            slide = Slide.objects.get(id=slide_id)
+            slide = visible(Slide, request.user).get(id=slide_id)
         except Slide.DoesNotExist:
             return Response({
                 'error': f'Slide {slide_id} not found'
             }, status=status.HTTP_404_NOT_FOUND)
         
+        from learning.bank_sources import bank_status
+        generation = bank_status(slide)
         # Get processing status
         try:
             status_obj = SlideProcessingStatus.objects.get(slide=slide)
             return Response({
                 'slide_id': slide_id,
                 'slide_title': slide.title,
+                'question_bank': generation,
                 'status': status_obj.status,
                 'content_extracted': status_obj.content_extracted,
                 'rag_processed': status_obj.rag_processed,
@@ -1788,6 +1516,7 @@ def slide_processing_status(request, slide_id):
             return Response({
                 'slide_id': slide_id,
                 'slide_title': slide.title,
+                'question_bank': generation,
                 'status': 'not_processed',
                 'content_extracted': False,
                 'rag_processed': False,
@@ -1806,7 +1535,7 @@ def slide_processing_status(request, slide_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def processing_overview(request):
     """
     Get overview of all slide processing statuses
@@ -1816,11 +1545,11 @@ def processing_overview(request):
         from django.db.models import Count
         
         # Get counts by status
-        status_counts = SlideProcessingStatus.objects.values('status').annotate(count=Count('status'))
+        status_counts = visible(SlideProcessingStatus, request.user).values('status').annotate(count=Count('status'))
         
         # Get total slides
-        total_slides = Slide.objects.count()
-        processed_slides = SlideProcessingStatus.objects.count()
+        total_slides = visible(Slide, request.user).count()
+        processed_slides = visible(SlideProcessingStatus, request.user).count()
         unprocessed_slides = total_slides - processed_slides
         
         # Format status counts
@@ -1829,7 +1558,7 @@ def processing_overview(request):
             status_summary['unprocessed'] = unprocessed_slides
         
         # Get recent failures
-        recent_failures = SlideProcessingStatus.objects.filter(
+        recent_failures = visible(SlideProcessingStatus, request.user).filter(
             status='failed'
         ).select_related('slide').order_by('-started_at')[:10]
         
@@ -1855,11 +1584,14 @@ def processing_overview(request):
 class SteeplechaseQuestionViewSet(viewsets.ModelViewSet):
     queryset = SteeplechaseQuestion.objects.all()
     serializer_class = SteeplechaseQuestionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, PlatformAdminWritesOnly]
     
     def get_queryset(self):
-        # Return all or apply filtering if necessary
-        return super().get_queryset()
+        from .class_access import content_admin
+        from learning.practice import playable_stations
+        if content_admin(self.request.user):
+            return self.queryset.all()
+        return playable_stations(self.request.user)
 
 class FriendChallengeViewSet(viewsets.ModelViewSet):
     queryset = FriendChallenge.objects.all()
@@ -1889,26 +1621,14 @@ class BrainBattleViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # A battle is visible if it belongs to your class, you host it, or you have
-        # joined it by code. The class-only filter meant a code shared across classes
-        # produced a battle the participant could never see again.
-        user = self.request.user
-        profile = getattr(user, 'profile', None)
-        class_group = profile.class_group if profile else None
-
-        visible = Q(host=user) | Q(participants__user=user)
-        if class_group:
-            visible |= Q(class_group=class_group)
-        return self.queryset.filter(visible).distinct()
+        from learning.views import _visible_battles
+        return _visible_battles(self.request.user)
 
     def perform_create(self, serializer):
         from rest_framework.exceptions import ValidationError
         from .ai_service import generate_battle_questions
         
-        profile = getattr(self.request.user, 'profile', None)
-        class_group = profile.class_group if profile else None
-        if not class_group:
-            raise ValidationError("You must belong to a class group to create a battle.")
+        class_group = upload_class(self.request.user)
             
         battle = serializer.save(host=self.request.user, class_group=class_group)
         
@@ -1966,34 +1686,47 @@ class BrainBattleViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def join(self, request, pk=None):
         battle = self.get_object()
-        BattleParticipant.objects.get_or_create(battle=battle, user=request.user)
-        return Response({'status': 'joined battle'})
+        from learning import battles as battle_service
+        try:
+            _, participant, created = battle_service.join(request.user, battle.code)
+        except battle_service.BattleError as exc:
+            return Response({'detail': str(exc), 'code': exc.code}, status=exc.status)
+        return Response(
+            {'status': 'joined battle', 'newly_joined': created, 'score': participant.score},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
         battle = self.get_object()
-        if request.user == battle.host:
-            battle.status = 'active'
-            battle.start_time = timezone.now()
-            battle.save()
-            return Response({'status': 'battle started'})
-        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+        from learning import battles as battle_service
+        try:
+            question = battle_service.advance_question(request.user, battle.pk)
+        except battle_service.BattleError as exc:
+            return Response({'detail': str(exc), 'code': exc.code}, status=exc.status)
+        return Response({'status': 'battle started', 'question': question})
 
     @action(detail=True, methods=['post'])
     def end(self, request, pk=None):
         battle = self.get_object()
-        if request.user == battle.host:
-            battle.status = 'completed'
-            battle.save()
-            return Response({'status': 'battle ended'})
-        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+        from learning import battles as battle_service
+        try:
+            battle_service.end_battle(request.user, battle.pk)
+        except battle_service.BattleError as exc:
+            return Response({'detail': str(exc), 'code': exc.code}, status=exc.status)
+        return Response({'status': 'battle ended'})
         
     def destroy(self, request, *args, **kwargs):
         battle = self.get_object()
-        if request.user == battle.host:
-            battle.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+        if request.user != battle.host:
+            return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+        if battle.status != 'scheduled':
+            return Response(
+                {'detail': 'Started battles cannot be deleted; their results must remain available.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+        battle.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # -------------------------
@@ -2004,28 +1737,31 @@ class FlashcardViewSet(viewsets.ModelViewSet):
     CRUD endpoints for Flashcards.
     """
     serializer_class = FlashcardSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ClassContentReferences]
 
     def get_queryset(self):
-        qs = Flashcard.objects.filter(user=self.request.user)
+        qs = visible(Flashcard, self.request.user).filter(user=self.request.user)
         for param in ['subject', 'block', 'sub_block', 'topic']:
             val = self.request.query_params.get(param)
             if val:
                 qs = qs.filter(**{f"{param}_id": val})
         
-        slide_id = self.request.query_params.get('slide_id')
-        if slide_id:
-            try:
-                from .models import Slide
-                slide = Slide.objects.get(id=slide_id)
-                if slide.topic_id:
-                    qs = qs.filter(topic_id=slide.topic_id)
-            except Exception:
-                pass
-
         source = self.request.query_params.get('source')
         if source:
             qs = qs.filter(source=source)
+
+        slide_id = self.request.query_params.get('slide_id')
+        if slide_id:
+            from .models import Slide
+            slide = visible(Slide, self.request.user).filter(pk=slide_id).first()
+            if slide is None:
+                return qs.none()
+            if source == 'ai':
+                qs = qs.filter(source_slide=slide)
+            elif slide.topic_id:
+                qs = qs.filter(topic_id=slide.topic_id)
+            else:
+                qs = qs.filter(source_slide=slide)
             
         return qs
 
@@ -2057,15 +1793,15 @@ class FlashcardViewSet(viewsets.ModelViewSet):
         """Returns flashcard statistics."""
         now = timezone.now()
         user = request.user
-        qs = Flashcard.objects.filter(user=user)
+        qs = visible(Flashcard, user).filter(user=user)
         due_count = qs.filter(
             Q(progress_records__isnull=True) | Q(progress_records__due_date__lte=now)
         ).distinct().count()
         total_cards = qs.count()
-        total_reviews = FlashcardReview.objects.filter(progress__user=user).count()
+        total_reviews = FlashcardReview.objects.filter(progress__user=user, progress__flashcard__in=qs).count()
         
         # Calculate retention rate
-        reviews = FlashcardReview.objects.filter(progress__user=user)
+        reviews = FlashcardReview.objects.filter(progress__user=user, progress__flashcard__in=qs)
         successful_reviews = reviews.filter(rating__in=['good', 'easy']).count()
         retention_rate = int((successful_reviews / total_reviews) * 100) if total_reviews > 0 else 0
         

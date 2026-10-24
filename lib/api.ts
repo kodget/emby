@@ -14,10 +14,8 @@ export const api = axios.create({
   timeout: 20000,
 });
 
-// Add auth token to requests (exclude public auth endpoints)
-api.interceptors.request.use((config) => {
-  // List of endpoints that should NOT have Authorization header
-  const publicEndpoints = [
+// Public failures must not refresh or discard an unrelated signed-in session.
+const publicEndpoints = [
     "/auth/signup/",
     "/auth/login/",
     "/auth/google-login/",
@@ -27,12 +25,17 @@ api.interceptors.request.use((config) => {
     "/auth/class/validate-code/",
     "/auth/payment/verify/",
     "/api/payments/verify/",
-  ];
+];
+const isPublicRequest = (url?: string) => publicEndpoints.some((endpoint) => {
+  const path = url?.split("?")[0];
+  return path === endpoint || path === `${API_BASE_URL}${endpoint}`;
+});
+
+// Add auth token to requests (exclude public auth endpoints)
+api.interceptors.request.use((config) => {
 
   // Check if the current request is to a public endpoint
-  const isPublicEndpoint = publicEndpoints.some((endpoint) =>
-    config.url?.includes(endpoint),
-  );
+  const isPublicEndpoint = isPublicRequest(config.url);
 
   // Only add token if NOT a public endpoint
   if (!isPublicEndpoint && typeof window !== "undefined") {
@@ -63,12 +66,25 @@ const processQueue = (error: any, token: string | null = null) => {
 
 // Add response interceptor to handle token refresh
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const url = response.config.url?.split("?")[0] ?? "";
+    if (response.config.method === "post" && (
+      url.endsWith("/api/progress/update_progress/") || url.endsWith("/api/study-time/log/") ||
+      /\/api\/quiz-attempts\/[^/]+\/submit\/$/.test(url) ||
+      /\/api\/schedule\/[^/]+\/complete\/$/.test(url) ||
+      /\/api\/learning\/practice\/[^/]+\/complete\/$/.test(url)
+      || /\/api\/decks\/[^/]+\/reading-progress\/$/.test(url)
+    ) && typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+      window.dispatchEvent(new Event("emby:progress-changed"));
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
     // If error is 401 and we haven't tried to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry
+        && typeof window !== "undefined" && !isPublicRequest(originalRequest.url)) {
       originalRequest._retry = true;
 
       const refreshToken = sessionStorage.getItem("refreshToken");
@@ -106,9 +122,13 @@ api.interceptors.response.use(
           {
             refresh: refreshToken,
           },
+          { timeout: 20000 },
         );
 
         const newAccessToken = response.data.access;
+        if (typeof newAccessToken !== "string" || !newAccessToken) {
+          throw new Error("The server returned an invalid session response. Please try again.");
+        }
         if (response.data.refresh) {
           sessionStorage.setItem("refreshToken", response.data.refresh);
         }
@@ -124,8 +144,10 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        // Refresh failed, redirect to login
-        if (typeof window !== "undefined") {
+        // Only an explicitly rejected refresh token ends the session. Network
+        // failures and server outages leave credentials available for a retry.
+        const refreshStatus = axios.isAxiosError(refreshError) ? refreshError.response?.status : undefined;
+        if (refreshStatus === 400 || refreshStatus === 401 || refreshStatus === 403) {
           sessionStorage.removeItem("token");
           sessionStorage.removeItem("refreshToken");
           sessionStorage.removeItem("user");
@@ -146,6 +168,7 @@ api.interceptors.response.use(
 // Auth Types - CORRECTED to match backend serializer
 export type UserProfile = {
   id: number;
+  user_id: number;
   username: string;
   email: string;
   full_name: string;
@@ -169,6 +192,7 @@ export type UserProfile = {
   created_at: string;
   is_superuser?: boolean;
   is_staff?: boolean;
+  is_platform_admin?: boolean;
 };
 
 export type AuthTokens = {
@@ -249,6 +273,8 @@ export type Subject = {
 
 export type Topic = {
   id: string;
+  block: string | null;
+  sub_block: string | null;
   name: string;
   description: string;
   order: number;
@@ -259,6 +285,7 @@ export type Section = Topic;
 
 export type SubBlock = {
   id: string;
+  block: string;
   name: string;
   description: string;
   order: number;
@@ -317,6 +344,7 @@ export type SlideDeck = {
   file_size: number;
   processing_status: "pending" | "processing" | "completed" | "failed";
   processing_error?: string;
+  text_extraction?: { status?: string; missing_pages?: number[]; processed_pages?: number; total_pages?: number; error_counts?: Record<string, number> };
   page_count: number;
   uploaded_by: number;
   uploaded_by_name: string;
@@ -512,6 +540,12 @@ export type SteeplechaseQuestion = {
 
 // ==================== AUTHENTICATION API ====================
 
+export type VerificationEmailResult = {
+  message: string;
+  email_status?: "sent" | "already_verified" | "throttled" | "unavailable" | "failed";
+  retry_after?: number;
+};
+
 export const authApi = {
   // Signup with email/password
   signup: async (data: {
@@ -519,7 +553,7 @@ export const authApi = {
     password: string;
     first_name: string;
     last_name: string;
-  }): Promise<{ message: string; user: UserProfile; tokens: AuthTokens }> => {
+  }): Promise<VerificationEmailResult & { user: UserProfile; tokens: AuthTokens }> => {
     const response = await api.post("/auth/signup/", data);
     return response.data;
   },
@@ -553,7 +587,7 @@ export const authApi = {
   },
 
   // Resend verification email
-  resendVerification: async (): Promise<{ message: string }> => {
+  resendVerification: async (): Promise<VerificationEmailResult> => {
     const response = await api.post("/auth/resend-verification/");
     return response.data;
   },
@@ -561,6 +595,11 @@ export const authApi = {
   // Get current user profile
   getProfile: async (): Promise<UserProfile> => {
     const response = await api.get("/auth/profile/");
+    return response.data;
+  },
+
+  requestClassHeadVerification: async (): Promise<{ message: string; user?: UserProfile }> => {
+    const response = await api.post("/auth/class-head/request-verification/");
     return response.data;
   },
 
@@ -662,7 +701,11 @@ export const adminApi = {
     const response = await api.get("/auth/class-head/pending/");
     return response.data;
   },
-  verifyClassHead: async (userId: number, approved = true, rejectionReason = "") => {
+  verifyClassHead: async (
+    userId: number,
+    approved = true,
+    rejectionReason = "",
+  ): Promise<{ message: string; user: UserProfile }> => {
     const response = await api.post("/auth/class-head/verify/", {
       user_id: userId,
       approved,
@@ -965,8 +1008,9 @@ export const curriculumApi = {
     section?: string;
   }): Promise<Slide[]> => {
     const params = {
-      ...filters,
-      sub_block: filters?.sub_block || filters?.topic,
+      subject: filters?.subject,
+      block: filters?.block,
+      sub_block: filters?.sub_block,
       topic: filters?.topic || filters?.section,
     };
     const response = await api.get("/api/slides/", { params });
@@ -985,7 +1029,7 @@ export const curriculumApi = {
     sub_block?: string;
     topic?: string;
     section?: string;
-    file_url: string;
+    asset_id: string;
     file_type: string;
     page_count: number;
   }): Promise<Slide> => {
@@ -1011,6 +1055,8 @@ export const curriculumApi = {
     slide_id: string;
     title: string;
     total_pages: number;
+    can_reprocess?: boolean;
+    text_extraction?: { status?: string; missing_pages?: number[]; processed_pages?: number; total_pages?: number; error_counts?: Record<string, number> };
     pages: Array<{
       page_number: number;
       image_url: string;
@@ -1040,11 +1086,18 @@ export const curriculumApi = {
   getMaterials: async (filters?: {
     subject?: string;
     block?: string;
+    sub_block?: string;
     topic?: string;
     section?: string;
     type?: string;
   }): Promise<Material[]> => {
-    const response = await api.get("/api/materials/", { params: filters });
+    const response = await api.get("/api/materials/", { params: {
+      subject: filters?.subject,
+      block: filters?.block,
+      sub_block: filters?.sub_block,
+      topic: filters?.topic || filters?.section,
+      type: filters?.type,
+    } });
     return response.data;
   },
 
@@ -1061,7 +1114,7 @@ export const curriculumApi = {
     block: string;
     topic?: string;
     section?: string;
-    file_url: string;
+    asset_id: string;
     file_size?: number;
   }): Promise<Material> => {
     const response = await api.post("/api/materials/", data);
@@ -1084,18 +1137,24 @@ export const curriculumApi = {
 // ==================== SLIDE DECK API (PDF/PPTX/DOCX) ====================
 
 export const deckApi = {
+  getReadingProgress: async (deckId: string): Promise<DeckReadingProgress> =>
+    (await api.get(`/api/decks/${deckId}/reading-progress/`)).data,
+  saveReadingProgress: async (deckId: string, data: { current_page: number; seconds: number; request_id: string }): Promise<DeckReadingProgress> =>
+    (await api.post(`/api/decks/${deckId}/reading-progress/`, data)).data,
   /**
    * Upload a new document (PDF, PPTX, PPT, DOCX)
    * Returns SlideDeck with processing status
    */
-  uploadDeck: async (file: File, title: string): Promise<SlideDeck> => {
+  uploadDeck: async (file: File, title: string, requestId = crypto.randomUUID()): Promise<SlideDeck> => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("title", title);
+    formData.append("request_id", requestId);
 
     const response = await api.post("/api/decks/", formData, {
+      timeout: 120000,
       headers: {
-        "Content-Type": "multipart/form-data",
+        "Content-Type": undefined,
       },
     });
     return response.data;
@@ -1173,9 +1232,17 @@ export const deckApi = {
 
 // ==================== PROGRESS API ====================
 
+export interface DeckReadingProgress {
+  deck_id: string;
+  current_page: number;
+  total_seconds: number;
+  completed: boolean;
+  updated_at: string | null;
+}
+
 export const progressApi = {
-  getProgress: async (): Promise<UserProgress[]> => {
-    const response = await api.get("/api/progress/");
+  getProgress: async (slide?: string): Promise<UserProgress[]> => {
+    const response = await api.get("/api/progress/", { params: slide ? { slide } : undefined });
     return response.data;
   },
 
@@ -1187,10 +1254,14 @@ export const progressApi = {
   updateProgress: async (data: {
     slide_id: string;
     current_page: number;
-    total_pages: number;
+    total_pages?: number;
     time_spent_minutes?: number;
+    seconds?: number;
+    request_id?: string;
   }): Promise<UserProgress> => {
-    const response = await api.post("/api/progress/update_progress/", data);
+    const response = await api.post("/api/progress/update_progress/", {
+      ...data, request_id: data.request_id ?? crypto.randomUUID(),
+    });
     return response.data;
   },
 
@@ -1212,12 +1283,15 @@ export const progressApi = {
   logStudyTime: async (data: {
     minutes: number;
     date?: string;
+    request_id?: string;
   }): Promise<{
     message: string;
     total_today: number;
     total_overall: number;
   }> => {
-    const response = await api.post("/api/study-time/log/", data);
+    const response = await api.post("/api/study-time/log/", {
+      ...data, request_id: data.request_id ?? crypto.randomUUID(),
+    });
     return response.data;
   },
 
@@ -1564,10 +1638,16 @@ export const aiApi = {
   getVideoSuggestions: async (
     slideId: string,
   ): Promise<{
+    source: "youtube_api" | "ai_suggestions";
     videos: Array<{
       title: string;
-      query: string;
-      reason: string;
+      query?: string;
+      reason?: string;
+      video_id?: string;
+      url?: string;
+      thumbnail?: string;
+      channel?: string;
+      duration?: string;
     }>;
   }> => {
     const response = await api.post("/api/ai/video-suggestions/", {
@@ -1602,7 +1682,7 @@ export const aiApi = {
     slideImageBase64?: string
   ): Promise<{
     message: string;
-    task_id: string;
+    job_id: string;
   }> => {
     const response = await api.post(
       "/api/ai/generate-flashcards/",
@@ -1616,13 +1696,24 @@ export const aiApi = {
     return response.data;
   },
 
-  // Slide-aware chat — backend proxy adds Gemini key, never exposed to frontend
+  getFlashcardGenerationStatus: async (jobId: string): Promise<{
+    job_id: string;
+    status: "queued" | "running" | "failed" | "completed";
+    requested_count: number;
+    generated_count: number;
+    error: string | null;
+    completed_at: string | null;
+  }> => {
+    const response = await api.get(`/api/ai/flashcards/${encodeURIComponent(jobId)}/`);
+    return response.data;
+  },
+
+  // Source-aware chat — the backend scopes context and history to a slide or a full deck.
   chatWithSlide: async (data: {
-    slide_id: string;
     message: string;
     slide_image_base64?: string;
     conversation_history?: Array<{ role: string; content: string }>;
-  }): Promise<{
+  } & ({ slide_id: string; deck_id?: never } | { deck_id: string; slide_id?: never })): Promise<{
     response: string;
     sources?: string[];
     youtube?: {
@@ -1632,7 +1723,14 @@ export const aiApi = {
       isDissection: boolean;
     };
   }> => {
-    const response = await api.post("/api/ai/chat/", data);
+    const response = await api.post("/api/ai/chat/", data, { timeout: 120000 });
+    return response.data;
+  },
+  getChatHistory: async (source: { slide_id: string } | { deck_id: string }): Promise<{
+    messages: Array<{ role: "user" | "assistant"; content: string; created_at: string }>;
+    disclaimer: string;
+  }> => {
+    const response = await api.get("/api/ai/chat/history/", { params: source });
     return response.data;
   },
 
@@ -1642,7 +1740,16 @@ export const aiApi = {
     slide_id: string;
     slide_image_base64?: string;
   }): Promise<{
-    youtube: Array<{ title: string; query: string; reason: string }>;
+    youtube: Array<{
+      title: string;
+      query?: string;
+      reason?: string;
+      video_id?: string;
+      url?: string;
+      thumbnail?: string;
+      channel?: string;
+      duration?: string;
+    }>;
     textbooks: Array<{
       title: string;
       author: string;
@@ -2239,6 +2346,7 @@ export const learningApi = {
 };
 
 export interface AnalyticsReport {
+  evidence?: { note: string; historical_assessments_excluded: number; assessments_awaiting_written_grades: number; historical_image_rounds_excluded_from_accuracy?: number };
   generated_at: string;
   window_days: number;
   is_premium: boolean;
@@ -2289,6 +2397,7 @@ export interface AnalyticsReport {
   >;
   topics?: {
     weakest: Array<{
+      id?: string;
       label: string;
       attempted: number;
       correct: number;
@@ -2297,6 +2406,7 @@ export interface AnalyticsReport {
       priority: number;
     }>;
     strongest: Array<{
+      id?: string;
       label: string;
       attempted: number;
       correct: number;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi, classApi } from "@/lib/api";
 import { UserProfile } from "@/lib/api";
@@ -10,17 +10,13 @@ import { TrendingUp, Users, Award, BookOpen, Clock, Target, ArrowLeft } from "lu
 
 type ClassMember = {
   id: number;
-  full_name: string;
-  class_role: string;
-  photo_url: string | null;
-  points: number;
-  streak: number;
-  is_premium: boolean;
+  user: { id: number; first_name: string; last_name: string; username: string };
+  total_points: number;
+  streak_days: number;
 };
 
 type ClassAnalytics = {
   totalMembers: number;
-  activeToday: number;
   avgPoints: number;
   avgStreak: number;
   topPerformers: { name: string; points: number; rank: number }[];
@@ -31,12 +27,17 @@ export default function AnalyticsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [analytics, setAnalytics] = useState<ClassAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    setLoading(true);
+    setAnalytics(null);
     try {
       const profileData = await authApi.getProfile();
       setProfile(profileData);
@@ -50,22 +51,21 @@ export default function AnalyticsPage() {
       const members: ClassMember[] = await classApi.getClassMembers();
 
       const totalMembers = members.length;
-      const totalPoints = members.reduce((sum, m) => sum + (m.points || 0), 0);
-      const totalStreak = members.reduce((sum, m) => sum + (m.streak || 0), 0);
+      const totalPoints = members.reduce((sum, m) => sum + (m.total_points || 0), 0);
+      const totalStreak = members.reduce((sum, m) => sum + (m.streak_days || 0), 0);
       const avgPoints = totalMembers > 0 ? Math.round(totalPoints / totalMembers) : 0;
       const avgStreak = totalMembers > 0 ? Math.round(totalStreak / totalMembers) : 0;
 
       // Sort members by points for top performers
-      const sorted = [...members].sort((a, b) => (b.points || 0) - (a.points || 0));
+      const sorted = [...members].sort((a, b) => (b.total_points || 0) - (a.total_points || 0) || a.user.id - b.user.id);
       const topPerformers = sorted.slice(0, 5).map((m, i) => ({
-        name: m.full_name,
-        points: m.points || 0,
+        name: `${m.user.first_name} ${m.user.last_name}`.trim() || m.user.username,
+        points: m.total_points || 0,
         rank: i + 1,
       }));
 
       setAnalytics({
         totalMembers,
-        activeToday: 0, // Not available without a dedicated backend endpoint
         avgPoints,
         avgStreak,
         topPerformers,
@@ -73,6 +73,7 @@ export default function AnalyticsPage() {
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };
@@ -95,12 +96,12 @@ export default function AnalyticsPage() {
       <AuthGuard>
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-gray-600">No analytics data available.</p>
+            <p className="text-gray-600">Could not load class analytics. Please try again.</p>
             <button
-              onClick={() => router.push("/class")}
+              onClick={loadData}
               className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
-              Back to Class
+              Retry
             </button>
           </div>
         </div>
@@ -163,7 +164,7 @@ export default function AnalyticsPage() {
 
           {/* Top Performers */}
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Top Performers</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Top members by points</h3>
             {analytics.topPerformers.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No member data available yet.</p>
             ) : (
@@ -196,4 +197,3 @@ export default function AnalyticsPage() {
     </AuthGuard>
   );
 }
-

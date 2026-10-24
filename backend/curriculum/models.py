@@ -3,6 +3,24 @@ from django.contrib.auth.models import User
 from cloudinary.models import CloudinaryField
 from datetime import date
 from django.utils import timezone
+import uuid
+
+
+class MediaAsset(models.Model):
+    """Authoritative storage identity; expiring delivery URLs are never persisted."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    class_group = models.ForeignKey('accounts.ClassGroup', on_delete=models.PROTECT, related_name='+')
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+')
+    public_id = models.CharField(max_length=512)
+    resource_type = models.CharField(max_length=10)
+    delivery_type = models.CharField(max_length=20, default='authenticated')
+    format = models.CharField(max_length=20, blank=True)
+    file_size = models.BigIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['public_id', 'resource_type', 'delivery_type'],
+                                               name='unique_private_media_identity')]
 
 
 # -------------------------
@@ -10,6 +28,9 @@ from django.utils import timezone
 # -------------------------
 class Subject(models.Model):
     """Anatomy, Physiology, Biochemistry"""
+    # Null is legacy/unassigned, never shared access. Ownership is assigned by a reviewed migration.
+    class_group = models.ForeignKey('accounts.ClassGroup', on_delete=models.PROTECT,
+                                    null=True, blank=True, editable=False, related_name='+')
     id = models.CharField(max_length=50, primary_key=True)  # e.g., 'anatomy'
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
@@ -78,6 +99,9 @@ class Topic(models.Model):
 # -------------------------
 class Slide(models.Model):
     """Individual slide/material for reading"""
+    # Null is legacy/unassigned, never shared access. Ownership is assigned by a reviewed migration.
+    class_group = models.ForeignKey('accounts.ClassGroup', on_delete=models.PROTECT,
+                                    null=True, blank=True, editable=False, related_name='+')
     id = models.CharField(max_length=50, primary_key=True)
     title = models.CharField(max_length=200)
     
@@ -89,6 +113,7 @@ class Slide(models.Model):
     
     # File information - stored in Cloudinary
     file = CloudinaryField('file', null=True, blank=True, resource_type='auto')
+    asset = models.ForeignKey(MediaAsset, on_delete=models.PROTECT, null=True, blank=True, related_name='slides')
     file_url = models.URLField(blank=True)  # Legacy or external URLs
     file_type = models.CharField(max_length=20, default='pdf')  # pdf, pptx, docx
     page_count = models.IntegerField(default=0)
@@ -110,10 +135,8 @@ class Slide(models.Model):
 
     @property
     def get_file_url(self):
-        """Return Cloudinary URL if file exists, otherwise return file_url"""
-        if self.file:
-            return self.file.url
-        return self.file_url
+        from .private_media import content_file_url
+        return content_file_url(self)
     
     @property
     def subject_name(self):
@@ -169,6 +192,9 @@ class Material(models.Model):
         ('other', 'Other'),
     ]
     
+    # Null is legacy/unassigned, never shared access. Ownership is assigned by a reviewed migration.
+    class_group = models.ForeignKey('accounts.ClassGroup', on_delete=models.PROTECT,
+                                    null=True, blank=True, editable=False, related_name='+')
     id = models.CharField(max_length=50, primary_key=True)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -182,6 +208,7 @@ class Material(models.Model):
     
     # File information - stored in Cloudinary
     file = CloudinaryField('file', null=True, blank=True, resource_type='auto')
+    asset = models.ForeignKey(MediaAsset, on_delete=models.PROTECT, null=True, blank=True, related_name='materials')
     file_url = models.URLField(blank=True)  # For external URLs (e.g., YouTube)
     file_size = models.BigIntegerField(default=0)  # in bytes
     
@@ -198,10 +225,8 @@ class Material(models.Model):
 
     @property
     def get_file_url(self):
-        """Return Cloudinary URL if file exists, otherwise return file_url"""
-        if self.file:
-            return self.file.url
-        return self.file_url
+        from .private_media import content_file_url
+        return content_file_url(self)
 
 
 # -------------------------
@@ -220,6 +245,8 @@ class UserProgress(models.Model):
     
     # Time tracking
     time_spent_minutes = models.IntegerField(default=0)
+    # Carry sub-minute intervals without changing historical whole minutes.
+    reading_seconds_remainder = models.PositiveSmallIntegerField(default=0)
     
     class Meta:
         unique_together = ['user', 'slide']
@@ -233,6 +260,19 @@ class UserProgress(models.Model):
         if self.total_pages == 0:
             return 0
         return int((self.current_page / self.total_pages) * 100)
+
+
+class CourseReadingCheckpoint(models.Model):
+    """Receipt for both timed and position-only course reading saves."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    slide = models.ForeignKey(Slide, on_delete=models.CASCADE)
+    request_id = models.UUIDField()
+    current_page = models.PositiveIntegerField()
+    seconds = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'request_id'], name='unique_course_reading_request')]
 
 
 class StudyProfile(models.Model):
@@ -335,8 +375,8 @@ class UserStats(models.Model):
         if not self.last_activity_date:
             return 0
             
-        today = timezone.now().date()
-        if self.last_activity_date < today - datetime.timedelta(days=1):
+        today = timezone.localdate()
+        if not today - datetime.timedelta(days=1) <= self.last_activity_date <= today:
             return 0
         return self.current_streak
 
@@ -510,6 +550,9 @@ class SpotStation(models.Model):
 
     id = models.CharField(max_length=50, primary_key=True)
 
+    # Publishing to the platform catalogue is explicit; missing parents do not imply sharing.
+    is_shared = models.BooleanField(default=False, db_index=True)
+
     kind = models.CharField(
         max_length=20, choices=Kind.choices, default=Kind.GROSS_ANATOMY, db_index=True
     )
@@ -528,10 +571,10 @@ class SpotStation(models.Model):
 
     # Curriculum links (optional — stations are usable without them)
     subject = models.ForeignKey(
-        Subject, on_delete=models.SET_NULL, related_name='spot_stations', null=True, blank=True
+        Subject, on_delete=models.PROTECT, related_name='spot_stations', null=True, blank=True
     )
     block = models.ForeignKey(
-        Block, on_delete=models.SET_NULL, related_name='spot_stations', null=True, blank=True
+        Block, on_delete=models.PROTECT, related_name='spot_stations', null=True, blank=True
     )
 
     # ---- Imagery -------------------------------------------------------
@@ -583,6 +626,10 @@ class SpotStation(models.Model):
 
     class Meta:
         ordering = ['source_file', 'source_page', 'id']
+        constraints = [models.CheckConstraint(
+            condition=models.Q(is_shared=False) | models.Q(subject__isnull=True, block__isnull=True),
+            name='shared_station_has_no_class_source',
+        )]
         indexes = [
             models.Index(fields=['kind', 'region', 'is_approved']),
             models.Index(fields=['kind', 'histology_topic', 'is_approved']),
@@ -594,7 +641,7 @@ class SpotStation(models.Model):
     @property
     def is_playable(self) -> bool:
         """Whether this station can be put in front of a student."""
-        return bool(self.is_approved and self.image_url and self.prompt and self.accepted_answers)
+        return bool(self.is_approved and not self.needs_review and self.image_url and self.prompt and self.accepted_answers)
 
     @property
     def section(self) -> str:
@@ -662,6 +709,11 @@ class QuizQuestion(models.Model):
     marking_rubric = models.JSONField(default=list, blank=True, help_text='Structured marking criteria')
     maximum_marks = models.IntegerField(default=20, help_text='Maximum marks for theory questions')
     source_text = models.TextField(blank=True, help_text='Original slide text used to generate this question')
+    source_page = models.PositiveIntegerField(null=True, blank=True)
+    bank_key = models.CharField(max_length=64, blank=True, db_index=True)
+    needs_review = models.BooleanField(default=True)
+    review_reason = models.TextField(blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
     question_options_order = models.JSONField(default=list, blank=True, help_text='Randomized option order')
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -744,11 +796,15 @@ class SlideDeck(models.Model):
         ('docx', 'Word Document'),
     ]
     
+    # Null is legacy/unassigned, never shared access. Ownership is assigned by a reviewed migration.
+    class_group = models.ForeignKey('accounts.ClassGroup', on_delete=models.PROTECT,
+                                    null=True, blank=True, editable=False, related_name='+')
     id = models.CharField(max_length=50, primary_key=True)
     title = models.CharField(max_length=200)
     
     # Original file
     original_file = CloudinaryField('original_file', resource_type='auto')
+    asset = models.ForeignKey(MediaAsset, on_delete=models.PROTECT, null=True, blank=True, related_name='decks')
     file_type = models.CharField(max_length=10, choices=FILE_TYPES)
     file_size = models.BigIntegerField(default=0)  # in bytes
     
@@ -760,6 +816,13 @@ class SlideDeck(models.Model):
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='uploaded_decks')
     processing_status = models.CharField(max_length=20, choices=PROCESSING_STATUS, default='pending')
     processing_error = models.TextField(blank=True)
+    processing_token = models.UUIDField(null=True, blank=True, editable=False)
+    processing_lease_until = models.DateTimeField(null=True, blank=True, editable=False)
+    text_extraction = models.JSONField(default=dict, blank=True)
+    curriculum_slide = models.OneToOneField(
+        Slide, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='standalone_deck', editable=False,
+    )
     
     # Stats
     page_count = models.IntegerField(default=0)
@@ -786,6 +849,30 @@ class SlideDeck(models.Model):
         return self.processing_status == 'failed'
 
 
+class DeckReadingProgress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deck_reading_progress')
+    deck = models.ForeignKey(SlideDeck, on_delete=models.CASCADE, related_name='reading_progress')
+    current_page = models.PositiveIntegerField(default=1)
+    total_seconds = models.PositiveIntegerField(default=0)
+    completed = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'deck'], name='unique_deck_reader_progress')]
+
+
+class DeckReadingCheckpoint(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='+')
+    deck = models.ForeignKey(SlideDeck, on_delete=models.CASCADE, related_name='+')
+    request_id = models.UUIDField()
+    current_page = models.PositiveIntegerField()
+    seconds = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'request_id'], name='unique_deck_reading_request')]
+
+
 class SlidePage(models.Model):
     """Rendered page from a slide deck"""
     deck = models.ForeignKey(SlideDeck, on_delete=models.CASCADE, related_name='pages')
@@ -794,6 +881,7 @@ class SlidePage(models.Model):
     
     # Rendered image (stored in Cloudinary)
     image = CloudinaryField('image', resource_type='image')
+    asset = models.ForeignKey(MediaAsset, on_delete=models.PROTECT, null=True, blank=True, related_name='pages')
     image_url = models.URLField(blank=True)  # Fallback URL
     
     # Image dimensions
@@ -815,6 +903,9 @@ class SlidePage(models.Model):
     @property
     def get_image_url(self):
         """Return Cloudinary URL if image exists, otherwise return image_url"""
+        if self.asset_id:
+            from .private_media import asset_url
+            return asset_url(self.asset) if self.asset.class_group_id == self.deck.class_group_id else ''
         if self.image:
             return self.image.url
         return self.image_url
@@ -848,8 +939,7 @@ class SlideChunk(models.Model):
 
 class SlideChatMessage(models.Model):
     """
-    Persisted AI chat history, scoped per student per slide (PRD Â§6.4.3).
-    Used to restore conversation context and to enforce daily free-tier limits.
+    Persisted AI chat history scoped per student and source.
     """
     ROLES = [
         ('user', 'User'),
@@ -858,6 +948,7 @@ class SlideChatMessage(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='slide_chat_messages')
     slide = models.ForeignKey(Slide, on_delete=models.CASCADE, related_name='chat_messages', null=True, blank=True)
+    deck = models.ForeignKey(SlideDeck, on_delete=models.CASCADE, related_name='chat_messages', null=True, blank=True)
 
     role = models.CharField(max_length=10, choices=ROLES)
     content = models.TextField()
@@ -868,11 +959,33 @@ class SlideChatMessage(models.Model):
         ordering = ['created_at']
         indexes = [
             models.Index(fields=['user', 'slide', 'created_at']),
+            models.Index(fields=['user', 'deck', 'created_at'], name='chat_deck_history_idx'),
             models.Index(fields=['user', 'created_at']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(slide__isnull=True) | models.Q(deck__isnull=True),
+                name='chat_message_one_content_source',
+            ),
         ]
 
     def __str__(self):
         return f"{self.user.username} [{self.role}] {self.content[:40]}"
+
+
+class UploadReceipt(models.Model):
+    """A user's upload intent survives response loss and deletion of its result."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    request_id = models.UUIDField()
+    kind = models.CharField(max_length=16)
+    fingerprint = models.CharField(max_length=64)
+    completed = models.BooleanField(default=False)
+    slide = models.ForeignKey('Slide', null=True, blank=True, on_delete=models.SET_NULL)
+    deck = models.ForeignKey('SlideDeck', null=True, blank=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'request_id'], name='unique_user_upload_request')]
 
 
 class SlideProcessingStatus(models.Model):
@@ -903,6 +1016,10 @@ class SlideProcessingStatus(models.Model):
     
     # Error tracking
     error_message = models.TextField(blank=True)
+    processing_token = models.UUIDField(null=True, blank=True, editable=False)
+    processing_lease_until = models.DateTimeField(null=True, blank=True, editable=False)
+    processing_attempts = models.PositiveSmallIntegerField(default=0, editable=False)
+    next_attempt_at = models.DateTimeField(null=True, blank=True, editable=False)
     
     def __str__(self):
         return f"{self.slide.title} - Status: {self.status}, Chunked: {self.is_chunked}, Embedded: {self.is_embedded}"
@@ -910,6 +1027,58 @@ class SlideProcessingStatus(models.Model):
 # -------------------------
 # QUIZ EXAMINATION SYSTEM
 # -------------------------
+class FormalAssessment(models.Model):
+    """Private class paper. Published content is immutable through the assessment API."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    class_group = models.ForeignKey('accounts.ClassGroup', on_delete=models.PROTECT)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    title = models.CharField(max_length=200)
+    duration_minutes = models.PositiveSmallIntegerField()
+    mcq_count = models.PositiveSmallIntegerField(default=0)
+    theory_count = models.PositiveSmallIntegerField(default=0)
+    questions = models.JSONField(default=list)
+    has_ai_questions = models.BooleanField(default=False)
+    ai_reviewed_at = models.DateTimeField(null=True, blank=True)
+    ai_reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='reviewed_assessments')
+    revision = models.PositiveIntegerField(default=1)
+    published_at = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    answers_released_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.CheckConstraint(condition=models.Q(mcq_count__lte=50, theory_count__lte=5,
+                duration_minutes__gte=1, duration_minutes__lte=150), name='formal_assessment_limits'),
+        ]
+
+
+class AssessmentDraftJob(models.Model):
+    """Private suggestions, pinned to a saved paper revision and verified source versions."""
+    paper = models.ForeignKey(FormalAssessment, on_delete=models.CASCADE, related_name='draft_jobs')
+    base_revision = models.PositiveIntegerField()
+    difficulty = models.CharField(max_length=10)
+    sources = models.JSONField(default=list)
+    plan = models.JSONField(default=list)
+    questions = models.JSONField(default=list)
+    status = models.CharField(max_length=20, default='pending')
+    attempts = models.PositiveIntegerField(default=0)
+    total_runs = models.PositiveIntegerField(default=0)
+    lease_token = models.UUIDField(null=True, editable=False)
+    lease_expires_at = models.DateTimeField(null=True)
+    next_attempt_at = models.DateTimeField(null=True)
+    error_code = models.CharField(max_length=40, blank=True)
+    applied_revision = models.PositiveIntegerField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['status', 'next_attempt_at'])]
+
+
 class QuizAttempt(models.Model):
     """Formal quiz/examination attempt with timing and configuration"""
     STATUS_CHOICES = [
@@ -921,13 +1090,17 @@ class QuizAttempt(models.Model):
     
     id = models.CharField(max_length=50, primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="quiz_attempts")
+    assessment = models.ForeignKey(FormalAssessment, on_delete=models.PROTECT, null=True, blank=True,
+                                   related_name='attempts')
+    snapshot_class = models.ForeignKey('accounts.ClassGroup', on_delete=models.PROTECT, null=True, blank=True,
+                                       editable=False, related_name='snapshot_attempts')
     
     # Configuration
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="quiz_attempts", null=True, blank=True)
-    block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name="quiz_attempts", null=True, blank=True)
-    sub_block = models.ForeignKey(SubBlock, on_delete=models.CASCADE, related_name="quiz_attempts", null=True, blank=True)
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="quiz_attempts", null=True, blank=True)
-    slide = models.ForeignKey(Slide, on_delete=models.CASCADE, related_name="quiz_attempts", null=True, blank=True)
+    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, related_name="quiz_attempts", null=True, blank=True)
+    block = models.ForeignKey(Block, on_delete=models.SET_NULL, related_name="quiz_attempts", null=True, blank=True)
+    sub_block = models.ForeignKey(SubBlock, on_delete=models.SET_NULL, related_name="quiz_attempts", null=True, blank=True)
+    topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, related_name="quiz_attempts", null=True, blank=True)
+    slide = models.ForeignKey(Slide, on_delete=models.SET_NULL, related_name="quiz_attempts", null=True, blank=True)
     
     # Exam type and configuration
     exam_type = models.CharField(max_length=20, choices=[
@@ -945,6 +1118,7 @@ class QuizAttempt(models.Model):
     
     # Ordered question IDs to preserve randomization
     question_ids = models.JSONField(default=list, help_text="Ordered list of question IDs")
+    question_snapshots = models.JSONField(default=list, editable=False, help_text="Private versioned question and answer snapshots")
     flagged_questions = models.JSONField(default=list, help_text="List of flagged question IDs")
     
     # Status and timing
@@ -956,7 +1130,7 @@ class QuizAttempt(models.Model):
     # Scoring
     mcq_score = models.IntegerField(default=0)
     mcq_total = models.IntegerField(default=0)
-    theory_score = models.IntegerField(default=0)
+    theory_score = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     theory_total = models.IntegerField(default=0)
     overall_percentage = models.FloatField(default=0.0)
     
@@ -971,6 +1145,7 @@ class QuizAttempt(models.Model):
     
     class Meta:
         ordering = ["-created_at"]
+        constraints = [models.UniqueConstraint(fields=['user', 'assessment'], name='one_formal_attempt_per_student')]
         indexes = [
             models.Index(fields=["user", "status"]),
             models.Index(fields=["user", "created_at"]),
@@ -985,7 +1160,7 @@ class QuizAttempt(models.Model):
         """Check if timed exam has expired"""
         if self.is_timed and self.deadline and self.status == "in_progress":
             from django.utils import timezone
-            return timezone.now() > self.deadline
+            return timezone.now() >= self.deadline
         return False
     
     @property
@@ -1003,7 +1178,9 @@ class QuizAttemptResponse(models.Model):
     ]
     
     attempt = models.ForeignKey(QuizAttempt, on_delete=models.CASCADE, related_name="responses")
-    question = models.ForeignKey(QuizQuestion, on_delete=models.CASCADE)
+    question = models.ForeignKey(QuizQuestion, on_delete=models.CASCADE, null=True, blank=True)
+    # Formal questions live only in the paper/attempt snapshots, never in public banks.
+    snapshot_question_id = models.CharField(max_length=50, blank=True, default='')
     
     # MCQ Response
     selected_option = models.CharField(max_length=1, blank=True, help_text="A, B, C, or D for MCQ questions")
@@ -1014,7 +1191,8 @@ class QuizAttemptResponse(models.Model):
     
     # AI Evaluation (for theory questions)
     ai_evaluation_status = models.CharField(max_length=20, choices=AI_EVALUATION_STATUS, default="pending")
-    ai_score = models.IntegerField(null=True, blank=True, help_text="AI-assigned score out of maximum marks")
+    ai_score = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="AI-assigned score out of maximum marks")
+    grading_evidence = models.JSONField(default=dict, editable=False)
     ai_feedback = models.JSONField(default=dict, blank=True, help_text="Structured AI feedback")
     ai_rubric_breakdown = models.JSONField(default=list, blank=True, help_text="Detailed rubric scoring breakdown")
     ai_evaluation_attempts = models.IntegerField(default=0, help_text="Number of AI evaluation retry attempts")
@@ -1029,6 +1207,12 @@ class QuizAttemptResponse(models.Model):
     
     class Meta:
         unique_together = ["attempt", "question"]
+        constraints = [
+            models.UniqueConstraint(fields=['attempt', 'snapshot_question_id'],
+                condition=~models.Q(snapshot_question_id=''), name='unique_snapshot_response'),
+            models.CheckConstraint(condition=(models.Q(question__isnull=False, snapshot_question_id='') |
+                (models.Q(question__isnull=True) & ~models.Q(snapshot_question_id=''))), name='response_question_reference'),
+        ]
         indexes = [
             models.Index(fields=["attempt", "question"]),
             models.Index(fields=["attempt", "ai_evaluation_status"]),
@@ -1036,13 +1220,13 @@ class QuizAttemptResponse(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.attempt.user.username} - {self.question.id}"
+        return f"{self.attempt.user.username} - {self.question_id or self.snapshot_question_id}"
     
     @property
     def needs_ai_evaluation(self):
         """Check if response needs AI evaluation"""
         return (
-            self.question.question_type == "theory" 
+            self.question_id is not None and self.question.question_type == "theory"
             and self.text_answer.strip() 
             and self.ai_evaluation_status == "pending"
         )
@@ -1051,6 +1235,25 @@ class QuizAttemptResponse(models.Model):
     def is_ai_evaluation_complete(self):
         """Check if AI evaluation is complete"""
         return self.ai_evaluation_status == "completed"
+
+
+class AssessmentGradingJob(models.Model):
+    """Durable work queue; the lease token fences off late or duplicate workers."""
+    attempt = models.OneToOneField(QuizAttempt, on_delete=models.CASCADE, related_name='grading_job')
+    status = models.CharField(max_length=20, default='pending', choices=[
+        ('pending', 'Queued'), ('running', 'Grading'), ('retry_wait', 'Retry scheduled'),
+        ('failed', 'Needs retry'), ('completed', 'Completed')])
+    attempts = models.PositiveIntegerField(default=0)
+    total_runs = models.PositiveIntegerField(default=0)
+    lease_token = models.UUIDField(null=True, editable=False)
+    lease_expires_at = models.DateTimeField(null=True)
+    next_attempt_at = models.DateTimeField(null=True)
+    error_code = models.CharField(max_length=50, blank=True)
+    completed_at = models.DateTimeField(null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['status', 'next_attempt_at'])]
 
 
 # -------------------------
@@ -1083,6 +1286,13 @@ class Flashcard(models.Model):
         blank=True,
         related_name="generated_flashcards",
     )
+    source_slide = models.ForeignKey(
+        Slide,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="generated_flashcards",
+    )
 
     front = models.TextField()
     back = models.TextField()
@@ -1101,7 +1311,12 @@ class Flashcard(models.Model):
                 fields=["user", "source_question"],
                 condition=models.Q(source="quiz_mistake"),
                 name="unique_quiz_mistake_flashcard_per_user",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["user", "source_slide", "front"],
+                condition=models.Q(source="ai", source_slide__isnull=False),
+                name="unique_ai_flashcard_source_front",
+            ),
         ]
         indexes = [
             models.Index(fields=["user", "source"]),
@@ -1111,6 +1326,40 @@ class Flashcard(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.front[:50]} ({self.source})"
+
+
+class FlashcardGenerationJob(models.Model):
+    STATUS_CHOICES = [
+        ("queued", "Queued"),
+        ("running", "Running"),
+        ("failed", "Failed"),
+        ("completed", "Completed"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="flashcard_generation_jobs")
+    slide = models.ForeignKey(Slide, on_delete=models.CASCADE, related_name="flashcard_generation_jobs")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="queued", db_index=True)
+    requested_count = models.PositiveSmallIntegerField()
+    generated_count = models.PositiveSmallIntegerField(default=0)
+    error_message = models.CharField(max_length=500, blank=True)
+    reservation = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    processing_lease_until = models.DateTimeField(null=True, blank=True, editable=False)
+    processing_token = models.UUIDField(null=True, blank=True, editable=False)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["user", "created_at"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "slide"],
+                condition=models.Q(status__in=["queued", "running"]),
+                name="unique_active_flashcard_job_per_user_slide",
+            ),
+        ]
 
 
 class FlashcardProgress(models.Model):
@@ -1229,6 +1478,8 @@ class BrainBattle(models.Model):
 
     questions = models.JSONField(default=list, blank=True, help_text="List of AI-generated questions")
     current_question_index = models.IntegerField(default=-1, help_text="-1 means not started")
+    current_question_started_at = models.DateTimeField(null=True, blank=True)
+    current_question_revealed_at = models.DateTimeField(null=True, blank=True)
     
     class_group = models.ForeignKey('accounts.ClassGroup', on_delete=models.CASCADE, related_name='brain_battles')
     host = models.ForeignKey(User, on_delete=models.CASCADE, related_name='hosted_battles')
@@ -1272,8 +1523,8 @@ class BrainBattle(models.Model):
 
     @property
     def is_joinable(self) -> bool:
-        """A battle can be joined until it finishes."""
-        return self.status in {"scheduled", "active"}
+        """New competitors may join only before the host starts the battle."""
+        return self.status == "scheduled"
 
 
 class BattleParticipant(models.Model):

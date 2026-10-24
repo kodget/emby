@@ -70,14 +70,28 @@ class ClassGroup(models.Model):
                 return code
     
     def add_class_head(self, user):
-        """Add class head (max 3)"""
-        if self.class_heads.count() >= 3:
-            raise ValueError("Maximum 3 class heads per class")
-        self.class_heads.add(user)
+        """Synchronize an already approved head; approval belongs to the review service."""
+        from django.db import transaction
+        with transaction.atomic():
+            group = ClassGroup.objects.select_for_update().get(pk=self.pk)
+            profile = Profile.objects.select_for_update().get(user=user)
+            if not (profile.class_group_id == group.pk and profile.class_role == ClassRole.CLASS_HEAD
+                    and profile.class_head_verified and user.is_active and group.is_active):
+                raise ValueError("The user must be approved for this active class first.")
+            if group.class_heads.filter(pk=user.pk).exists():
+                return
+            count = Profile.objects.filter(class_group=group, class_role=ClassRole.CLASS_HEAD,
+                                           class_head_verified=True, user__is_active=True).exclude(pk=profile.pk).count()
+            if count >= 3:
+                raise ValueError("Maximum 3 active approved class heads per class")
+            group.class_heads.add(user)
     
     def is_class_head(self, user):
         """Check if user is a class head"""
-        return self.class_heads.filter(id=user.id).exists()
+        return self.is_active and Profile.objects.filter(
+            user=user, class_group=self, class_role=ClassRole.CLASS_HEAD,
+            class_head_verified=True, user__is_active=True,
+        ).exists()
 
 
 # -------------------------
@@ -117,6 +131,12 @@ class Profile(models.Model):
     class_head_verified = models.BooleanField(default=False)
     class_head_verification_requested = models.BooleanField(default=False)
     class_head_rejection_reason = models.TextField(blank=True)
+    class_head_request_version = models.PositiveIntegerField(default=0)
+    class_head_reviewed_at = models.DateTimeField(null=True, blank=True)
+    class_head_reviewed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="reviewed_class_head_profiles",
+    )
     
     # Gamification
     streak = models.IntegerField(default=0)
@@ -135,7 +155,7 @@ class Profile(models.Model):
             return True
             
         # Class heads get full access automatically
-        if self.class_role == ClassRole.CLASS_HEAD and self.class_head_verified:
+        if self.is_class_head:
             return True
         
         # Paid premium
@@ -147,14 +167,15 @@ class Profile(models.Model):
 
     @property
     def is_class_head(self):
-        return self.class_role == ClassRole.CLASS_HEAD and self.class_head_verified
+        return (self.class_role == ClassRole.CLASS_HEAD and self.class_head_verified
+                and self.user.is_active and bool(self.class_group_id) and self.class_group.is_active)
     
     @property
     def can_access_app(self):
         """Check if user can access the app"""
         # Class heads must be verified
         if self.class_role == ClassRole.CLASS_HEAD:
-            return self.class_head_verified
+            return self.is_class_head
         # Other users can access immediately
         return True
 

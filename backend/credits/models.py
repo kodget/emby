@@ -32,8 +32,49 @@ class CreditPackage(models.Model):
     def __str__(self):
         return f"{self.name} - {self.credits} credits"
 
+
+class CreditPurchase(models.Model):
+    """Server-created Paystack intent and immutable entitlement/price snapshot."""
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        CREDITED = "CREDITED", "Credited"
+        REFUNDED = "REFUNDED", "Refunded"
+
+    reference = models.CharField(max_length=100, unique=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="credit_purchases")
+    package = models.ForeignKey(
+        CreditPackage, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="purchases",
+    )
+    package_id_snapshot = models.PositiveBigIntegerField()
+    package_name = models.CharField(max_length=100)
+    credits = models.PositiveIntegerField()
+    amount_kobo = models.PositiveIntegerField()
+    currency = models.CharField(max_length=3, default="NGN")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    provider_transaction_id = models.CharField(max_length=100, blank=True)
+    provider_refund_reference = models.CharField(
+        max_length=100, null=True, blank=True, unique=True
+    )
+    refunded_amount_kobo = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    refunded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "status", "created_at"])]
+
+    def __str__(self):
+        return f"{self.reference} - {self.user.username}: {self.credits} credits ({self.status})"
+
+
 class CreditLot(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='credit_lots')
+    purchase = models.OneToOneField(
+        CreditPurchase, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="credit_lot",
+    )
     source = models.CharField(max_length=50, choices=CreditSource.choices)
     original_amount = models.IntegerField()
     remaining_amount = models.IntegerField()
@@ -77,3 +118,22 @@ class CreditTransaction(models.Model):
         
     def __str__(self):
         return f"{self.user.username} {self.type} {self.amount} ({self.action})"
+
+
+class LegacyCreditRecord(models.Model):
+    """Lossless source snapshot and target identity for a reviewed legacy import."""
+
+    source_table = models.CharField(max_length=64)
+    source_pk = models.CharField(max_length=100)
+    source_digest = models.CharField(max_length=64)
+    payload = models.JSONField()
+    target_model = models.CharField(max_length=64, blank=True)
+    target_pk = models.PositiveBigIntegerField(null=True, blank=True)
+    imported_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["source_table", "source_pk"], name="credits_unique_legacy_source"
+            )
+        ]

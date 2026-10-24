@@ -36,10 +36,12 @@ from .views import (
 )
 from .upload_views import upload_file, delete_file
 from .quiz_views import QuizAttemptViewSet
+from .formal_assessments import FormalAssessmentViewSet
 # New slide-aware AI views (replaces legacy textbook/video/mcq views)
-from .ai_views import chat_with_slide, generate_resources, textbook_suggestions, video_suggestions, generate_mcqs, chat_history, generate_flashcards
+from .ai_views import chat_with_slide, generate_resources, textbook_suggestions, video_suggestions, generate_mcqs, chat_history, generate_flashcards, flashcard_generation_status
 
 router = DefaultRouter()
+router.register(r'formal-assessments', FormalAssessmentViewSet, basename='formal-assessment')
 router.register(r'quiz-attempts', QuizAttemptViewSet, basename='quiz-attempt')
 router.register(r'steeplechase', SteeplechaseQuestionViewSet, basename='steeplechase')
 router.register(r'study-profile', StudyProfileViewSet, basename='study-profile')
@@ -81,6 +83,7 @@ urlpatterns = [
     path('ai/video-suggestions/', video_suggestions, name='ai-video-suggestions'),
     path('ai/generate-mcqs/', generate_mcqs, name='ai-generate-mcqs'),
     path('ai/generate-flashcards/', generate_flashcards, name='ai-generate-flashcards'),
+    path('ai/flashcards/<uuid:job_id>/', flashcard_generation_status, name='ai-flashcard-generation-status'),
     # Legacy AI endpoints (no path conflicts)
     path('ai/tutor/', ai_tutor, name='ai-tutor'),
     path('ai/recommendations/', ai_study_recommendations, name='ai-recommendations'),

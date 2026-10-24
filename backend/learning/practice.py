@@ -28,8 +28,10 @@ from django.db.models import Q
 from django.utils import timezone
 
 from curriculum.models import SpotStation
+from curriculum.class_access import visible, member_class, content_admin
 
 from . import events
+from .practice_evidence import snapshot, saved_stations, counts
 from .models import (
     ActivityType,
     PracticeAttempt,
@@ -78,7 +80,7 @@ def _is_premium(user: User) -> bool:
 
 
 def _period() -> str:
-    return timezone.now().strftime("%Y-%m")
+    return timezone.localdate().strftime("%Y-%m")
 
 
 def entitlement(user: User, mode: str) -> dict:
@@ -87,7 +89,7 @@ def entitlement(user: User, mode: str) -> dict:
     usage, _ = PracticeRoundUsage.objects.get_or_create(
         user=user, mode=mode, period=_period()
     )
-    available = station_pool(mode).count()
+    available = station_pool(user, mode).count()
 
     if premium:
         return {
@@ -112,12 +114,34 @@ def entitlement(user: User, mode: str) -> dict:
 # ---------------------------------------------------------------------------
 # Station selection
 # ---------------------------------------------------------------------------
-def station_pool(mode: str, sections: list[str] | None = None):
+def playable_stations(user):
+    return visible(SpotStation, user).filter(is_approved=True, needs_review=False).exclude(
+        image_url='').exclude(prompt='').exclude(accepted_answers=[])
+
+
+def visible_sessions(user):
+    """Old results cannot disclose sources the student may no longer access."""
+    rows = PracticeSession.objects.filter(user=user)
+    allowed = set(playable_stations(user).values_list('pk', flat=True))
+    session_ids = {}
+    for pk, ids in rows.values_list('pk', 'station_ids'):
+        if (isinstance(ids, list) and ids and all(isinstance(i, str) and i in allowed for i in ids)
+                and len(set(ids)) == len(ids)):
+            session_ids[pk] = set(ids)
+    invalid = {pk for pk, sid in PracticeAttempt.objects.filter(session_id__in=session_ids)
+               .values_list('session_id', 'station_id') if sid not in session_ids[pk]}
+    return rows.filter(pk__in=session_ids.keys() - invalid)
+
+
+def require_session_access(session):
+    if not visible_sessions(session.user).filter(pk=session.pk).exists():
+        raise PracticeError('Session not found.', code='not_found', status=404)
+
+
+def station_pool(user: User, mode: str, sections: list[str] | None = None):
     """Approved, playable stations for a mode, optionally filtered by section."""
     kinds = KIND_FOR_MODE.get(mode, [])
-    qs = SpotStation.objects.filter(kind__in=kinds, is_approved=True).exclude(
-        image_url=""
-    )
+    qs = playable_stations(user).filter(kind__in=kinds)
 
     if sections:
         wanted = [s.strip().upper() for s in sections if s and s.strip()]
@@ -129,7 +153,7 @@ def station_pool(mode: str, sections: list[str] | None = None):
     return qs
 
 
-def available_sections(mode: str) -> list[dict]:
+def available_sections(user: User, mode: str) -> list[dict]:
     """Sections that actually have playable stations, with counts.
 
     Only non-empty sections are offered so a student cannot pick a filter that yields
@@ -143,7 +167,7 @@ def available_sections(mode: str) -> list[dict]:
     """
     field = "histology_topic" if mode == PracticeMode.HISTOLOGY else "region"
     rows = (
-        station_pool(mode)
+        station_pool(user, mode)
         .values(field)
         .annotate(count=__import__("django").db.models.Count("id"))
         .order_by("-count")
@@ -164,7 +188,7 @@ def _select_stations(user: User, mode: str, sections: list[str], count: int) -> 
     Blind randomisation would re-show the same handful of stations; this ranks unseen
     first, then least-recently-seen, and only then falls back to repeats.
     """
-    pool = list(station_pool(mode, sections).values_list("id", flat=True))
+    pool = list(station_pool(user, mode, sections).values_list("id", flat=True))
     if not pool:
         return []
 
@@ -201,7 +225,15 @@ def start_session(
     if mode not in dict(PracticeMode.choices):
         raise PracticeError("Unknown practice mode")
 
+    if not content_admin(user) and member_class(user) is None:
+        raise PracticeError('Join an active class before starting practice.', status=403)
+    if not isinstance(sections, (list, tuple)) or not all(isinstance(s, str) for s in sections):
+        if sections is not None:
+            raise PracticeError('Select valid practice sections.')
+
     sections = sections or []
+    # Serialize the allowance check and increment, including the first monthly row.
+    events.lock_stats(user)
     limits = entitlement(user, mode)
 
     if not limits["is_premium"]:
@@ -224,9 +256,13 @@ def start_session(
         mode=mode,
         sections=sections,
         station_ids=station_ids,
+        station_snapshots=[snapshot(s) for s in sorted(
+            playable_stations(user).filter(pk__in=station_ids), key=lambda s: station_ids.index(s.pk))],
         total_stations=len(station_ids),
         seconds_per_station=SECONDS_PER_STATION,
     )
+    if saved_stations(session) is None:
+        raise PracticeError('A selected station is incomplete or no longer available. Please try again.')
 
     # Count the round only once it has actually been created.
     usage, _ = PracticeRoundUsage.objects.select_for_update().get_or_create(
@@ -276,6 +312,12 @@ def station_payload(station: SpotStation, index: int, total: int) -> dict:
         payload["true_false"] = {"statement": true_false["statement"]}
 
     return payload
+
+
+def session_station(session, station):
+    """Use frozen content only after current source access has been checked."""
+    saved = saved_stations(session)
+    return saved[station.id] if saved is not None else station
 
 
 # ---------------------------------------------------------------------------
@@ -363,14 +405,38 @@ def submit_attempt(
     timed_out: bool = False,
 ) -> dict:
     """Record and grade one station, returning the reveal payload."""
-    if session.status != PracticeSession.Status.IN_PROGRESS:
-        raise PracticeError("This session is already finished.")
+    session = PracticeSession.objects.select_for_update().get(pk=session.pk, user=session.user)
+    require_session_access(session)
     if station_id not in session.station_ids:
         raise PracticeError("That station is not part of this session.")
 
-    station = SpotStation.objects.filter(id=station_id).first()
+    existing = session.attempts.filter(station_id=station_id).first()
+    if existing is None and session.status != PracticeSession.Status.IN_PROGRESS:
+        raise PracticeError("This session is already finished.")
+
+    station = playable_stations(session.user).filter(id=station_id).first()
     if station is None:
         raise PracticeError("Station not found.", status=404)
+    station = session_station(session, station)
+
+    # A submitted answer is final once its answer key has been revealed. A replay,
+    # including a late timer request, returns the original decision.
+    if existing is not None:
+        main_answer = existing.main_answer
+        supporting_choice = existing.supporting_choice
+        true_false_answer = existing.true_false_answer
+        timed_out = existing.timed_out
+        seconds_taken = existing.seconds_taken
+    else:
+        if not isinstance(main_answer, str) or len(main_answer) > 2000:
+            raise PracticeError('Main answer must be text of at most 2000 characters.')
+        if type(seconds_taken) is not int or seconds_taken < 0 or type(timed_out) is not bool:
+            raise PracticeError('Provide valid elapsed seconds and a timeout flag.')
+        if true_false_answer is not None and type(true_false_answer) is not bool:
+            raise PracticeError('Choose true or false.')
+        if supporting_choice is not None and (type(supporting_choice) is not int or supporting_choice < 0
+                or supporting_choice >= len((station.supporting_question or {}).get('options', []))):
+            raise PracticeError('Choose an available supporting option.')
 
     supporting = station.supporting_question or {}
     true_false = station.true_false_question or {}
@@ -378,17 +444,17 @@ def submit_attempt(
     main_correct = grade_main_answer(main_answer, station.accepted_answers)
 
     supporting_correct = None
-    if supporting.get("enabled") and supporting_choice is not None:
-        supporting_correct = supporting_choice == supporting.get("correct_index")
+    if supporting.get("enabled"):
+        supporting_correct = supporting_choice is not None and supporting_choice == supporting.get("correct_index")
 
     tf_correct = None
-    if true_false.get("enabled") and true_false_answer is not None:
-        tf_correct = true_false_answer == bool(true_false.get("answer"))
+    if true_false.get("enabled"):
+        tf_correct = true_false_answer is not None and true_false_answer == true_false.get("answer")
 
     # A timer expiry must never overwrite an answer the student already submitted.
-    attempt, _ = PracticeAttempt.objects.update_or_create(
+    attempt, _ = PracticeAttempt.objects.get_or_create(
         session=session,
-        station=station,
+        station_id=station_id,
         defaults={
             "order": session.station_ids.index(station_id),
             "main_answer": (main_answer or "")[:2000],
@@ -402,6 +468,10 @@ def submit_attempt(
             "answered_at": timezone.now(),
         },
     )
+
+    main_correct = attempt.main_correct
+    supporting_correct = attempt.supporting_correct
+    tf_correct = attempt.true_false_correct
 
     return {
         "station_id": station.id,
@@ -436,8 +506,12 @@ def submit_attempt(
 @transaction.atomic
 def complete_session(session: PracticeSession) -> dict:
     """Score the round, persist the breakdown, and feed the learning stream."""
+    session = PracticeSession.objects.select_for_update().get(pk=session.pk, user=session.user)
+    require_session_access(session)
     if session.status == PracticeSession.Status.COMPLETED:
         return results(session)
+    if session.status != PracticeSession.Status.IN_PROGRESS:
+        raise PracticeError('This session is already finished.')
 
     attempts = list(session.attempts.select_related("station"))
 
@@ -474,6 +548,14 @@ def complete_session(session: PracticeSession) -> dict:
             round(bucket["correct"] / bucket["attempted"], 3) if bucket["attempted"] else 0
         )
 
+    saved = counts(session)
+    if saved is not None:
+        main_correct, supporting_correct, tf_correct = (saved[k] for k in (
+            'main_correct', 'supporting_correct', 'true_false_correct'))
+        graded, correct, timed_out = saved['total'], saved['correct'], saved['timed_out']
+        score = correct / graded if graded else 0
+        breakdown = saved['breakdown']
+
     session.main_correct = main_correct
     session.supporting_correct = supporting_correct
     session.true_false_correct = tf_correct
@@ -484,7 +566,7 @@ def complete_session(session: PracticeSession) -> dict:
     session.completed_at = timezone.now()
     session.save()
 
-    duration = sum(a.seconds_taken for a in attempts)
+    duration = saved['seconds'] if saved is not None else sum(max(0, a.seconds_taken) for a in attempts)
     activity = (
         ActivityType.STEEPLECHASE_COMPLETED
         if session.mode == PracticeMode.STEEPLECHASE
@@ -498,6 +580,7 @@ def complete_session(session: PracticeSession) -> dict:
         duration_seconds=duration,
         resource_type="practice_session",
         resource_id=str(session.id),
+        occurred_at=session.completed_at,
         metadata={"mode": session.mode, "sections": session.sections},
     )
 
@@ -506,7 +589,9 @@ def complete_session(session: PracticeSession) -> dict:
 
 def results(session: PracticeSession) -> dict:
     """Full result payload. Premium students additionally get per-station detail."""
+    require_session_access(session)
     attempts = list(session.attempts.select_related("station").order_by("order"))
+    frozen = saved_stations(session)
     premium = _is_premium(session.user)
 
     payload = {
@@ -536,16 +621,16 @@ def results(session: PracticeSession) -> dict:
         payload["stations"] = [
             {
                 "station_id": a.station_id,
-                "image_url": a.station.image_url,
-                "section": a.station.section,
-                "question": a.station.prompt,
+                "image_url": (frozen[a.station_id] if frozen else a.station).image_url,
+                "section": (frozen[a.station_id] if frozen else a.station).section,
+                "question": (frozen[a.station_id] if frozen else a.station).prompt,
                 "your_answer": a.main_answer,
-                "correct_answer": (a.station.accepted_answers or [None])[0],
+                "correct_answer": ((frozen[a.station_id] if frozen else a.station).accepted_answers or [None])[0],
                 "main_correct": a.main_correct,
                 "supporting_correct": a.supporting_correct,
                 "true_false_correct": a.true_false_correct,
-                "explanation": a.station.explanation,
-                "structure": a.station.structure,
+                "explanation": (frozen[a.station_id] if frozen else a.station).explanation,
+                "structure": (frozen[a.station_id] if frozen else a.station).structure,
                 "seconds_taken": a.seconds_taken,
                 "timed_out": a.timed_out,
             }

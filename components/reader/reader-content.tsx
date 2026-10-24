@@ -15,6 +15,8 @@ export function ReaderContent({
   blocks,
   slideContent,
   currentPageIndex = 0,
+  onPageLoad,
+  onPageError,
   onSelect,
   onExplain,
   fallbackTitle,
@@ -22,6 +24,8 @@ export function ReaderContent({
   blocks: ReaderBlock[];
   slideContent?: any;
   currentPageIndex?: number;
+  onPageLoad?: () => void;
+  onPageError?: () => void;
   onSelect: (s: SelectionPayload | null) => void;
   onExplain: (text: string) => void;
   fallbackTitle: string;
@@ -56,7 +60,7 @@ export function ReaderContent({
     const page = slideContent.pages[currentPageIndex] ?? slideContent.pages[0];
     return (
       <article ref={articleRef} aria-label="Study material" className="flex-1 flex flex-col min-h-0 w-full relative">
-        <SlideImageBlock key={currentPageIndex} page={page} />
+        <SlideImageBlock key={`${currentPageIndex}:${page.image_url}`} page={page} onLoad={onPageLoad} onError={onPageError} />
       </article>
     );
   }
@@ -96,12 +100,14 @@ function HintBar() {
   );
 }
 
-function SlideImageBlock({ page }: { page: any }) {
+function SlideImageBlock({ page, onLoad, onError }: { page: any; onLoad?: () => void; onError?: () => void }) {
   // A rendered slide is unreadable at phone width, so every page is tappable into the
   // immersive viewer (fullscreen, rotate, pinch-zoom).
   if (page.image_url) {
     return (
       <SlideViewer
+        onLoad={onLoad}
+        onError={onError}
         src={page.image_url}
         alt={`Page ${page.page_number}`}
         caption={`Page ${page.page_number}${page.width ? ` · ${page.width} × ${page.height}` : ""}`}

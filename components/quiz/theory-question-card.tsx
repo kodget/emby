@@ -14,10 +14,11 @@ interface TheoryQuestionCardProps {
   answer: string;
   isFlagged: boolean;
   onChange: (text: string) => void;
+  onBlur: () => void;
   onFlag: () => void;
 }
 
-export function TheoryQuestionCard({ question, questionNumber, totalQuestions, answer, isFlagged, onChange, onFlag }: TheoryQuestionCardProps) {
+export function TheoryQuestionCard({ question, questionNumber, totalQuestions, answer, isFlagged, onChange, onBlur, onFlag }: TheoryQuestionCardProps) {
   const wordCount = answer.trim().split(/\s+/).filter(Boolean).length;
   const hasEnough = wordCount >= 30;
   return (
@@ -38,7 +39,7 @@ export function TheoryQuestionCard({ question, questionNumber, totalQuestions, a
         <p className="text-sm text-emerald-700">Write a detailed answer. Aim for at least 30 words. AI will evaluate your response.</p>
       </div>
       <div className="space-y-2">
-        <Textarea value={answer} onChange={(e) => onChange(e.target.value)} placeholder="Start writing your answer here..." className="min-h-[220px] resize-y text-base leading-relaxed" autoFocus />
+        <Textarea aria-label="Written answer" value={answer} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} maxLength={20000} placeholder="Start writing your answer here..." className="min-h-[220px] resize-y text-base leading-relaxed" autoFocus />
         <div className="flex items-center justify-between px-1">
           <span className={cn("text-xs transition-colors", hasEnough ? "text-emerald-600" : "text-muted-foreground")}>{wordCount} word{wordCount !== 1 ? "s" : ""}{ !hasEnough ? " (30+ recommended)" : " check"}</span>
           <span className="text-xs text-muted-foreground">{answer.length} chars</span>

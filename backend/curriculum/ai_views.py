@@ -10,22 +10,85 @@ ENDPOINTS:
 """
 
 import logging
+from datetime import timedelta
 logger = logging.getLogger(__name__)
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .ai_service import slide_ai
-from .models import Slide, SlideContent, SlideChatMessage
+from .models import FlashcardGenerationJob, Slide, SlideContent, SlideChatMessage, SlideDeck
+from .class_access import visible, ClassContentReferences
 
 # PRD §6.4.3 — keep the last 50 messages of context per student per slide.
 MAX_HISTORY_MESSAGES = 50
+MAX_DECK_CHAT_CONTEXT_CHARS = 48000
 # PRD §6.4.3 — required safety disclaimer.
 AI_DISCLAIMER = (
     "This is for educational purposes only and is not a substitute for clinical judgment."
 )
 from credits.services import CreditManager, InsufficientCreditsError
+
+FLASHCARD_QUEUE_TIMEOUT = timedelta(minutes=2)
+
+
+def _mark_flashcard_job_queue_failed(job_id):
+    with transaction.atomic():
+        job = FlashcardGenerationJob.objects.select_for_update().filter(
+            pk=job_id,
+            status='queued',
+        ).first()
+        if job is None:
+            return
+        refund_error = None
+        try:
+            with transaction.atomic():
+                CreditManager.refund_credits(
+                    job.user,
+                    job.reservation.get('reserved_amount', 0),
+                    action="REFUND_FLASHCARD_ERROR",
+                    reservation_id=job.reservation.get('reservation_id', ''),
+                )
+        except Exception as error:
+            refund_error = error
+            logger.exception("Could not refund credits for flashcard job %s", job.pk)
+        job.status = 'failed'
+        job.error_message = (
+            'The generation request could not be queued; contact support about your credits.'
+            if refund_error else
+            'The generation request could not be queued. Credits were refunded; please retry.'
+        )
+        job.completed_at = timezone.now()
+        job.save(update_fields=['status', 'error_message', 'completed_at', 'updated_at'])
+
+
+def _dispatch_flashcard_job(job_id, slide_image_base64=None):
+    from django.conf import settings
+    from .tasks import generate_ai_flashcards_from_slide_task
+
+    def enqueue():
+        try:
+            job = FlashcardGenerationJob.objects.select_related('user', 'slide').get(pk=job_id)
+            generate_ai_flashcards_from_slide_task.delay(
+                str(job.slide_id),
+                job.user_id,
+                job.requested_count,
+                job.reservation,
+                slide_image_base64,
+                str(job.pk),
+            )
+        except Exception:
+            logger.exception("Could not queue flashcard generation job %s", job_id)
+            _mark_flashcard_job_queue_failed(job_id)
+            raise
+
+    if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+        import threading
+        threading.Thread(target=enqueue, daemon=True).start()
+    else:
+        enqueue()
 
 
 def has_premium_access(user):
@@ -80,6 +143,47 @@ def _slide_text(slide):
     return ""
 
 
+def _deck_chat_context(deck):
+    """Build a page-labelled, bounded context from the deck's extracted text."""
+    if deck.processing_status != 'completed':
+        return None, 'This document is not ready for AI chat yet. Please retry after processing completes.'
+
+    page_rows = list(
+        deck.pages.order_by('slide_number').values_list('slide_number', 'extracted_text')
+    )
+    pages = [(number, text.strip()) for number, text in page_rows if text and text.strip()]
+    if not pages:
+        return None, 'No readable text is available for this document yet. Retry text processing before using AI chat.'
+
+    extraction = deck.text_extraction if isinstance(deck.text_extraction, dict) else {}
+    missing = extraction.get('missing_pages', [])
+    missing = missing if isinstance(missing, list) else []
+    header = (
+        f"Document extraction status: {extraction.get('status', 'unverified')}.\n"
+        f"Pages with readable text: {len(pages)} of {deck.page_count or len(page_rows)}.\n"
+    )
+    if missing:
+        header += f"Text extraction was incomplete on pages: {', '.join(map(str, missing))}.\n"
+
+    labels = [f'[Page {number}]\n' for number, _ in pages]
+    page_context = '\n\n'.join(label + text for label, (_, text) in zip(labels, pages))
+    if len(header) + len(page_context) > MAX_DECK_CHAT_CONTEXT_CHARS:
+        excerpt_note = 'Page text is excerpted to fit the model context; details outside these excerpts may be unavailable.\n'
+        text_budget = (
+            MAX_DECK_CHAT_CONTEXT_CHARS - len(header) - len(excerpt_note) - 1
+            - sum(map(len, labels)) - (2 * (len(labels) - 1))
+        )
+        if text_budget < 0:
+            return None, 'This document has too many pages to prepare chat context.'
+        allocation = text_budget // len(pages)
+        page_context = '\n\n'.join(
+            label + text[:allocation] for label, (_, text) in zip(labels, pages)
+        )
+        header += excerpt_note
+
+    return header + '\n' + page_context, None
+
+
 def _get_or_generate_resources(slide, user, slide_image_base64=None, force_refresh=False):
     """
     Return generated study resources for a slide, caching them on SlideContent
@@ -115,13 +219,16 @@ def _get_or_generate_resources(slide, user, slide_image_base64=None, force_refre
         sc.save(update_fields=['content_data', 'updated_at'])
     else:
         # Refund on error
-        CreditManager.refund_credits(user, reservation['reserved_amount'], action="REFUND_RESOURCE_ERROR")
+        CreditManager.refund_credits(
+            user, reservation['reserved_amount'], action="REFUND_RESOURCE_ERROR",
+            reservation_id=reservation['reservation_id'],
+        )
 
     return resources
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def textbook_suggestions(request):
     """
     Generate AI-powered textbook suggestions for a slide (Premium Feature)
@@ -163,7 +270,7 @@ def textbook_suggestions(request):
         
         # Get slide
         try:
-            slide = Slide.objects.get(id=slide_id)
+            slide = visible(Slide, request.user).get(id=slide_id)
         except Slide.DoesNotExist:
             return Response(
                 {'error': f'Slide {slide_id} not found'},
@@ -209,7 +316,7 @@ def textbook_suggestions(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def video_suggestions(request):
     """
     Generate AI-powered video suggestions for a slide (Premium Feature)
@@ -250,7 +357,7 @@ def video_suggestions(request):
         
         # Get slide
         try:
-            slide = Slide.objects.get(id=slide_id)
+            slide = visible(Slide, request.user).get(id=slide_id)
         except Slide.DoesNotExist:
             return Response(
                 {'error': f'Slide {slide_id} not found'},
@@ -324,7 +431,7 @@ def video_suggestions(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def generate_mcqs(request):
     """
     Generate AI-powered MCQs for a slide (Premium Feature)
@@ -366,7 +473,7 @@ def generate_mcqs(request):
         
         # Get slide
         try:
-            slide = Slide.objects.get(id=slide_id)
+            slide = visible(Slide, request.user).get(id=slide_id)
         except Slide.DoesNotExist:
             return Response(
                 {'error': f'Slide {slide_id} not found'},
@@ -412,7 +519,7 @@ def generate_mcqs(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def chat_with_slide(request):
     """
     Chat with AI about the current slide
@@ -438,13 +545,14 @@ def chat_with_slide(request):
     try:
         # Get request data
         slide_id = request.data.get('slide_id')
+        deck_id = request.data.get('deck_id')
         message = request.data.get('message')
         slide_image_base64 = request.data.get('slide_image_base64')
         conversation_history = request.data.get('conversation_history')
 
-        if not slide_id:
+        if bool(slide_id) == bool(deck_id):
             return Response(
-                {'error': 'slide_id is required'},
+                {'error': 'Provide exactly one of slide_id or deck_id'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -454,63 +562,59 @@ def chat_with_slide(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        is_premium = has_premium_access(request.user)
+        slide = None
+        deck = None
+        if deck_id:
+            deck = visible(SlideDeck, request.user).filter(pk=deck_id).first()
+            if deck is None:
+                return Response({'error': f'Document {deck_id} not found'}, status=status.HTTP_404_NOT_FOUND)
+            context_text, context_error = _deck_chat_context(deck)
+            if context_error:
+                return Response({'error': context_error}, status=status.HTTP_409_CONFLICT)
+            history_scope = {'deck': deck}
+            slide_context = {
+                'context_scope': 'deck',
+                'title': deck.title,
+                'text': context_text,
+                'total_slides': deck.page_count or deck.pages.count(),
+            }
+        else:
+            slide = visible(Slide, request.user).filter(pk=slide_id).first()
+            if slide is None:
+                return Response({'error': f'Slide {slide_id} not found'}, status=status.HTTP_404_NOT_FOUND)
+            slide_text = _slide_text(slide)
+            context_text = _rag_context(slide, message, slide_text)
+            history_scope = {'slide': slide}
+            slide_context = {
+                'slide_index': 1,
+                'total_slides': slide.page_count or 1,
+                'title': slide.title,
+                'text': context_text,
+                'course': slide.topic_name if hasattr(slide, 'topic_name') else 'General'
+            }
 
-        # 1. Reserve credits dynamically
-        try:
-            reservation = CreditManager.reserve_credits(request.user, "CHAT")
-        except InsufficientCreditsError as e:
-            return Response(
-                {
-                    'error': str(e),
-                    'insufficient_credits': True,
-                },
-                status=status.HTTP_402_PAYMENT_REQUIRED
-            )
-
-        # Get slide
-        try:
-            slide = Slide.objects.get(id=slide_id)
-        except Slide.DoesNotExist:
-            return Response(
-                {'error': f'Slide {slide_id} not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # Get slide content (text)
-        slide_text = ""
-        try:
-            slide_content = SlideContent.objects.get(slide=slide)
-            if slide_content.content_data and 'text' in slide_content.content_data:
-                slide_text = slide_content.content_data['text']
-        except SlideContent.DoesNotExist:
-            logger.warning(f"No content found for slide {slide_id}")
-
-        # RAG: retrieve the most relevant slide chunks for this question,
-        # falling back to the full extracted text when RAG is unavailable.
-        context_text = _rag_context(slide, message, slide_text)
-
-        # Conversation history: use what the client sent, otherwise restore from DB
-        if not conversation_history:
+        # Deck chat always restores server-persisted history; it does not trust client-supplied context.
+        if deck or not conversation_history:
             history_qs = SlideChatMessage.objects.filter(
-                user=request.user, slide=slide
+                user=request.user, **history_scope
             ).order_by('-created_at')[:MAX_HISTORY_MESSAGES]
             conversation_history = [
                 {'role': m.role, 'content': m.content}
                 for m in reversed(list(history_qs))
             ]
 
-        # Build slide context
-        slide_context = {
-            'slide_index': 1,
-            'total_slides': slide.page_count or 1,
-            'title': slide.title,
-            'text': context_text,
-            'course': slide.topic_name if hasattr(slide, 'topic_name') else 'General'
-        }
+        # Reserve only after source access, extraction, and history have been verified.
+        try:
+            reservation = CreditManager.reserve_credits(request.user, "CHAT")
+        except InsufficientCreditsError as e:
+            return Response(
+                {'error': str(e), 'insufficient_credits': True},
+                status=status.HTTP_402_PAYMENT_REQUIRED
+            )
 
         # Call AI service
-        logger.info(f"Processing chat for slide {slide_id}: {str(message)[:50]}...")
+        logger.info("Processing %s chat for %s: %s",
+                    'deck' if deck else 'slide', deck_id or slide_id, str(message)[:50])
 
         result = slide_ai.chat(
             user_message=message,
@@ -520,27 +624,40 @@ def chat_with_slide(request):
             return_usage=True
         )
 
-        if 'error' in result and not result.get('response'):
-            CreditManager.refund_credits(request.user, reservation['reserved_amount'], action="REFUND_CHAT_ERROR")
+        if ('error' in result or not isinstance(result.get('response'), str)
+                or not result['response'].strip()):
+            CreditManager.refund_credits(
+                request.user, reservation['reserved_amount'], action="REFUND_CHAT_ERROR",
+                reservation_id=reservation['reservation_id'],
+            )
             return Response(
-                {'error': result['error']},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'The AI provider could not complete the request. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY
             )
             
-        # 2. Commit usage
-        CreditManager.commit_usage(request.user, reservation, result.get('total_tokens', 0))
-
-        # Persist the exchange (PRD §6.4.3)
         try:
-            SlideChatMessage.objects.create(
-                user=request.user, slide=slide, role='user', content=str(message)
+            with transaction.atomic():
+                SlideChatMessage.objects.create(
+                    user=request.user, **history_scope, role='user', content=str(message)
+                )
+                SlideChatMessage.objects.create(
+                    user=request.user, **history_scope, role='assistant',
+                    content=result.get('response', '')
+                )
+                CreditManager.commit_usage(request.user, reservation, result.get('total_tokens', 0))
+        except Exception:
+            logger.exception("Failed to persist chat for %s %s", 'deck' if deck else 'slide', deck_id or slide_id)
+            try:
+                CreditManager.refund_credits(
+                    request.user, reservation['reserved_amount'], action="REFUND_CHAT_PERSISTENCE_ERROR",
+                    reservation_id=reservation['reservation_id'],
+                )
+            except Exception:
+                logger.exception("Failed to refund chat reservation after persistence failure")
+            return Response(
+                {'error': 'The chat could not be saved. Please try again.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            SlideChatMessage.objects.create(
-                user=request.user, slide=slide, role='assistant',
-                content=result.get('response', '')
-            )
-        except Exception as persist_err:
-            logger.error(f"Failed to persist chat for slide {slide_id}: {persist_err}")
 
         result['disclaimer'] = AI_DISCLAIMER
         result['balance'] = CreditManager.get_user_balance(request.user)
@@ -558,7 +675,7 @@ def chat_with_slide(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def generate_resources(request):
     """
     Generate study resources for a slide
@@ -609,7 +726,7 @@ def generate_resources(request):
         
         # Get slide
         try:
-            slide = Slide.objects.get(id=slide_id)
+            slide = visible(Slide, request.user).get(id=slide_id)
         except Slide.DoesNotExist:
             return Response(
                 {'error': f'Slide {slide_id} not found'},
@@ -658,21 +775,31 @@ def generate_resources(request):
 
 
 @api_view(['GET', 'DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def chat_history(request):
     """
-    GET  /api/ai/chat/history/?slide_id=...  -> last 50 messages for the student+slide
-    DELETE /api/ai/chat/history/?slide_id=... -> clear the conversation
+    GET/DELETE /api/ai/chat/history/?slide_id=... or ?deck_id=...
 
-    slide_id is optional; when omitted, operates on general (slide-less) chat.
+    When both identifiers are omitted, operates on general chat history.
     """
     slide_id = request.query_params.get('slide_id')
+    deck_id = request.query_params.get('deck_id')
+    if slide_id and deck_id:
+        return Response(
+            {'error': 'Provide only one of slide_id or deck_id'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     qs = SlideChatMessage.objects.filter(user=request.user)
-    if slide_id:
+    if deck_id:
+        deck = visible(SlideDeck, request.user).filter(pk=deck_id).first()
+        if deck is None:
+            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+        qs = qs.filter(deck=deck)
+    elif slide_id:
         qs = qs.filter(slide_id=slide_id)
     else:
-        qs = qs.filter(slide__isnull=True)
+        qs = qs.filter(slide__isnull=True, deck__isnull=True)
 
     if request.method == 'DELETE':
         deleted, _ = qs.delete()
@@ -690,7 +817,7 @@ def chat_history(request):
     return Response({'messages': data, 'disclaimer': AI_DISCLAIMER}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def generate_flashcards(request):
     """
     Generate AI-powered Flashcards for a slide (Premium Feature).
@@ -702,6 +829,35 @@ def generate_flashcards(request):
         "count": 5 // Optional
     }
     """
+    slide_id = request.data.get('slide_id')
+    count = request.data.get('count', 5)
+    slide_image_base64 = request.data.get('slide_image_base64')
+
+    if not slide_id:
+        return Response({'error': 'slide_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if isinstance(count, bool):
+        return Response({'error': 'count must be an integer from 1 to 20'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        count = int(count)
+    except (TypeError, ValueError):
+        return Response({'error': 'count must be an integer from 1 to 20'}, status=status.HTTP_400_BAD_REQUEST)
+    if count < 1 or count > 20:
+        return Response({'error': 'count must be an integer from 1 to 20'}, status=status.HTTP_400_BAD_REQUEST)
+
+    slide = visible(Slide, request.user).get(pk=slide_id)
+    active_job = FlashcardGenerationJob.objects.filter(
+        user=request.user,
+        slide=slide,
+        status__in=['queued', 'running'],
+    ).first()
+    if active_job is not None:
+        return Response({
+            'message': 'Flashcard generation is already in progress',
+            'job_id': str(active_job.pk),
+            'balance': CreditManager.get_user_balance(request.user),
+        }, status=status.HTTP_202_ACCEPTED)
+
     try:
         reservation = CreditManager.reserve_credits(request.user, "GENERATE_FLASHCARDS")
     except InsufficientCreditsError as e:
@@ -710,41 +866,100 @@ def generate_flashcards(request):
             status=status.HTTP_402_PAYMENT_REQUIRED
         )
     
-    slide_id = request.data.get('slide_id')
-    count = request.data.get('count', 5)
-    slide_image_base64 = request.data.get('slide_image_base64')
-    
-    if not slide_id:
-        return Response({'error': 'slide_id is required'}, status=status.HTTP_400_BAD_REQUEST)
-        
     try:
-        from django.conf import settings
-        from .tasks import generate_ai_flashcards_from_slide_task
-        
-        if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
-            import threading
-            threading.Thread(
-                target=generate_ai_flashcards_from_slide_task.delay,
-                args=(slide_id, request.user.id, int(count), reservation, slide_image_base64),
-                daemon=True
-            ).start()
-            task_id = "local-eager-task"
-        else:
-            task = generate_ai_flashcards_from_slide_task.delay(
-                slide_id, request.user.id, int(count), reservation, slide_image_base64
+        with transaction.atomic():
+            job = FlashcardGenerationJob.objects.create(
+                user=request.user,
+                slide=slide,
+                requested_count=count,
+                reservation=reservation,
             )
-            task_id = task.id
+    except IntegrityError:
+        CreditManager.refund_credits(
+            request.user,
+            reservation['reserved_amount'],
+            action="REFUND_FLASHCARD_ERROR",
+            reservation_id=reservation['reservation_id'],
+        )
+        active_job = FlashcardGenerationJob.objects.filter(
+            user=request.user,
+            slide=slide,
+            status__in=['queued', 'running'],
+        ).first()
+        if active_job is not None:
+            return Response({
+                'message': 'Flashcard generation is already in progress',
+                'job_id': str(active_job.pk),
+                'balance': CreditManager.get_user_balance(request.user),
+            }, status=status.HTTP_202_ACCEPTED)
+        logger.exception("Could not create flashcard generation job for slide %s", slide_id)
+        return Response(
+            {'error': 'Could not create flashcard generation job'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    try:
+        _dispatch_flashcard_job(job.pk, slide_image_base64)
         
         return Response({
             'message': 'Flashcard generation started',
-            'task_id': task_id,
+            'job_id': str(job.pk),
             'balance': CreditManager.get_user_balance(request.user)
         }, status=status.HTTP_202_ACCEPTED)
-        
     except Exception as e:
-        CreditManager.refund_credits(request.user, reservation['reserved_amount'], action="REFUND_FLASHCARD_ERROR")
-        logger.error(f"Flashcard generation API error: {e}")
+        logger.error("Flashcard generation API error for job %s: %s", job.pk, e)
         return Response(
-            {'error': str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {
+                'message': 'Generation could not be queued. Check the saved request status for details.',
+                'job_id': str(job.pk),
+                'balance': CreditManager.get_user_balance(request.user),
+            },
+            status=status.HTTP_202_ACCEPTED,
         )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, ClassContentReferences])
+def flashcard_generation_status(request, job_id):
+    now = timezone.now()
+    should_requeue = False
+    with transaction.atomic():
+        job = FlashcardGenerationJob.objects.select_for_update().filter(
+            pk=job_id,
+            user=request.user,
+            slide__in=visible(Slide, request.user),
+        ).first()
+        if job is None:
+            return Response({'error': 'Generation request not found'}, status=status.HTTP_404_NOT_FOUND)
+        queued_too_long = (
+            job.status == 'queued'
+            and job.updated_at <= now - FLASHCARD_QUEUE_TIMEOUT
+        )
+        worker_lease_expired = (
+            job.status == 'running'
+            and job.processing_lease_until is not None
+            and job.processing_lease_until <= now
+        )
+        if queued_too_long or worker_lease_expired:
+            job.status = 'queued'
+            job.processing_lease_until = None
+            job.processing_token = None
+            job.updated_at = now
+            job.save(update_fields=[
+                'status', 'processing_lease_until', 'processing_token', 'updated_at',
+            ])
+            should_requeue = True
+    if should_requeue:
+        try:
+            _dispatch_flashcard_job(job.pk)
+        except Exception as error:
+            logger.warning("Flashcard job %s could not be requeued: %s", job.pk, error)
+        job.refresh_from_db()
+    return Response({
+        'job_id': str(job.pk),
+        'status': job.status,
+        'requested_count': job.requested_count,
+        'generated_count': job.generated_count,
+        'error': job.error_message or None,
+        'completed_at': job.completed_at,
+    }, status=status.HTTP_200_OK)

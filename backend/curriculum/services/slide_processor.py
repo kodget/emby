@@ -48,7 +48,7 @@ class SlideProcessor:
         
         # Check if it's a Cloudinary URL
         if 'cloudinary.com' not in url and 'res.cloudinary.com' not in url:
-            logger.warning(f"URL doesn't appear to be from Cloudinary: {url}")
+            logger.warning('Legacy file URL is outside the configured storage provider.')
         
         # Basic URL format validation
         try:
@@ -138,7 +138,7 @@ class SlideProcessor:
         
         for attempt in range(max_retries + 1):
             try:
-                logger.info(f"Downloading from Cloudinary (attempt {attempt + 1}/{max_retries + 1}): {url}")
+                logger.info('Downloading file (attempt %s/%s)', attempt + 1, max_retries + 1)
                 
                 # Make request with appropriate timeout
                 response = requests.get(
@@ -191,7 +191,7 @@ class SlideProcessor:
                 return True, ""
                 
             except HTTPError as e:
-                error_msg = f"HTTP error {e.response.status_code}: {e}"
+                error_msg = f"Storage returned HTTP {e.response.status_code}"
                 if e.response.status_code == 404:
                     error_msg = "File not found on Cloudinary (404) - URL may be invalid or expired"
                 elif e.response.status_code == 403:
@@ -206,18 +206,16 @@ class SlideProcessor:
                     return False, error_msg
                     
             except (ConnectionError, Timeout) as e:
-                error_msg = f"Network error: {e}"
+                error_msg = 'Storage connection timed out or was unavailable.'
                 logger.error(f"Attempt {attempt + 1} failed: {error_msg}")
                 
             except RequestException as e:
-                error_msg = f"Request error: {e}"
+                error_msg = 'Storage request failed.'
                 logger.error(f"Attempt {attempt + 1} failed: {error_msg}")
                 
             except Exception as e:
-                error_msg = f"Unexpected error: {e}"
+                error_msg = 'Could not download the stored file.'
                 logger.error(f"Attempt {attempt + 1} failed: {error_msg}")
-                import traceback
-                traceback.print_exc()
             
             # Wait before retry (exponential backoff)
             if attempt < max_retries:
@@ -256,12 +254,8 @@ class SlideProcessor:
         # Update status to processing at start
         SlideProcessor.update_processing_status(slide, 'processing')
         
-        # Get Cloudinary URL - prefer file_url if available, fallback to file.url
-        file_url = None
-        if slide.file_url:
-            file_url = slide.file_url
-        elif slide.file:
-            file_url = slide.file.url
+        from ..private_media import content_file_url
+        file_url = content_file_url(slide)
         
         if not file_url:
             result['error'] = 'No file URL found'
@@ -278,7 +272,6 @@ class SlideProcessor:
             return result
         
         logger.info(f"Processing slide {slide.id}: {slide.title}")
-        logger.info(f"File URL: {file_url}")
         logger.info(f"File Type: {slide.file_type}")
         
         # Create temporary directory for processing

@@ -4,21 +4,17 @@ Slide Conversion Pipeline
 FLOW:
   PDF            → PyMuPDF renders each page as JPG
   PPTX/PPT       → LibreOffice → PDF → PyMuPDF renders each page as JPG
-  DOCX/DOC       → LibreOffice → PDF → PyMuPDF renders each page as JPG
+  DOCX           → LibreOffice → PDF → PyMuPDF renders each page as JPG
 
 Output: list of local JPG file paths (one per page), kept in temp_dir.
 Caller (tasks.py) uploads them to Cloudinary then deletes temp_dir.
 """
 
-import io
 import os
 import re
-import shutil
-import subprocess
 import tempfile
 import logging
-from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -26,55 +22,6 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
-
-def _pdf_to_jpg_pages(pdf_path: str, output_dir: str, dpi: int = 150) -> List[str]:
-    """
-    Render every page of a PDF as a JPEG using PyMuPDF.
-    Returns a list of absolute paths to the produced JPG files.
-    """
-    import fitz  # PyMuPDF
-
-    os.makedirs(output_dir, exist_ok=True)
-    zoom = dpi / 72.0
-    mat = fitz.Matrix(zoom, zoom)
-
-    doc = fitz.open(pdf_path)
-    logger.info(f"PDF has {len(doc)} pages — rendering at {dpi} DPI")
-
-    jpg_paths: List[str] = []
-    for i in range(len(doc)):
-        page = doc[i]
-        pix = page.get_pixmap(matrix=mat, alpha=False)
-
-        # Save directly as JPEG (PyMuPDF supports jpg natively)
-        jpg_filename = f"page_{i + 1:04d}.jpg"
-        jpg_path = os.path.join(output_dir, jpg_filename)
-        pix.save(jpg_path)  # extension determines format
-        jpg_paths.append(jpg_path)
-        logger.info(f"  ✓ page {i + 1}: {jpg_path}")
-
-    doc.close()
-    logger.info(f"✓ Rendered {len(jpg_paths)} pages")
-    return jpg_paths
-
-
-def _extract_text_from_pdf(pdf_path: str) -> str:
-    """Extract plain text from a PDF for RAG / search."""
-    try:
-        import fitz
-        doc = fitz.open(pdf_path)
-        parts = []
-        for i in range(len(doc)):
-            parts.append(doc[i].get_text())
-            parts.append("\n---PAGE BREAK---\n")
-        doc.close()
-        text = "".join(parts)
-        logger.info(f"Extracted {len(text)} chars from PDF")
-        return text
-    except Exception as e:
-        logger.warning(f"Text extraction failed (non-fatal): {e}")
-        return ""
-
 
 def _download_from_cloudinary(cloudinary_url: str, timeout: int = 60) -> bytes:
     """
@@ -93,7 +40,10 @@ def _download_from_cloudinary(cloudinary_url: str, timeout: int = 60) -> bytes:
     import cloudinary.api
 
     def _try_get(url: str) -> bytes | None:
-        resp = requests.get(url, timeout=timeout)
+        try:
+            resp = requests.get(url, timeout=timeout)
+        except requests.RequestException:
+            raise IOError('File storage is temporarily unavailable.') from None
         if resp.status_code == 200:
             return resp.content
         return None
@@ -103,19 +53,24 @@ def _download_from_cloudinary(cloudinary_url: str, timeout: int = 60) -> bytes:
     if data:
         return data
 
+    from urllib.parse import urlsplit
+    parsed = urlsplit(cloudinary_url)
+    if parsed.path.endswith('/download') or '/authenticated/' in parsed.path:
+        raise IOError('Private file download failed; obtain a fresh delivery link and retry.')
+
     logger.warning(f"Plain download failed — trying signed URL…")
 
     # ── Parse URL components ─────────────────────────────────────────────────
     # URL shape: https://res.cloudinary.com/<cloud>/<rtype>/upload/v<ver>/<public_id_with_ext>
     if "cloudinary.com" not in cloudinary_url:
-        raise IOError(f"Cannot download from URL: {cloudinary_url}")
+        raise IOError('Cannot download from the configured storage URL.')
 
     m = re.search(
         r"cloudinary\.com/[^/]+/(image|raw|video|auto)/upload/(?:v\d+/)?(.+)",
         cloudinary_url,
     )
     if not m:
-        raise IOError(f"Cannot parse Cloudinary URL: {cloudinary_url}")
+        raise IOError('Cannot parse the legacy storage URL.')
 
     detected_rtype = m.group(1)  # what the URL says (may be wrong for PDFs)
     public_id_with_ext = m.group(2)
@@ -132,17 +87,16 @@ def _download_from_cloudinary(cloudinary_url: str, timeout: int = 60) -> bytes:
                 sign_url=True,
                 secure=True,
             )
-            logger.info(f"Trying signed URL (resource_type={rtype}): {signed_url[:100]}…")
+            logger.info('Trying legacy signed download (resource_type=%s)', rtype)
             data = _try_get(signed_url)
             if data:
                 logger.info(f"✓ Signed URL worked with resource_type={rtype}")
                 return data
         except Exception as exc:
-            logger.debug(f"  resource_type={rtype} failed: {exc}")
+            logger.debug('Download failed (resource_type=%s, %s)', rtype, type(exc).__name__)
 
     raise IOError(
-        f"Cannot download from Cloudinary after multiple attempts. "
-        f"URL: {cloudinary_url}"
+        'Cannot download from storage after multiple attempts.'
     )
 
 
@@ -184,7 +138,7 @@ class SlideConversionPipeline:
             "error": None,
         }
 
-        temp_dir = tempfile.mkdtemp(prefix=f"slide_{slide_id}_")
+        temp_dir = tempfile.mkdtemp(prefix='emby-render-')
         result["temp_dir"] = temp_dir
         logger.info(f"=== PIPELINE START  slide={slide_id}  type={original_file_type} ===")
         logger.info(f"Temp dir: {temp_dir}")
@@ -194,8 +148,9 @@ class SlideConversionPipeline:
             if status_obj:
                 status_obj.status = 'downloading'
                 status_obj.save(update_fields=['status'])
-            logger.info(f"Downloading: {cloudinary_url}")
-            file_bytes = _download_from_cloudinary(cloudinary_url)
+            logger.info('Downloading source file for slide %s', slide_id)
+            from .document_extraction import source_bytes, content_text
+            file_bytes = source_bytes(cloudinary_url)
             logger.info(f"Downloaded {len(file_bytes):,} bytes")
 
             ft = original_file_type.lower().lstrip(".")
@@ -204,39 +159,27 @@ class SlideConversionPipeline:
             with open(original_path, "wb") as fh:
                 fh.write(file_bytes)
 
-            # ── 1. Verify it's a PDF ───────
-            if ft != "pdf":
-                raise ValueError("Only PDF files are supported.")
-            pdf_path = original_path
-
-            # ── 2. Extract text (for RAG) ────────────────────────────────────
-            if status_obj:
-                status_obj.status = 'extracting_text'
-                status_obj.save(update_fields=['status'])
-            text_content = _extract_text_from_pdf(pdf_path)
-            result["text_content"] = text_content
-
-            # ── 3. Render each PDF page → JPG ────────────────────────────────
+            from .document_rendering import render_document
             if status_obj:
                 status_obj.status = 'converting_to_jpg'
                 status_obj.save(update_fields=['status'])
-            logger.info("Rendering PDF pages → JPG…")
-            jpg_dir = os.path.join(temp_dir, "pages")
-            jpg_paths = _pdf_to_jpg_pages(pdf_path, jpg_dir, dpi=150)
+            rendered = render_document(original_path, ft, temp_dir, ocr=True)
+            jpg_paths = rendered['image_paths']
+            result['image_paths'] = jpg_paths
+            result['page_count'] = rendered['page_count']
+            result['text_content'] = content_text(rendered)
+            result['pages'] = rendered['pages']
+            result['text_extraction'] = rendered['text_extraction']
 
-            if not jpg_paths:
-                raise RuntimeError("No pages were rendered from the PDF")
-
-            result["image_paths"] = jpg_paths
-            result["page_count"] = len(jpg_paths)
             result["success"] = True
             logger.info(f"=== PIPELINE COMPLETE: {len(jpg_paths)} pages ===")
             return result
 
         except Exception as exc:
-            logger.error(f"Pipeline error: {exc}", exc_info=True)
-            result["error"] = str(exc)
+            logger.error('Pipeline error (%s)', type(exc).__name__)
+            result['error'] = 'The document could not be processed. Check the original file and retry.'
             # Clean up on failure — temp_dir is useless without images
-            shutil.rmtree(temp_dir, ignore_errors=True)
+            from .document_rendering import cleanup_render
+            cleanup_render(result)
             result["temp_dir"] = None
             return result

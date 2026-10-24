@@ -39,6 +39,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { quizApi } from "@/lib/api";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { PracticeArena } from "@/components/quiz/practice-arena";
+import { DeckPractice } from "@/components/quiz/deck-practice";
 
 interface Subject {
   id: string;
@@ -76,10 +77,10 @@ const examTypes = [
   {
     type: "practice" as const,
     title: "Practice Quiz",
-    description: "Relaxed learning with immediate feedback",
+    description: "Saved questions from one deck",
     icon: BookOpen,
     color: "bg-emerald-500",
-    features: ["Instant feedback", "No time pressure", "Review answers"],
+    features: ["Up to 20 MCQs", "Choose your difficulty", "Review after submission"],
     premium: false,
   },
   {
@@ -94,15 +95,15 @@ const examTypes = [
   {
     type: "formal" as const,
     title: "Formal Assessment",
-    description: "Official evaluation with certification",
+    description: "Papers published by your class head",
     icon: Trophy,
     color: "bg-primary",
     features: [
-      "Official scoring",
-      "Certificate eligible",
-      "Comprehensive report",
+      "Class-head questions",
+      "One attempt per student",
+      "Fixed time limit",
     ],
-    premium: true,
+    premium: false,
   },
 ];
 
@@ -139,6 +140,7 @@ function QuizConfigContent() {
   const { isPremium } = useFeatureAccess();
 
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [practiceMode, setPracticeMode] = useState<"saved" | "missed" | null>(searchParams.get("slide") ? "saved" : null);
   const [step, setStep] = useState<"subject" | "type" | "config" | "review">(
     "subject",
   );
@@ -335,10 +337,15 @@ function QuizConfigContent() {
 
   const steps = ["subject", "type", "config", "review"];
 
+  if (practiceMode || (showAdvanced && step === "config" && config.exam_type === "practice")) {
+    return <DeckPractice initialSlide={config.slide || searchParams.get("slide") || ""} missed={practiceMode === "missed"}
+      onBack={() => { setPracticeMode(null); setShowAdvanced(false); setStep("type"); }} />;
+  }
   if (!showAdvanced) {
     return (
       <PracticeArena
-        onMissedQuestions={startMissedQuestions}
+        onMissedQuestions={() => setPracticeMode("missed")}
+        onPractice={() => setPracticeMode("saved")}
         creatingMissed={creatingMissed}
         onAdvanced={() => setShowAdvanced(true)}
       />
@@ -684,15 +691,19 @@ function QuizConfigContent() {
                       return (
                         <motion.div
                           key={et.type}
-                          whileHover={{ scale: locked || (et.type === "formal" && (config.slide || config.topic)) ? 1 : 1.02 }}
-                          whileTap={{ scale: locked || (et.type === "formal" && (config.slide || config.topic)) ? 1 : 0.98 }}
+                          whileHover={{ scale: locked ? 1 : 1.02 }}
+                          whileTap={{ scale: locked ? 1 : 0.98 }}
                         >
                           <Card
                             className={`transition-all duration-200 
-                              ${locked || (et.type === "formal" && (config.slide || config.topic)) ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-md"} 
+                              ${locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-md"}
                               ${config.exam_type === et.type ? "ring-2 ring-primary border-primary" : "border-border"}
                             `}
                             onClick={() => {
+                              if (et.type === "formal") {
+                                router.push("/quiz/assessments");
+                                return;
+                              }
                               if (locked) {
                                 toast({
                                   title: "Premium Feature",
@@ -701,23 +712,13 @@ function QuizConfigContent() {
                                 });
                                 return;
                               }
-                              if (et.type === "formal" && (config.slide || config.topic)) {
-                                toast({
-                                  title: "Not Allowed",
-                                  description: "Formal Assessments can only be taken at the Block or Subject level.",
-                                  variant: "destructive"
-                                });
-                                return;
-                              }
+                              if (et.type === "mock") { router.push("/quiz/mock"); return; }
                               setConfig({
                                 ...config,
                                 exam_type: et.type,
                                 is_timed: et.type !== "practice",
-                                duration_minutes:
-                                  et.type === "formal" ? 150 : 30,
-                                configuration: et.type === "formal" 
-                                  ? { ...config.configuration, mcq_count: 50, theory_count: 5 }
-                                  : config.configuration,
+                                duration_minutes: 30,
+                                configuration: config.configuration,
                               });
                             }}
                           >
@@ -750,11 +751,6 @@ function QuizConfigContent() {
                                   <p className="text-muted-foreground text-sm mb-3">
                                     {et.description}
                                   </p>
-                                  {et.type === "formal" && (config.slide || config.topic) && (
-                                    <p className="text-destructive text-xs mb-2">
-                                      Formal Assessments must be taken at the Block or Subject level.
-                                    </p>
-                                  )}
                                   <div className="flex flex-wrap gap-2">
                                     {et.features.map((f, i) => (
                                       <Badge

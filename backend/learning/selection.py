@@ -27,12 +27,13 @@ from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import Q
 from django.utils import timezone
 
 from curriculum.models import QuizQuestion
+from curriculum.class_access import visible
 
-from .models import QuestionExposure, WeakArea
+from .models import QuestionExposure
+from .bank_sources import eligible_questions, usable_questions
 
 logger = logging.getLogger(__name__)
 
@@ -50,21 +51,34 @@ W_SEEN_PENALTY = 18.0
 W_JITTER = 8.0
 
 
-def _weak_node_ids(user: User) -> set:
-    """Sub-block and topic ids the student is currently weak at."""
-    rows = WeakArea.objects.filter(user=user, attempted__gte=3, mastery__lt=0.7).values(
-        "sub_block_id", "topic_id"
-    )
-    ids = set()
-    for row in rows:
-        ids.update(v for v in row.values() if v)
-    return ids
+def _node_mastery(user: User) -> dict:
+    """Match the report's current 30-day evidence at each curriculum level."""
+    from .analytics_evidence import Evidence
+    evidence = Evidence(user, 30)
+    mastery = {}
+    for scope in ('TOPIC', 'SUB_BLOCK', 'BLOCK', 'SUBJECT'):
+        groups = evidence.topics(scope=scope, limit=None)
+        for row in groups['weakest'] + groups['strongest']:
+            mastery[row['id']] = row['mastery']
+    return mastery
+
+
+def _is_weak(question, mastery):
+    # Prefer specific evidence, including strengths, over a weaker ancestor.
+    topics = {source.topic_id for source in (question.source_slide, question.source_material)
+              if source and source.topic_id}
+    for level, ids in (('TOPIC', topics), ('SUB_BLOCK', [question.sub_block_id]),
+                       ('BLOCK', [question.block_id]), ('SUBJECT', [question.subject_id])):
+        values = [mastery[f'{level}:{pk}'] for pk in ids if pk and f'{level}:{pk}' in mastery]
+        if values:
+            return any(value < .75 for value in values)
+    return False
 
 
 def _score(
     question: QuizQuestion,
     exposure: QuestionExposure | None,
-    weak_ids: set,
+    is_weak: bool,
     now,
 ) -> float:
     score = random.uniform(0, W_JITTER)
@@ -87,7 +101,7 @@ def _score(
             if now - exposure.last_seen_at < RECENT_COOLDOWN:
                 score -= W_SEEN_PENALTY * 2
 
-    if weak_ids and (question.sub_block_id in weak_ids):
+    if is_weak:
         score += W_WEAK_AREA
 
     return score
@@ -108,7 +122,9 @@ def select_questions(
 
     Returns fewer than `count` only when the filtered bank genuinely holds fewer.
     """
-    qs = QuizQuestion.objects.filter(question_type=question_type)
+    if count <= 0:
+        return []
+    qs = visible(QuizQuestion, user).filter(question_type=question_type)
 
     if subject_id:
         qs = qs.filter(subject_id=subject_id)
@@ -119,13 +135,12 @@ def select_questions(
     if slide_id:
         qs = qs.filter(source_slide_id=slide_id)
 
-    weak_ids = _weak_node_ids(user)
-    if weak_areas_only and weak_ids:
-        qs = qs.filter(Q(sub_block_id__in=weak_ids) | Q(subject__weak_areas__user=user)).distinct()
+    mastery = _node_mastery(user)
+    candidates = list(usable_questions(user, qs))
+    weak = {q.pk: _is_weak(q, mastery) for q in candidates}
+    if weak_areas_only:
+        candidates = [q for q in candidates if weak[q.pk]]
 
-    candidates = list(qs.only(
-        "id", "sub_block_id", "subject_id", "block_id", "question_type", "difficulty"
-    )[:1200])
     if not candidates:
         return []
 
@@ -139,14 +154,14 @@ def select_questions(
     now = timezone.now()
     ranked = sorted(
         candidates,
-        key=lambda q: _score(q, exposures.get(q.id), weak_ids, now),
+        key=lambda q: _score(q, exposures.get(q.id), weak[q.pk], now),
         reverse=True,
     )
     chosen = ranked[:count]
 
     # Re-fetch in full: the ranking pass only loaded the columns it needed.
     ids = [q.id for q in chosen]
-    by_id = {q.id: q for q in QuizQuestion.objects.filter(id__in=ids)}
+    by_id = {q.id: q for q in visible(QuizQuestion, user).filter(id__in=ids)}
     return [by_id[i] for i in ids if i in by_id]
 
 
@@ -204,7 +219,7 @@ def missed_questions(user: User, *, limit: int = 20) -> list[QuizQuestion]:
     from the same definition of a mistake.
     """
     rows = (
-        QuestionExposure.objects.filter(user=user, times_incorrect__gt=0)
+        QuestionExposure.objects.filter(user=user, times_incorrect__gt=0, question__in=eligible_questions(visible(QuizQuestion, user)))
         .select_related("question")
         .order_by("-times_incorrect", "last_incorrect_at")[:limit]
     )
@@ -213,23 +228,25 @@ def missed_questions(user: User, *, limit: int = 20) -> list[QuizQuestion]:
 
 def coverage(user: User, **filters) -> dict:
     """How much of the available bank this student has seen — real numbers, not a guess."""
-    qs = QuizQuestion.objects.all()
+    from .bank_sources import usable_questions
+    qs = visible(QuizQuestion, user)
     for field, value in filters.items():
         if value:
             qs = qs.filter(**{field: value})
-
-    total = qs.count()
-    seen = QuestionExposure.objects.filter(
-        user=user, question__in=qs, times_seen__gt=0
-    ).count()
-    answered = QuestionExposure.objects.filter(
-        user=user, question__in=qs, times_answered__gt=0
-    ).count()
-
-    return {
-        "total": total,
-        "seen": seen,
-        "unseen": max(0, total - seen),
-        "answered": answered,
-        "percent_seen": round(seen / total * 100) if total else 0,
-    }
+    # Duplicate stems in one source/difficulty form one selectable question.
+    groups = {}
+    for question in usable_questions(user, qs):
+        source = ('slide', question.source_slide_id) if question.source_slide_id else (
+            ('material', question.source_material_id) if question.source_material_id else ('course', question.subject_id))
+        key = (source, question.question_type, question.difficulty, ' '.join(question.question_text.casefold().split()))
+        groups.setdefault(key, []).append(question.pk)
+    exposures = {row.question_id: row for row in QuestionExposure.objects.filter(
+        user=user, question_id__in=[pk for ids in groups.values() for pk in ids])}
+    counts = {name: 0 for name in ('seen', 'answered', 'missed')}
+    for ids in groups.values():
+        rows = [exposures[pk] for pk in ids if pk in exposures]
+        for name, field in [('seen', 'times_seen'), ('answered', 'times_answered'), ('missed', 'times_incorrect')]:
+            counts[name] += int(any(getattr(row, field) > 0 for row in rows))
+    total = len(groups)
+    return {'total': total, **counts, 'unseen': total-counts['seen'],
+            'percent_seen': round(counts['seen']/total*100) if total else 0}

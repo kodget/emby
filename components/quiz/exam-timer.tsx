@@ -23,19 +23,23 @@ function formatTime(s: number) {
 
 export function ExamTimer({ totalSeconds, remainingSeconds, onTick, onExpire, active }: ExamTimerProps) {
   const ref = useRef<ReturnType<typeof setInterval> | null>(null);
+  const expired = useRef(false);
 
   useEffect(() => {
     if (!active) return;
     ref.current = setInterval(onTick, 1000);
-    return () => { if (ref.current) clearInterval(ref.current); };
+    const resume = () => { if (document.visibilityState === "visible") onTick(); };
+    document.addEventListener("visibilitychange", resume);
+    return () => { if (ref.current) clearInterval(ref.current); document.removeEventListener("visibilitychange", resume); };
   }, [active, onTick]);
 
   useEffect(() => {
-    if (remainingSeconds === 0) {
+    if (active && remainingSeconds === 0 && !expired.current) {
+      expired.current = true;
       if (ref.current) clearInterval(ref.current);
       onExpire();
     }
-  }, [remainingSeconds, onExpire]);
+  }, [active, remainingSeconds, onExpire]);
 
   let pct = totalSeconds > 0 ? (remainingSeconds / totalSeconds) * 100 : 0;
   if (isNaN(pct) || !isFinite(pct)) pct = 0;

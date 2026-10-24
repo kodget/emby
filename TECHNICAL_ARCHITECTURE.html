@@ -1,0 +1,147 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; padding: 40px; max-width: 900px; margin: 0 auto; color: #333; }
+            h1, h2, h3 { border-bottom: 1px solid #eaecef; padding-bottom: .3em; margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25; color: #111; }
+            code { background-color: rgba(27,31,35,.05); border-radius: 3px; font-size: 85%; margin: 0; padding: .2em .4em; font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace; }
+            pre { background-color: #f6f8fa; border-radius: 6px; font-size: 85%; line-height: 1.45; overflow: auto; padding: 16px; border: 1px solid #e1e4e8; }
+            pre code { background-color: transparent; border: 0; display: inline; padding: 0; }
+            table { border-collapse: collapse; width: 100%; margin-top: 0; margin-bottom: 16px; }
+            table th, table td { border: 1px solid #dfe2e5; padding: 6px 13px; }
+            table th { font-weight: 600; background-color: #f6f8fa; }
+            table tr:nth-child(2n) { background-color: #f6f8fa; }
+            a { color: #0366d6; text-decoration: none; }
+            li { margin-bottom: 0.25em; }
+        </style>
+    </head>
+    <body>
+        <h1>Emby - Technical Architecture Document</h1>
+<h2>1. Introduction</h2>
+<p>This document outlines the technical architecture of the Emby Quiz Examination System. Emby is a modern, full-stack educational platform providing assessment, AI-powered evaluation, practice modules, and a comprehensive administrative dashboard. The system is designed for high performance, scalability, and asynchronous processing capabilities.</p>
+<h2>2. System Overview</h2>
+<p>The architecture follows a decoupled client-server model.</p>
+<ul>
+<li><strong>Frontend Client:</strong> A Next.js 16 (App Router) Single Page Application (SPA) providing interfaces for students (Web App) and administrators (Admin Dashboard).</li>
+<li><strong>Backend Service:</strong> A Django 4.x monolith serving RESTful APIs via Django REST Framework (DRF) and real-time WebSockets via Django Channels (Daphne).</li>
+<li><strong>Asynchronous Workers:</strong> Celery workers backed by Redis for offloading heavy tasks (AI grading, slide processing, RAG indexing).</li>
+<li><strong>Data Persistence:</strong> PostgreSQL for relational data and Redis for caching and message brokering.</li>
+</ul>
+<h2>3. High-Level Architecture Diagram</h2>
+<pre><code class="language-mermaid">graph TD
+    Client[Web Client - Next.js] --&gt;|HTTPS / REST| LB[Load Balancer]
+    Client --&gt;|WSS / WebSockets| LB
+    LB --&gt; WebApp[Django + Daphne Web Server]
+    
+    WebApp --&gt;|Read/Write| DB[(PostgreSQL)]
+    WebApp --&gt;|Cache / Broker| Redis[(Redis)]
+    
+    Celery[Celery Workers] --&gt;|Consume| Redis
+    Celery --&gt;|Read/Write| DB
+    Celery --&gt;|API Calls| LLM[LLM Provider - OpenAI/Anthropic]
+    Celery --&gt;|Media| Cloudinary[Cloudinary Storage]
+    
+    WebApp --&gt;|Auth| OAuth[Google OAuth]
+    WebApp --&gt;|Payments| Paystack[Paystack API]
+</code></pre>
+<h2>4. Frontend Architecture (Next.js)</h2>
+<h3>4.1. Core Technologies</h3>
+<ul>
+<li><strong>Framework:</strong> Next.js 16 with Turbopack (App Router <code>app/</code> directory).</li>
+<li><strong>Language:</strong> TypeScript for end-to-end type safety.</li>
+<li><strong>State Management:</strong> A hybrid approach using <strong>Zustand</strong> (e.g., <code>store/quiz-attempt-slice.ts</code> for lightweight UI state) and <strong>Redux Toolkit</strong> for complex global application state.</li>
+<li><strong>Styling &amp; UI:</strong> Tailwind CSS, Radix UI primitives (shadcn/ui), and Framer Motion for micro-animations.</li>
+<li><strong>Forms &amp; Validation:</strong> React Hook Form integrated with Zod.</li>
+</ul>
+<h3>4.2. Routing Structure</h3>
+<ul>
+<li><code>(app)</code>: The core student-facing application (Dashboards, Quizzes, Practice, Credits).</li>
+<li><code>(admin)</code>: Administrative dashboard for curriculum management, user control, and payment tracking. Built with dynamic schema generation (fetching Django models dynamically to render admin tables).</li>
+<li><strong>Auth Routes:</strong> Modularized authentication flows (<code>/signin</code>, <code>/signup</code>, <code>/forgot-password</code>, <code>/verification-pending</code>).</li>
+</ul>
+<h2>5. Backend Architecture (Django)</h2>
+<h3>5.1. Core Technologies</h3>
+<ul>
+<li><strong>Framework:</strong> Django 4.x with Django REST Framework.</li>
+<li><strong>ASGI Server:</strong> Daphne for handling asynchronous protocols (WebSockets) alongside HTTP.</li>
+<li><strong>Task Queue:</strong> Celery for distributed task execution.</li>
+</ul>
+<h3>5.2. Modular App Structure</h3>
+<ul>
+<li><code>accounts</code>: User modeling, profile management, JWT, and Google OAuth integration.</li>
+<li><code>curriculum</code>: Hierarchical data models (Subjects -&gt; Blocks -&gt; Topics) for organizing educational content.</li>
+<li><code>learning</code>: Managing slides and educational content, incorporating Retrieval-Augmented Generation (RAG).</li>
+<li><code>pastquestions</code>: Question bank management (MCQs, Theory).</li>
+<li><code>credits</code>: Managing user API usage limits, tracking free-tier usage versus premium.</li>
+<li><code>payments</code>: Webhook integrations with Paystack for subscription lifecycle management.</li>
+</ul>
+<h3>5.3. Asynchronous Task Processing (Celery)</h3>
+<p>Heavy operations are strictly offloaded from the main HTTP thread to Celery workers:</p>
+<ul>
+<li><strong>AI Grading:</strong> Theory question evaluations using external LLM APIs (with primary and fallback API keys).</li>
+<li><strong>Slide Processing:</strong> Extracting content from PDFs, generating embeddings for RAG (<code>fix_slide.py</code>, <code>check_slide.py</code>).</li>
+<li><strong>Data Backfills:</strong> Scheduled jobs for maintaining data integrity.</li>
+</ul>
+<h2>6. Data Architecture</h2>
+<h3>6.1. Primary Database (PostgreSQL)</h3>
+<p>A relational schema designed for high-integrity transactions:</p>
+<ul>
+<li><strong>Users &amp; Auth:</strong> Extended AbstractUser model linked to Profiles.</li>
+<li><strong>Curriculum Tree:</strong> Self-referential or deeply nested foreign keys linking Subjects &gt; Blocks &gt; Topics.</li>
+<li><strong>Assessments:</strong> <code>QuizAttempt</code> acts as the root aggregate holding state (<code>in_progress</code>, <code>graded</code>). It links to individual <code>QuestionAttempt</code> records.</li>
+<li><strong>Transactions:</strong> Audit logs for credit expenditure and Paystack payments.</li>
+</ul>
+<h3>6.2. Caching &amp; Message Broker (Redis)</h3>
+<ul>
+<li><strong>Celery Broker:</strong> Queuing tasks for background processing.</li>
+<li><strong>Channel Layer:</strong> Facilitating real-time WebSocket communication via Django Channels.</li>
+<li><strong>Rate Limiting:</strong> Tracking API usage (e.g., 10 quiz creations/hour/user).</li>
+</ul>
+<h2>7. Key System Flows</h2>
+<h3>7.1. Quiz Attempt Lifecycle</h3>
+<ol>
+<li><strong>Initialization:</strong> Client POSTs <code>/quiz-attempts/</code>. Django validates subscription limits (Free vs Premium) via the <code>credits</code> app.</li>
+<li><strong>Generation:</strong> Backend queries the <code>pastquestions</code> and <code>curriculum</code> apps to assemble MCQs and Theory questions based on requested difficulty and topic.</li>
+<li><strong>Execution:</strong> Client submits answers incrementally via REST endpoints. State is maintained in Next.js via Zustand.</li>
+<li><strong>Submission:</strong> Manual or Auto-submission triggers a state change to <code>graded</code>.</li>
+<li><strong>Evaluation:</strong> MCQs are evaluated synchronously. Theory questions trigger an asynchronous Celery task to call the LLM API.</li>
+<li><strong>Result Retrieval:</strong> Client polls or receives a WebSocket event upon theory grading completion.</li>
+</ol>
+<h3>7.2. Payment &amp; Subscription Flow</h3>
+<ol>
+<li>Client initiates upgrade via Paystack checkout.</li>
+<li>Paystack processes payment and fires a secure webhook to the Django backend.</li>
+<li>The <code>payments</code> app verifies the webhook signature.</li>
+<li>Upon validation, the user&#39;s <code>Profile</code> is upgraded to Premium, unlocking detailed AI analysis and higher rate limits.</li>
+</ol>
+<h2>8. Security &amp; Compliance</h2>
+<ul>
+<li><strong>Authentication:</strong> Stateless JWT tokens passed via Authorization headers.</li>
+<li><strong>Authorization:</strong> Role-Based Access Control (RBAC). <code>is_staff</code> and <code>is_superuser</code> flags control access to the dynamic Next.js admin dashboard.</li>
+<li><strong>API Protection:</strong> DRF throttling limits endpoints to prevent abuse (e.g., 100 answers/min/user).</li>
+<li><strong>Data Privacy:</strong> Passwords hashed via PBKDF2. Environment variables strictly separate development and production secrets.</li>
+</ul>
+<h2>9. Infrastructure &amp; Deployment (Render + Vercel)</h2>
+<ul>
+<li><strong>Frontend (Vercel):</strong> Serverless deployment configured via <code>vercel.json</code> and standard Next.js build pipeline.</li>
+<li><strong>Backend (Render):</strong> Defined by <code>render.yaml</code>.<ul>
+<li><code>web</code>: Python runtime running Daphne (HTTP + WSS).</li>
+<li><code>worker</code>: Python runtime running Celery.</li>
+<li><code>redis</code>: Managed Redis instance linked to both web and worker.</li>
+<li><code>PostgreSQL</code>: Render Managed Database.</li>
+</ul>
+</li>
+<li><strong>Storage:</strong> Cloudinary integration for scalable image, PDF, and media asset storage.</li>
+</ul>
+<h2>10. Future Architectural Considerations</h2>
+<ul>
+<li><strong>GraphQL:</strong> Transitioning complex frontend curriculum fetching to GraphQL to reduce over-fetching.</li>
+<li><strong>Vector Database:</strong> Migrating RAG embeddings from pgvector/in-memory to a dedicated vector store (Pinecone/Weaviate) as slide volume scales.</li>
+<li><strong>Microservices:</strong> Extracting the AI grading engine into a dedicated microservice (e.g., FastAPI) if LLM context processing becomes a bottleneck.</li>
+</ul>
+
+    </body>
+    </html>
+    

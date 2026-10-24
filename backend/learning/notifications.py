@@ -211,7 +211,7 @@ def build_for_user(user: User) -> list[Notification]:
 
     created: list[Notification] = []
     now = timezone.now()
-    today = now.date()
+    today = timezone.localdate(now)
 
     # --- flashcards actually due -------------------------------------------------
     due = FlashcardProgress.objects.filter(user=user, due_date__lte=now).count()
@@ -272,10 +272,11 @@ def build_for_user(user: User) -> list[Notification]:
             created.append(n)
 
     # --- a streak about to break --------------------------------------------------
-    stats = getattr(user, "stats", None)
-    streak = getattr(stats, "active_streak", 0) or 0
-    last = getattr(stats, "last_activity_date", None)
-    if streak >= 2 and last and last < today and now.hour >= 17:
+    from .analytics_evidence import Evidence
+    evidence = Evidence(user, 30, now=now)
+    streak = evidence.consistency()['current_streak']
+    last = max((timezone.localdate(row['at']) for row in evidence.rows), default=None)
+    if streak >= 2 and last and last < today and timezone.localtime(now).hour >= 17:
         n = schedule(
             user,
             NotificationType.STREAK_AT_RISK,
@@ -289,24 +290,18 @@ def build_for_user(user: User) -> list[Notification]:
             created.append(n)
 
     # --- a topic that keeps going wrong -------------------------------------------
-    from .models import WeakArea
-
-    weakest = (
-        WeakArea.objects.filter(user=user, scope=WeakArea.Scope.SUB_BLOCK, attempted__gte=8)
-        .filter(mastery__lt=0.55)
-        .order_by("-priority")
-        .first()
-    )
+    weakest = next((row for row in evidence.topics(scope='SUB_BLOCK', limit=None)['weakest']
+                    if row['attempted'] >= 8 and row['mastery'] < .55), None)
     if weakest:
+        iso_year, iso_week, _ = today.isocalendar()
         n = schedule(
             user,
             NotificationType.WEAK_AREA,
-            f"{weakest.label} needs another pass",
-            f"You're at {round(weakest.mastery * 100)}% there. A focused round would help.",
+            f"{weakest['label']} needs another pass",
+            f"You're at {round(weakest['mastery'] * 100)}% there. A focused round would help.",
             action_url="/analytics",
-            # Weekly, not daily — a weak topic does not change overnight.
-            dedupe_key=f"weak_area:{weakest.id}:{today.isocalendar().week}",
-            payload={"area_id": weakest.id},
+            dedupe_key=f"weak_area:{weakest['id']}:{iso_year}-{iso_week}",
+            payload={"area_id": weakest['id']},
         )
         if n:
             created.append(n)

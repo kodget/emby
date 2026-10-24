@@ -47,10 +47,9 @@ export type Subject = {
 export const curriculum: Subject[] = [];
 
 // Dynamic curriculum loader
-let cachedCurriculum: Subject[] | null = null;
+// Fetch under the current session; never reuse another class's in-memory library.
 
 export async function loadCurriculum(): Promise<Subject[]> {
-  if (cachedCurriculum) return cachedCurriculum;
 
   try {
     const response = await api.get(`/api/subjects/`);
@@ -92,7 +91,7 @@ export async function loadCurriculum(): Promise<Subject[]> {
         let blockTopics: any[] = [];
         try {
           const blockTopicsResponse = await api.get(`/api/topics/?block=${block.id}`);
-          blockTopics = blockTopicsResponse.data;
+          blockTopics = blockTopicsResponse.data.filter((topic: any) => !topic.sub_block);
         } catch (e) {
           console.warn(`Failed to fetch topics for block ${block.id}`, e);
         }
@@ -134,7 +133,6 @@ export async function loadCurriculum(): Promise<Subject[]> {
       curriculum.push(subjectData);
     }
 
-    cachedCurriculum = curriculum;
     return curriculum;
   } catch (error) {
     console.error("Failed to load curriculum:", error);

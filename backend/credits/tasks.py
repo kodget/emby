@@ -1,7 +1,7 @@
 from celery import shared_task
 from django.utils import timezone
-from datetime import timedelta
 from django.contrib.auth.models import User
+from django.db.models import Sum
 from django.db.models import Q
 from .models import CreditLot, CreditTransaction, TransactionType, CreditSource
 from accounts.models import SubscriptionTier
@@ -35,29 +35,36 @@ def expiration_cleanup():
     Cleans up any other expired lots (e.g. promotional) and records a transaction.
     (Purchases don't expire based on models config, but if they did we'd handle it here)
     """
-    with transaction.atomic():
-        expired_lots = CreditLot.objects.filter(
-            remaining_amount__gt=0,
-            expires_at__lte=timezone.now()
-        )
-        
-        for lot in expired_lots:
-            # We must be careful to calculate balance correctly per user
-            balance_before = sum(l.remaining_amount for l in CreditLot.objects.filter(
-                user=lot.user, 
-                remaining_amount__gt=0
-            ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))) + lot.remaining_amount
-            
-            amount = lot.remaining_amount
-            lot.remaining_amount = 0
-            lot.save(update_fields=['remaining_amount'])
-            
-            CreditTransaction.objects.create(
-                user=lot.user,
-                type=TransactionType.EXPIRATION,
-                amount=-amount,
-                balance_before=balance_before,
-                balance_after=balance_before - amount,
-                action="EXPIRATION",
-                description=f"Expired {amount} credits from lot {lot.id}"
-            )
+    now = timezone.now()
+    user_ids = CreditLot.objects.filter(
+        remaining_amount__gt=0, expires_at__lte=now
+    ).order_by().values_list("user_id", flat=True).distinct()
+
+    for user_id in user_ids.iterator():
+        with transaction.atomic():
+            user = User.objects.select_for_update().get(pk=user_id)
+            expired_lots = list(CreditLot.objects.select_for_update().filter(
+                user=user, remaining_amount__gt=0, expires_at__lte=now
+            ).order_by("expires_at", "pk"))
+            balance = CreditLot.objects.filter(
+                user=user, remaining_amount__gt=0
+            ).filter(
+                Q(expires_at__isnull=True) | Q(expires_at__gt=now)
+            ).aggregate(total=Sum("remaining_amount"))["total"] or 0
+            balance += sum(lot.remaining_amount for lot in expired_lots)
+
+            for lot in expired_lots:
+                amount = lot.remaining_amount
+                lot.remaining_amount = 0
+                lot.save(update_fields=["remaining_amount"])
+
+                CreditTransaction.objects.create(
+                    user=user,
+                    type=TransactionType.EXPIRATION,
+                    amount=-amount,
+                    balance_before=balance,
+                    balance_after=balance - amount,
+                    action="EXPIRATION",
+                    description=f"Expired {amount} credits from lot {lot.id}",
+                )
+                balance -= amount

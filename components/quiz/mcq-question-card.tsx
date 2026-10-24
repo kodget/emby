@@ -36,7 +36,7 @@ export function MCQQuestionCard({ question, questionNumber, totalQuestions, sele
           </div>
           <p className="text-lg font-medium leading-relaxed">{question.question_text}</p>
         </div>
-        <Button variant="ghost" size="icon" onClick={onFlag}
+        <Button variant="ghost" size="icon" onClick={onFlag} aria-label={isFlagged ? "Unflag question" : "Flag question"}
           className={cn("flex-shrink-0 rounded-full transition-colors", isFlagged ? "text-amber-500 bg-amber-50 hover:bg-amber-100" : "text-muted-foreground")}>
           <Flag className="w-4 h-4" />
         </Button>
@@ -47,7 +47,7 @@ export function MCQQuestionCard({ question, questionNumber, totalQuestions, sele
           if (!text) return null;
           const selected = selectedOption === opt;
           return (
-            <motion.button key={opt} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} onClick={() => onSelect(opt)}
+            <motion.button key={opt} aria-pressed={selected} aria-label={`${opt}. ${text}`} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} onClick={() => onSelect(opt)}
               className={cn("w-full text-left p-4 rounded-xl border-2 transition-all duration-200 flex items-start gap-3",
                 selected ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40 hover:bg-accent/40")}>
               <div className={cn("w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold transition-all",

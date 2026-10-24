@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Browser fixtures must not compete with an open development server for its build lock.
+  distDir: process.env.EMBY_BROWSER_TESTS === "uploads" ? ".next/upload-browser-tests"
+    : process.env.EMBY_BROWSER_TESTS === "1" ? ".next/browser-tests" : ".next",
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     formats: ["image/avif", "image/webp"],

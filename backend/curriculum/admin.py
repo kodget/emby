@@ -109,10 +109,31 @@ class UpcomingTestAdmin(admin.ModelAdmin):
 
 @admin.register(QuizQuestion)
 class QuizQuestionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'question_type', 'difficulty', 'subject', 'sub_block', 'source_type', 'created_at']
-    list_filter = ['question_type', 'difficulty', 'subject', 'source_type', 'created_at']
+    list_display = ['id', 'question_type', 'difficulty', 'subject', 'sub_block', 'source_type', 'needs_review', 'reviewed_at']
+    list_filter = ['question_type', 'difficulty', 'subject', 'source_type', 'needs_review', 'reviewed_at']
     search_fields = ['id', 'question_text', 'subject__name', 'sub_block__name']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at', 'bank_key', 'reviewed_at', 'needs_review']
+    actions = ['confirm_human_review']
+
+    @admin.action(description='Confirm I reviewed the answers, medical claims and source evidence; approve selected questions', permissions=['change'])
+    def confirm_human_review(self, request, queryset):
+        from django.core.exceptions import ValidationError
+        from learning.bank_sources import approve_reviewed_question
+        approved = 0
+        for question in queryset:
+            try:
+                reviewed = approve_reviewed_question(question.pk)
+                self.log_change(request, reviewed, 'Human review confirmed: answer, medical claims and source evidence.')
+                approved += 1
+            except ValidationError as exc:
+                self.message_user(request, f'{question.pk}: {exc.messages[0]}', level='error')
+        self.message_user(request, f'{approved} question(s) approved after human review.')
+
+    def save_model(self, request, obj, form, change):
+        if change and form.changed_data and obj.source_type == 'ai_generated' and obj.source_slide_id:
+            obj.reviewed_at = None
+            obj.needs_review = True
+        super().save_model(request, obj, form, change)
     fieldsets = (
         ('Basic Information', {
             'fields': ('id', 'question_type', 'difficulty', 'subject', 'block', 'sub_block')
@@ -129,9 +150,10 @@ class QuizQuestionAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Source Information', {
-            'fields': ('source_type', 'source_material', 'source_slide', 'source_text'),
+            'fields': ('source_type', 'source_material', 'source_slide', 'source_page', 'source_text', 'bank_key'),
             'classes': ('collapse',)
         }),
+        ('Review', {'fields': ('needs_review', 'review_reason', 'reviewed_at')}),
         ('Metadata', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)

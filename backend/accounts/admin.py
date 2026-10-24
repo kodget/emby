@@ -1,6 +1,8 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.forms import UserChangeForm
+from django import forms
 
 from .models import (
     Profile,
@@ -20,10 +22,30 @@ from .models import (
 
 class ProfileInline(admin.StackedInline):
     model = Profile
+    fk_name = 'user'
     can_delete = False
+    readonly_fields = (
+        'class_head_verified', 'class_head_verification_requested',
+        'class_head_rejection_reason', 'class_head_request_version',
+        'class_head_reviewed_at', 'class_head_reviewed_by',
+        'class_role', 'class_group', 'school', 'set_name',
+    )
+
+
+class ApprovalAwareUserChangeForm(UserChangeForm):
+    def clean_is_active(self):
+        from .class_heads import validate_reactivation
+        from rest_framework.exceptions import ValidationError
+        active = self.cleaned_data.get('is_active', False)
+        try:
+            validate_reactivation(self.instance.pk, active)
+        except ValidationError as exc:
+            raise forms.ValidationError(exc.detail) from None
+        return active
 
 
 class CustomUserAdmin(UserAdmin):
+    form = ApprovalAwareUserChangeForm
     inlines = [ProfileInline]
 
 
@@ -65,23 +87,19 @@ class ProfileAdmin(admin.ModelAdmin):
         'school__name',
     )
 
-    list_editable = (
-        'class_role',
-        'class_head_verified',
-    )
+    readonly_fields = ProfileInline.readonly_fields + ('user',)
 
     actions = ['approve_class_heads']
 
     def approve_class_heads(self, request, queryset):
-
+        from .class_heads import review_class_head
+        from rest_framework.exceptions import APIException
         for profile in queryset:
-
-            profile.class_head_verified = True
-            profile.class_head_verification_requested = False
-            profile.save()
-
-            if profile.class_group:
-                profile.class_group.class_heads.add(profile.user)
+            try:
+                review_class_head(actor=request.user, user_id=profile.user_id, approved=True)
+                self.message_user(request, f'Approved {profile.user}.', messages.SUCCESS)
+            except APIException as exc:
+                self.message_user(request, f'{profile.user}: {exc.detail}', messages.ERROR)
 
     approve_class_heads.short_description = "Approve selected class heads"
 
@@ -100,7 +118,7 @@ class ClassGroupAdmin(admin.ModelAdmin):
         'is_active',
     )
 
-    filter_horizontal = ('class_heads',)
+    readonly_fields = ('class_heads',)
 
 
 # =====================================

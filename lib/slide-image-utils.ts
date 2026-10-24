@@ -6,7 +6,9 @@
  * in every API call.
  */
 
-const imageCache = new Map<string, string>();
+const imageCache = new Map<string, { value: string; expires: number }>();
+let cacheSession: string | null = null;
+const currentSession = () => typeof window === "undefined" ? null : sessionStorage.getItem("token");
 
 /**
  * Download a slide image and convert to base64.
@@ -15,16 +17,19 @@ const imageCache = new Map<string, string>();
  */
 export async function imageUrlToBase64(imageUrl: string): Promise<string> {
   if (!imageUrl) return "";
+  const session = currentSession();
+  if (session !== cacheSession) { imageCache.clear(); cacheSession = session; }
+  if (!session) return "";
 
   // Return cached version if available
-  if (imageCache.has(imageUrl)) {
-    return imageCache.get(imageUrl)!;
-  }
+  const cached = imageCache.get(imageUrl);
+  if (cached && cached.expires > Date.now()) return cached.value;
+  imageCache.delete(imageUrl);
 
   try {
     const response = await fetch(imageUrl);
     if (!response.ok) {
-      console.warn(`Failed to fetch image for base64 conversion: ${imageUrl}`);
+      console.warn("Could not load the slide image.");
       return "";
     }
 
@@ -33,17 +38,19 @@ export async function imageUrlToBase64(imageUrl: string): Promise<string> {
     return new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {
+        if (session !== currentSession()) { resolve(""); return; }
         const dataUrl = reader.result as string;
         // Strip the "data:image/jpeg;base64," prefix — only raw data needed
         const base64Data = dataUrl.split(",")[1] ?? "";
-        imageCache.set(imageUrl, base64Data);
+        if (imageCache.size >= 12) imageCache.delete(imageCache.keys().next().value!);
+        imageCache.set(imageUrl, { value: base64Data, expires: Date.now() + 5 * 60 * 1000 });
         resolve(base64Data);
       };
       reader.onerror = () => resolve("");
       reader.readAsDataURL(blob);
     });
   } catch (error) {
-    console.warn("imageUrlToBase64 failed:", error);
+    console.warn("Could not convert the slide image.");
     return "";
   }
 }

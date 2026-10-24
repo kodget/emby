@@ -54,6 +54,7 @@ export default function UniversalAdminFormPage() {
            // Initialize default values based on schema
            const initialData: any = {};
            foundSchema.fields.forEach((f: any) => {
+              if (!f.editable || f.auto_created) return;
               if (f.many_to_many) initialData[f.name] = [];
               else if (f.type === "BooleanField") initialData[f.name] = false;
               else initialData[f.name] = "";
@@ -75,14 +76,26 @@ export default function UniversalAdminFormPage() {
     setSaving(true);
     setError(null);
     try {
+      // The record contains IDs, display labels and protected workflow state.
+      // Submit only fields the server schema explicitly allows this form to edit.
+      const payload: Record<string, unknown> = {};
+      for (const field of schema.fields) {
+        if (!field.editable || field.auto_created || (!isNew && field.primary_key)) continue;
+        if (!(field.name in formData)) continue;
+        const value = formData[field.name];
+        payload[field.name] = (field.type === "JSONField" || field.many_to_many) && typeof value === "string"
+          ? JSON.parse(value || (field.many_to_many ? "[]" : "null"))
+          : value;
+      }
       if (isNew) {
-         await adminApi.createAdminData(appLabel, modelName, formData);
+         await adminApi.createAdminData(appLabel, modelName, payload);
       } else {
-         await adminApi.updateAdminData(appLabel, modelName, id, formData);
+         await adminApi.updateAdminData(appLabel, modelName, id, payload);
       }
       router.push(`/admin/manage/${appLabel}/${modelName}`);
     } catch (err: any) {
-       setError(err.message || "Failed to save record");
+       const detail = err.response?.data?.error;
+       setError(typeof detail === "string" ? detail : err instanceof SyntaxError ? "Enter valid JSON for JSON and multiple-relation fields." : err.message || "Failed to save record");
        setSaving(false);
     }
   };
@@ -139,7 +152,7 @@ export default function UniversalAdminFormPage() {
           <CardContent className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {schema.fields.map((field: any) => {
-                if (field.auto_created && field.name === 'id') return null; // Hide auto PK
+                if (field.auto_created || (isNew && !field.editable)) return null;
                 
                 return (
                   <div key={field.name} className={`space-y-2 ${field.type === 'TextField' ? 'md:col-span-2' : ''}`}>
@@ -148,7 +161,18 @@ export default function UniversalAdminFormPage() {
                       {field.is_relation && <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded uppercase font-mono">{field.type}</span>}
                     </Label>
                     
-                    {field.choices ? (
+                    {!field.editable || (!isNew && field.primary_key) ? (
+                      <p id={field.name} className="text-sm text-muted-foreground break-words">
+                        {formData[field.name] == null ? "—" : typeof formData[field.name] === "object" ? JSON.stringify(formData[field.name]) : String(formData[field.name])}
+                        <span className="block text-xs">Read only</span>
+                      </p>
+                    ) : field.type === "JSONField" || field.many_to_many ? (
+                      <textarea id={field.name}
+                        value={typeof formData[field.name] === "string" ? formData[field.name] : JSON.stringify(formData[field.name] ?? (field.many_to_many ? [] : {}), null, 2)}
+                        onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                        className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        aria-describedby={`${field.name}-hint`} />
+                    ) : field.choices ? (
                       <select
                         id={field.name}
                         value={formData[field.name] || ''}
@@ -185,6 +209,9 @@ export default function UniversalAdminFormPage() {
                         onChange={(e) => handleFieldChange(field.name, e.target.value)}
                         placeholder={field.is_relation ? `Enter ${field.related_model || ''} ID` : ''}
                       />
+                    )}
+                    {(field.type === "JSONField" || field.many_to_many) && field.editable && (
+                      <p id={`${field.name}-hint`} className="text-xs text-muted-foreground">{field.many_to_many ? "Enter a JSON array of related IDs, such as [1, 2]." : "Enter valid JSON."}</p>
                     )}
                   </div>
                 );

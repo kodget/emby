@@ -15,6 +15,21 @@ jobs:
     name: CI Checks
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: emby_test
+          POSTGRES_DB: emby_tests
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U emby_test -d emby_tests"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,6 +48,52 @@ jobs:
         run: |
           echo "Compiling backend Python modules..."
           python -m compileall backend
+
+      - name: Install isolated integration test dependencies
+        run: python -m pip install -r backend/tests/requirements-integration.txt
+
+      - name: Run persistence regression tests without external services
+        run: python -m unittest discover -s backend/tests -t backend -p "test_*.py" -v
+
+      - name: Install local office renderer for real-format reader tests
+        run: sudo apt-get update && sudo apt-get install -y libreoffice-impress libreoffice-writer tesseract-ocr-eng
+
+      - name: Verify document rendering and reading without production services
+        working-directory: backend
+        run: python -m django test curriculum.tests.test_document_rendering curriculum.tests.test_document_extraction curriculum.tests.test_extraction_integration curriculum.tests.test_reading --settings=tests.integration_settings --noinput
+
+      - name: Run account, recovery and content integrity tests against disposable PostgreSQL
+        working-directory: backend
+        env:
+          EMBY_TEST_POSTGRES: "1"
+        run: python -m django test accounts.tests credits.tests curriculum.tests.test_bank_recovery curriculum.tests.test_deck_banks curriculum.tests.test_deck_practice curriculum.tests.test_assessment_answers curriculum.tests.test_formal_assessments curriculum.tests.test_assessment_drafts curriculum.tests.test_assessment_grading curriculum.tests.test_assessment_feedback curriculum.tests.test_analytics_evidence curriculum.tests.test_activity_writers curriculum.tests.test_progress_surfaces curriculum.tests.test_activity_audit curriculum.tests.test_weak_area_recovery curriculum.tests.test_activity_reconciliation curriculum.tests.test_mock_attempts curriculum.tests.test_content_integrity curriculum.tests.test_class_access curriculum.tests.test_upload_validation curriculum.tests.test_community_class_access curriculum.tests.test_related_class_access curriculum.tests.test_private_media curriculum.tests.test_standalone_processing curriculum.tests.test_standalone_deck_recovery curriculum.tests.test_slide_processing_recovery curriculum.tests.test_slide_processing curriculum.tests.test_upload_receipts curriculum.tests.test_media_inventory curriculum.tests.test_practice_class_access curriculum.tests.test_image_practice_evidence curriculum.tests.test_planner_activity curriculum.tests.test_battle_socket_access curriculum.tests.test_reading curriculum.tests.test_deck_reading_progress curriculum.tests.test_course_reading_progress curriculum.tests.test_extraction_integration --settings=tests.integration_settings --noinput
+
+      - name: Check model and migration consistency
+        working-directory: backend
+        run: python -m django makemigrations --check --dry-run --settings=tests.integration_settings
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Check frontend dependency advisories
+        run: npm audit --audit-level=moderate
+
+      - name: Check TypeScript and authentication regressions
+        run: |
+          npx tsc --noEmit --incremental false
+          node --test scripts/test-class-head-guards.cjs scripts/test-auth-refresh.cjs scripts/test-api-timeouts.cjs scripts/test-assessment-state.cjs scripts/test-activity-requests.cjs scripts/test-reading-recorder.cjs scripts/test-upload-intent.cjs
+
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Exercise account and content pages with isolated API fixtures
+        run: npm run test:browser
+
+      - name: Build the production frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:8600
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
 
       - name: Validate JavaScript syntax
         run: |

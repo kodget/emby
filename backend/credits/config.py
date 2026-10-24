@@ -64,16 +64,18 @@ def get_user_credit_tier(user):
         return (999999, 999999, "PLATINUM", "platinum")
 
     # Class Head check (Receives 150 daily, 4500 monthly)
-    if profile.class_role == ClassRole.CLASS_HEAD:
+    if profile.is_class_head:
         return (CLASS_HEAD_DAILY_CREDITS, CLASS_HEAD_MONTHLY_CAP, CreditSource.DAILY_CLASS_HEAD, "class_head")
 
     # Material Uploader check (Receives 100 daily, 3000 monthly)
     capabilities = getattr(profile, "class_capabilities", []) or []
-    if profile.class_role == ClassRole.MATERIAL_UPLOADER or "SLIDE_UPLOADER" in capabilities:
+    if profile.class_role == ClassRole.MATERIAL_UPLOADER or (
+        profile.class_role != ClassRole.CLASS_HEAD and "SLIDE_UPLOADER" in capabilities
+    ):
         return (MATERIAL_UPLOADER_DAILY_CREDITS, MATERIAL_UPLOADER_MONTHLY_CAP, CreditSource.DAILY_MATERIAL_UPLOADER, "material_uploader")
 
     # Premium check (Receives 60 daily, 1800 monthly)
-    if profile.subscription_tier == SubscriptionTier.PREMIUM:
+    if profile.subscription_tier == SubscriptionTier.PREMIUM and profile.is_premium:
         return (PRO_DAILY_CREDITS, PRO_MONTHLY_CAP, CreditSource.DAILY_PRO, "premium")
 
     # Free student (Receives 20 daily, 600 monthly)

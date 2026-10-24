@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/app/app-sidebar";
 import { AppTopbar } from "@/components/app/app-topbar";
 import { MobileTabBar } from "@/components/app/mobile-tab-bar";
 import { PageTransition } from "@/components/app/page-transition";
+import { ProgressSync } from "@/components/app/progress-sync";
 
 /**
  * The authenticated app shell.
@@ -19,6 +20,7 @@ import { PageTransition } from "@/components/app/page-transition";
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-[100dvh] bg-background">
+      <ProgressSync />
       <AppSidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">

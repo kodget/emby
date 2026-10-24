@@ -299,107 +299,23 @@ class SlideConverter:
     
     @staticmethod
     def convert_document(input_file_path: str, file_type: str, deck_id: str) -> Tuple[bool, dict]:
-        """
-        Convert document through full pipeline:
-        1. Detect format
-        2. Convert to PPTX (if needed)
-        3. Convert to PDF
-        4. Convert PDF to images
-        5. Return paths to rendered slides
-        
-        Args:
-            input_file_path: Path to uploaded file
-            file_type: Detected file type (pdf, pptx, ppt, docx)
-            deck_id: Unique identifier for this deck
-            
-        Returns:
-            Tuple (success: bool, result_dict with paths and metadata)
-        """
-        result = {
-            'success': False,
-            'file_type': file_type,
-            'converted_pptx': None,
-            'converted_pdf': None,
-            'slide_images': [],
-            'page_count': 0,
-            'error': None
-        }
-        
+        """Keep rendered files alive until the caller has stored all pages."""
+        from .document_rendering import render_document, cleanup_render
+        result = {'success': False, 'file_type': file_type, 'slide_images': [],
+                  'page_count': 0, 'error': None, 'converted_pptx': None, 'converted_pdf': None,
+                  'temp_dir': tempfile.mkdtemp(prefix='emby-render-')}
         try:
-            # Create temporary working directory
-            temp_dir = tempfile.mkdtemp(prefix=f"slides_{deck_id}_")
-            logger.info(f"Working directory: {temp_dir}")
-            logger.info(f"Input file: {input_file_path}")
-            logger.info(f"File type: {file_type}")
-            
-            try:
-                # Step 1: If PDF, skip to image conversion
-                if file_type == 'pdf':
-                    logger.info("File is PDF, skipping PPTX conversion")
-                    pdf_path = input_file_path
-                else:
-                    # Step 2: Convert to PPTX
-                    logger.info(f"Converting {file_type} to PPTX...")
-                    convert_dir = os.path.join(temp_dir, 'pptx')
-                    success, pptx_path = LibreOfficeConverter.convert_to_pptx(
-                        input_file_path, 
-                        convert_dir
-                    )
-                    
-                    if not success:
-                        result['error'] = 'Failed to convert to PPTX'
-                        logger.error(result['error'])
-                        return False, result
-                    
-                    result['converted_pptx'] = pptx_path
-                    logger.info(f"✓ PPTX conversion successful: {pptx_path}")
-                    
-                    # Step 3: Convert PPTX to PDF
-                    logger.info("Converting PPTX to PDF...")
-                    pdf_dir = os.path.join(temp_dir, 'pdf')
-                    success, pdf_path = LibreOfficeConverter.convert_to_pdf(pptx_path, pdf_dir)
-                    
-                    if not success:
-                        result['error'] = 'Failed to convert to PDF'
-                        logger.error(result['error'])
-                        return False, result
-                    
-                    result['converted_pdf'] = pdf_path
-                    logger.info(f"✓ PDF conversion successful: {pdf_path}")
-                
-                # Step 4: Convert PDF to images
-                logger.info("Converting PDF to images...")
-                images_dir = os.path.join(temp_dir, 'images')
-                success, image_paths = PDFToImageConverter.convert_pdf_to_images(
-                    pdf_path,
-                    images_dir
-                )
-                
-                if not success:
-                    result['error'] = 'Failed to convert PDF to images'
-                    logger.error(result['error'])
-                    return False, result
-                
-                result['slide_images'] = image_paths
-                result['page_count'] = len(image_paths)
-                result['success'] = True
-                
-                logger.info(f"✓ Successfully converted document: {deck_id} with {len(image_paths)} pages")
-                
-                return True, result
-                
-            finally:
-                # Clean up temporary directory
-                shutil.rmtree(temp_dir, ignore_errors=True)
-                logger.info(f"Cleaned up temporary directory: {temp_dir}")
-        
-        except Exception as e:
-            logger.error(f"Document conversion pipeline error: {e}")
-            import traceback
-            traceback.print_exc()
-            result['error'] = str(e)
+            rendered = render_document(input_file_path, file_type, result['temp_dir'], ocr=True)
+            result.update(success=True, slide_images=rendered['image_paths'],
+                          pages=rendered['pages'], text_extraction=rendered['text_extraction'],
+                          page_count=rendered['page_count'], converted_pdf=rendered['pdf_path'])
+            return True, result
+        except Exception as exc:
+            logger.warning('Document rendering failed (%s)', type(exc).__name__)
+            cleanup_render(result)
+            result.update(temp_dir=None, error='Document conversion failed. Check the file and conversion service.')
             return False, result
-    
+
     @staticmethod
     def get_slide_storage_path(deck_id: str, slide_number: int) -> str:
         """Get the storage path for a rendered slide"""

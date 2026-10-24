@@ -1,5 +1,6 @@
 import logging
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from .models import Achievement, UserAchievement, UserBadge, Badge, LearningEvent, ActivityType
 from .notifications import schedule, NotificationType
@@ -163,90 +164,63 @@ def seed_achievements():
         )
 
 class AchievementEngine:
-    """Central engine for evaluating achievements based on learning events."""
+    """Central engine for deriving achievement progress from learning records."""
     
     @classmethod
     def evaluate_event(cls, event: LearningEvent):
-        """Hooked into learning.events.record() to fan out progress."""
-        
-        updates = {}
-        
-        # 1. Determine which metrics just incremented
-        if event.activity == ActivityType.QUIZ_COMPLETED:
-            updates["quizzes_completed"] = 1
-            if event.metadata and event.metadata.get("exam_type") == "formal":
-                if event.correct_count is not None and event.total_count is not None and event.total_count > 0:
-                    score = event.correct_count / event.total_count
-                    if score >= 0.5:
-                        updates["formal_assessments_passed"] = 1
-        elif event.activity == ActivityType.FLASHCARD_REVIEWED:
-            # Using total_count from LearningEvent (number of cards reviewed)
-            updates["flashcards_reviewed"] = event.total_count or 1
-            
-        # Add a check for streak updates
-        # Streak updates happen in `_touch_streak` inside events.py, we can read it from user stats
-        stats = getattr(event.user, "stats", None)
-        if stats and stats.current_streak > 0:
-            updates["current_streak"] = stats.current_streak
-
-        if not updates:
-            return
-
-        # 2. Update achievements that match these metrics
-        # Only active achievements that the user hasn't completed yet
-        for metric, increment in updates.items():
-            if metric == "current_streak":
-                cls._process_absolute_metric(event.user, metric, increment, event)
-            else:
-                cls._process_incremental_metric(event.user, metric, increment, event)
+        """Refresh from the ledger; reprocessing the same event cannot add progress twice."""
+        cls.recalculate_user(event.user)
 
     @classmethod
-    def _process_incremental_metric(cls, user, metric, increment, event):
-        """Update progress for additive metrics (e.g., quizzes_completed)."""
-        achievements = Achievement.objects.filter(target_metric=metric, is_active=True)
-        
-        for ach in achievements:
-            # Get or create progress
-            with transaction.atomic():
-                # Lock the row to prevent race conditions from concurrent quiz completions
-                user_ach, created = UserAchievement.objects.select_for_update().get_or_create(
-                    user=user, achievement=ach
-                )
-                
-                if user_ach.is_completed:
-                    continue
-                
-                user_ach.progress += increment
-                user_ach.save(update_fields=["progress", "updated_at"])
-                
-                if user_ach.progress >= ach.target_value:
-                    cls._unlock_achievement(user_ach, event)
-                    
-    @classmethod
-    def _process_absolute_metric(cls, user, metric, current_value, event):
-        """Update progress for absolute metrics (e.g., streak)."""
-        achievements = Achievement.objects.filter(target_metric=metric, is_active=True)
-        
-        for ach in achievements:
-            with transaction.atomic():
-                user_ach, created = UserAchievement.objects.select_for_update().get_or_create(
-                    user=user, achievement=ach
-                )
-                
-                if user_ach.is_completed:
-                    continue
-                
-                # For streaks, progress is just the current streak, bounded by target
-                new_progress = min(current_value, ach.target_value)
-                if new_progress != user_ach.progress:
-                    user_ach.progress = new_progress
-                    user_ach.save(update_fields=["progress", "updated_at"])
-                
-                if user_ach.progress >= ach.target_value:
-                    cls._unlock_achievement(user_ach, event)
+    @transaction.atomic
+    def recalculate_user(cls, user):
+        """Rebuild progress from recorded events and current streak without inventing activity."""
+        from curriculum.models import UserStats
+
+        stats, _ = UserStats.objects.get_or_create(user=user)
+        stats = UserStats.objects.select_for_update().get(pk=stats.pk)
+        events = LearningEvent.objects.filter(user=user)
+        quiz_events = events.filter(activity=ActivityType.QUIZ_COMPLETED)
+        flashcard_events = events.filter(activity=ActivityType.FLASHCARD_REVIEWED)
+
+        formal_passes = 0
+        for accuracy, metadata in quiz_events.filter(
+            metadata__exam_type="formal"
+        ).values_list("accuracy", "metadata"):
+            if metadata.get("theory_grading_pending"):
+                continue
+            percentage = metadata.get("final_percentage")
+            if percentage is None:
+                percentage = (accuracy or 0) * 100
+            if percentage >= 50:
+                formal_passes += 1
+
+        metrics = {
+            "quizzes_completed": quiz_events.count(),
+            "formal_assessments_passed": formal_passes,
+            "flashcards_reviewed": (
+                flashcard_events.aggregate(total=Sum("total_count"))["total"] or 0
+            ) + flashcard_events.filter(total_count=0).count(),
+            "current_streak": stats.active_streak,
+        }
+
+        for achievement in Achievement.objects.filter(is_active=True):
+            progress = min(max(metrics.get(achievement.target_metric, 0), 0), achievement.target_value)
+            user_achievement, _ = UserAchievement.objects.select_for_update().get_or_create(
+                user=user, achievement=achievement
+            )
+            if user_achievement.is_completed:
+                continue
+
+            if user_achievement.progress != progress:
+                user_achievement.progress = progress
+                user_achievement.save(update_fields=["progress", "updated_at"])
+
+            if progress >= achievement.target_value:
+                cls._unlock_achievement(user_achievement)
 
     @classmethod
-    def _unlock_achievement(cls, user_achievement: UserAchievement, event: LearningEvent):
+    def _unlock_achievement(cls, user_achievement: UserAchievement):
         """Handle the actual unlocking and notification creation."""
         user_achievement.is_completed = True
         user_achievement.completed_at = timezone.now()

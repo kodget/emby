@@ -22,11 +22,11 @@ an in-memory counter.
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import F, Sum
 from django.utils import timezone
 
 from .models import ActivityType, LearningEvent, XPAward
@@ -78,9 +78,9 @@ STREAK_BONUS = [(30, 0.30), (14, 0.20), (7, 0.12), (3, 0.05)]
 
 
 def _today_window():
-    now = timezone.now()
-    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    return start, start + timedelta(days=1)
+    today = timezone.localdate()
+    return (timezone.make_aware(datetime.combine(today, time.min)),
+            timezone.make_aware(datetime.combine(today + timedelta(days=1), time.min)))
 
 
 def earned_today(user: User, reason: str) -> int:
@@ -185,9 +185,21 @@ def award_for_event(event: LearningEvent) -> XPAward | None:
     """Grant XP for an event and keep UserStats.points in step.
 
     Returns None when the event earns nothing (capped out, too fast, or not an
-    XP-bearing activity). Safe to call once per event; callers should not retry.
+    XP-bearing activity). Retries return the saved decision, including zero awards.
     """
+    from .events import lock_stats
+    stats = lock_stats(event.user)
+    saved = LearningEvent.objects.get(pk=event.pk)
+    existing = XPAward.objects.filter(event=saved).order_by('awarded_at', 'pk').first()
+    if saved.xp_processed or existing is not None:
+        if not saved.xp_processed:
+            LearningEvent.objects.filter(pk=saved.pk).update(xp_processed=True)
+        return existing
+    # Use persisted counts, not stale caller-supplied data, when granting rewards.
+    saved.user = event.user
+    event = saved
     amount, base, multiplier, capped, note = compute(event)
+    LearningEvent.objects.filter(pk=event.pk).update(xp_processed=True)
     if amount <= 0:
         logger.debug("No XP for %s: %s", event.activity, note or "zero award")
         return None
@@ -204,10 +216,8 @@ def award_for_event(event: LearningEvent) -> XPAward | None:
     )
 
     # Mirror onto the existing gamification counter so leaderboards keep working.
-    stats = getattr(event.user, "stats", None)
-    if stats is not None:
-        stats.points = (stats.points or 0) + amount
-        stats.save(update_fields=["points", "updated_at"])
+    type(stats).objects.filter(pk=stats.pk).update(points=F('points') + amount, updated_at=timezone.now())
+    stats.refresh_from_db()
 
     return award
 

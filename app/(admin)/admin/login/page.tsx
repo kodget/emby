@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
+import { canAccessAdmin } from "@/lib/guards";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +30,7 @@ export default function AdminLogin() {
       sessionStorage.setItem("user", JSON.stringify(response.user));
 
       // Check if user is admin
-      if (response.user.is_superuser || response.user.is_staff) {
+      if (canAccessAdmin(response.user)) {
         toast.success("Welcome to the Admin Dashboard");
         router.push("/admin");
       } else {
@@ -54,7 +55,7 @@ export default function AdminLogin() {
             <ShieldAlert className="h-6 w-6" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Admin Portal</h1>
-          <p className="text-sm text-gray-500 mt-1">Sign in with superuser credentials</p>
+          <p className="text-sm text-gray-500 mt-1">Sign in with your administrator account</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">

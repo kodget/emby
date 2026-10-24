@@ -30,6 +30,10 @@ backend/.env
 backend/backend/.env
 
 # Python
+.venv/
+.test-postgres/
+test-results/
+playwright-report/
 __pycache__/
 *.pyc
 *.pyo
@@ -83,3 +87,5 @@ Thumbs.db
 
 # Django user uploads. Serve these from Cloudinary, not the repo.
 /backend/media/
+.test-tessdata/
+.test-results-uploads/

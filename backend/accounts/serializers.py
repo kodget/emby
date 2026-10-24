@@ -75,8 +75,11 @@ class ClassMemberSerializer(serializers.ModelSerializer):
         return getattr(stats, 'points', 0) if stats else 0
 
     def get_streak_days(self, obj):
-        stats = getattr(obj.user, 'stats', None)
-        return getattr(stats, 'active_streak', 0) if stats else obj.streak
+        streaks = self.context.get('_roster_streaks', {})
+        if obj.user_id in streaks:
+            return streaks[obj.user_id]
+        from learning.progress_evidence import summary
+        return summary(obj.user, self.context)['current_streak']
 
     def get_rank(self, obj):
         stats = getattr(obj.user, 'stats', None)
@@ -84,6 +87,7 @@ class ClassMemberSerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(read_only=True)
     username = serializers.CharField(source='user.username', read_only=True)
     email = serializers.CharField(source='user.email', read_only=True)
     full_name = serializers.CharField(source='user.get_full_name', read_only=True)
@@ -91,26 +95,29 @@ class ProfileSerializer(serializers.ModelSerializer):
     class_code = serializers.CharField(source='class_group.code', read_only=True)
     is_premium = serializers.BooleanField(read_only=True)
     can_access_app = serializers.BooleanField(read_only=True)
-    # Profile.streak is a dead column that nothing ever writes — the live streak is
-    # maintained on UserStats by learning.events. Serving the model field made the
-    # sidebar show a permanent zero while the dashboard showed the real figure.
+    # Derive the same streak as analytics instead of trusting either legacy cache.
     streak = serializers.SerializerMethodField()
 
     is_superuser = serializers.BooleanField(source='user.is_superuser', read_only=True)
     is_staff = serializers.BooleanField(source='user.is_staff', read_only=True)
+    is_platform_admin = serializers.SerializerMethodField()
+
+    def get_is_platform_admin(self, obj):
+        from .permissions import has_platform_admin_access
+        return has_platform_admin_access(obj.user)
 
     def get_streak(self, obj) -> int:
-        stats = getattr(obj.user, "stats", None)
-        return getattr(stats, "active_streak", 0) or 0
+        from learning.progress_evidence import summary
+        return summary(obj.user, self.context)['current_streak']
 
     class Meta:
         model = Profile
-        fields = ['id', 'username', 'email', 'full_name', 'photo_url', 'class_role',
+        fields = ['id', 'user_id', 'username', 'email', 'full_name', 'photo_url', 'class_role',
                   'school', 'school_name', 'set_name', 'class_group', 'class_code',
                   'subscription_tier', 'subscription_expires_at', 'is_premium',
                   'onboarding_completed', 'email_verified', 'class_head_verified',
                   'class_head_verification_requested', 'class_head_rejection_reason',
-                  'can_access_app', 'streak', 'created_at', 'is_superuser', 'is_staff']
+                  'can_access_app', 'streak', 'created_at', 'is_superuser', 'is_staff', 'is_platform_admin']
         read_only_fields = ['subscription_tier', 'subscription_expires_at', 'email_verified',
                             'class_head_verified', 'class_head_verification_requested',
                             'is_superuser', 'is_staff']
@@ -208,6 +215,7 @@ class JoinClassSerializer(serializers.Serializer):
     class_code = serializers.CharField(max_length=6)
 
     def validate_class_code(self, value):
+        value = value.strip().upper()
         if not ClassGroup.objects.filter(code=value, is_active=True).exists():
             raise serializers.ValidationError("Invalid or inactive class code.")
         return value

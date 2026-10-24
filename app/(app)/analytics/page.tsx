@@ -17,7 +17,7 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Crown } from "lucide-react";
 
 import AuthGuard from "@/components/auth/auth-guard";
@@ -34,22 +34,17 @@ export default function AnalyticsPage() {
   const [days, setDays] = useState<number>(30);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
-
-  const load = useCallback(async (window: number) => {
-    setLoading(true);
-    setFailed(false);
-    try {
-      setReport(await analyticsApi.getReport(window));
-    } catch {
-      setFailed(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
-    void load(days);
-  }, [days, load]);
+    let cancelled = false;
+    setLoading(true);
+    setFailed(false);
+    analyticsApi.getReport(days).then(data => { if (!cancelled) setReport(data); })
+      .catch(() => { if (!cancelled) setFailed(true); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [days, reload]);
 
   return (
     <AuthGuard>
@@ -100,30 +95,20 @@ export default function AnalyticsPage() {
             action={
               <button
                 type="button"
-                onClick={() => void load(days)}
+                onClick={() => setReload(value => value + 1)}
                 className="press rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
               >
                 Retry
               </button>
             }
           />
-        ) : !report.overview.has_data ? (
-          <AxoEmpty
-            className="mt-4"
-            title="Not enough activity yet"
-            description="Once you've answered a few questions, this page will show your accuracy, what you're weak at, and whether you're improving."
-            pose="sleeping"
-            action={
-              <Link
-                href="/quiz"
-                className="press inline-flex h-11 items-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground"
-              >
-                Start a quiz
-              </Link>
-            }
-          />
         ) : (
-          <Report report={report} />
+          <>
+            {!report.overview.has_data && <AxoEmpty className="mt-4" title="Not enough activity yet"
+              description="Your recorded study time and scored answers will appear here as you study."
+              pose="sleeping" />}
+            <Report report={report} />
+          </>
         )}
       </div>
     </AuthGuard>
@@ -137,6 +122,13 @@ function Report({ report }: { report: AnalyticsReport }) {
 
   return (
     <div className="mt-6 space-y-6">
+      {report.evidence && <div className="rounded border p-3 text-sm text-muted-foreground">
+        <p>{report.evidence.note}</p>
+        <p>{report.evidence.historical_assessments_excluded} historical assessments excluded; {report.evidence.assessments_awaiting_written_grades} assessments awaiting written grades.</p>
+        {!!report.evidence.historical_image_rounds_excluded_from_accuracy && <p>
+          {report.evidence.historical_image_rounds_excluded_from_accuracy} historical image-practice rounds count toward activity, but their scores cannot be verified against saved questions.
+        </p>}
+      </div>}
       {/* Headline */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <StatTile
@@ -147,14 +139,14 @@ function Report({ report }: { report: AnalyticsReport }) {
           icon={<Icon3D name="target" size="sm" />}
         />
         <StatTile
-          label="Answered"
+          label="Scored items"
           value={overview.attempted.toLocaleString()}
           hint={`${overview.sessions} sessions`}
           icon={<Icon3D name="quiz" size="sm" />}
         />
         <StatTile
           label="Study time"
-          value={`${Math.floor(overview.study_minutes / 60)}h ${overview.study_minutes % 60}m`}
+          value={`${Math.round(overview.study_minutes)} min`}
           icon={<Icon3D name="planner" size="sm" />}
         />
         <StatTile
@@ -243,7 +235,7 @@ function Report({ report }: { report: AnalyticsReport }) {
                           ? "bg-review"
                           : "bg-weakness",
                     )}
-                    style={{ width: `${Math.max(3, (row.accuracy ?? 0) * 100)}%` }}
+                    style={{ width: `${(row.accuracy ?? 0) * 100}%` }}
                   />
                 </div>
               </li>
@@ -252,9 +244,11 @@ function Report({ report }: { report: AnalyticsReport }) {
         </section>
       )}
 
+      <BankCoverage bank={report.question_bank} />
+
       {/* Topic detail — premium */}
       {report.topics ? (
-        <TopicPerformance topics={report.topics} bank={report.question_bank} />
+        <TopicPerformance topics={report.topics} />
       ) : (
         <section className="flex items-start gap-3 rounded-2xl border border-primary/20 plinth p-5">
           <Axo pose="rocket" size="sm" />
@@ -264,9 +258,7 @@ function Report({ report }: { report: AnalyticsReport }) {
               Topic-level analysis
             </h2>
             <p className="mt-1 text-pretty text-sm text-muted-foreground">
-              Premium shows exactly which topics are dragging your score down, ranked by how
-              urgently they need revision, plus how much of the question bank you have
-              covered.
+              Premium shows observed topic accuracy and areas to revise within the selected period.
             </p>
             <Link
               href="/premium"
@@ -322,10 +314,8 @@ function ActivityChart({
 
 function TopicPerformance({
   topics,
-  bank,
 }: {
   topics: NonNullable<AnalyticsReport["topics"]>;
-  bank?: AnalyticsReport["question_bank"];
 }) {
   if (topics.tracked_nodes === 0) {
     return (
@@ -344,11 +334,11 @@ function TopicPerformance({
       <section className="card-3d p-5">
         <h2 className="font-display text-base font-semibold">What should I revise?</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Ranked by weakness and how long since you last practised it.
+          Observed accuracy in this period, using at least three scored items per area. This is not a prediction of mastery.
         </p>
         <ul className="mt-3 space-y-2">
           {topics.weakest.map((topic) => (
-            <li key={topic.label} className="flex items-center gap-3 rounded-xl bg-secondary/40 px-3 py-2.5">
+            <li key={topic.id || topic.label} className="flex items-center gap-3 rounded-xl bg-secondary/40 px-3 py-2.5">
               <span className="min-w-0 flex-1 truncate text-sm font-medium">{topic.label}</span>
               <span className="text-xs text-muted-foreground tabular">
                 {topic.correct}/{topic.attempted}
@@ -377,7 +367,7 @@ function TopicPerformance({
             <ul className="mt-2 flex flex-wrap gap-2">
               {topics.strongest.slice(0, 5).map((topic) => (
                 <li
-                  key={topic.label}
+                  key={topic.id || topic.label}
                   className="rounded-full bg-mastery/10 px-3 py-1 text-xs font-medium text-mastery"
                 >
                   {topic.label} · {Math.round(topic.mastery * 100)}%
@@ -388,26 +378,27 @@ function TopicPerformance({
         )}
       </section>
 
-      {bank && bank.total > 0 && (
-        <section className="card-3d p-5">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-display text-base font-semibold">Question bank</h2>
-            <span className="text-sm text-muted-foreground tabular">
-              {bank.percent_seen}% seen
-            </span>
-          </div>
-          <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-secondary">
-            <div
-              className="h-full rounded-full bg-primary"
-              style={{ width: `${bank.percent_seen}%` }}
-            />
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground tabular">
-            {bank.seen} of {bank.total} seen · {bank.answered} answered · {bank.missed} missed
-            at least once
-          </p>
-        </section>
-      )}
+
     </>
   );
+}
+
+
+function BankCoverage({ bank }: { bank?: AnalyticsReport["question_bank"] }) {
+  if (!bank) return null;
+  return <section className="card-3d p-5" aria-label="Question bank coverage">
+    <div className="flex items-baseline justify-between gap-3">
+      <h2 className="font-display text-base font-semibold">Question bank</h2>
+      <span className="text-sm text-muted-foreground tabular">{bank.percent_seen}% seen</span>
+    </div>
+    <p className="mt-1 text-xs text-muted-foreground">Currently available MCQs across your class. Coverage is all-time, independent of the selected activity period.</p>
+    {bank.total ? <>
+      <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-secondary">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${bank.percent_seen}%` }} />
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground tabular">
+        {bank.seen} of {bank.total} seen · {bank.answered} answered · {bank.missed} missed at least once
+      </p>
+    </> : <p className="mt-2 text-sm text-muted-foreground">No ready MCQs are available in your class yet.</p>}
+  </section>;
 }

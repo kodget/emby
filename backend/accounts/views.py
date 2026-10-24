@@ -51,19 +51,6 @@ def get_tokens_for_user(user):
     }
 
 
-def send_verification_email(user, token):
-    """Send email verification link"""
-    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
-    verification_link = f"{frontend_url}/verify-email?token={token}"
-    send_mail(
-        'Verify your email - Emby',
-        f'Click this link to verify your email: {verification_link}',
-        settings.DEFAULT_FROM_EMAIL,
-        [user.email],
-        fail_silently=True,
-    )
-
-
 # -------------------------
 # AUTHENTICATION ENDPOINTS
 # -------------------------
@@ -71,35 +58,21 @@ def send_verification_email(user, token):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
-    """Email/password signup"""
+    from django.db import transaction
+    from .email_service import request_email_verification
     serializer = SignupSerializer(data=request.data)
-    if serializer.is_valid():
+    serializer.is_valid(raise_exception=True)
+    with transaction.atomic():
         user = serializer.save()
-        
-        # Get or create profile (signal may have already created it)
-        profile, _ = Profile.objects.get_or_create(
-            user=user,
-            defaults={'class_role': ClassRole.STUDENT}
-        )
-        profile.email_verification_token = secrets.token_urlsafe(32)
-        profile.save()
-        
-        # Send verification email
-        try:
-            send_verification_email(user, profile.email_verification_token)
-        except Exception as e:
-            print(f"Email sending failed: {e}")
-        
-        # Generate tokens
-        tokens = get_tokens_for_user(user)
-        
-        return Response({
-            'message': 'Account created successfully. Please check your email to verify.',
-            'user': ProfileSerializer(profile).data,
-            'tokens': tokens
-        }, status=status.HTTP_201_CREATED)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        profile, _ = Profile.objects.get_or_create(user=user)
+    delivery = request_email_verification(user)
+    profile.refresh_from_db()
+    return Response({
+        'message': 'Account created successfully. ' + delivery.message,
+        'email_status': delivery.status,
+        'user': ProfileSerializer(profile).data,
+        'tokens': get_tokens_for_user(user),
+    }, status=201)
 
 
 @api_view(['POST'])
@@ -237,146 +210,44 @@ def google_login(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_email(request):
-    """Verify email with token"""
-    token = request.data.get('token')
-    
-    if not token:
-        return Response({'error': 'Token required'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        profile = Profile.objects.get(email_verification_token=token)
-        profile.email_verified = True
-        profile.email_verification_token = ''
-        profile.save()
-        
-        return Response({
-            'message': 'Email verified successfully'
-        }, status=status.HTTP_200_OK)
-    
-    except Profile.DoesNotExist:
-        return Response({
-            'error': 'Invalid or expired token'
-        }, status=status.HTTP_400_BAD_REQUEST)
+    from .email_service import consume_verification_token
+    if consume_verification_token(request.data.get('token')):
+        return Response({'message': 'Email verified successfully'})
+    return Response({'error': 'Invalid, expired or already-used verification link. Request a new email.'}, status=400)
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def resend_verification(request):
-    """Resend verification email"""
-    profile = request.user.profile
-    
-    if profile.email_verified:
-        return Response({
-            'message': 'Email already verified'
-        }, status=status.HTTP_200_OK)
-    
-    # Generate new token
-    profile.email_verification_token = secrets.token_urlsafe(32)
-    profile.save()
-    
-    # Send email
-    try:
-        send_verification_email(request.user, profile.email_verification_token)
-        return Response({
-            'message': 'Verification email sent'
-        }, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({
-            'error': 'Failed to send email'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    from .email_service import request_email_verification
+    delivery = request_email_verification(request.user)
+    response_code = 429 if delivery.status == 'throttled' else (
+        503 if delivery.status in ('failed', 'unavailable') else 200
+    )
+    body = {'message': delivery.message, 'email_status': delivery.status, 'retry_after': delivery.retry_after}
+    if response_code >= 400:
+        body['error'] = delivery.message
+    response = Response(body, status=response_code)
+    if delivery.retry_after:
+        response['Retry-After'] = str(delivery.retry_after)
+    return response
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def forgot_password(request):
-    """Request password reset email"""
-    email = request.data.get('email')
-    
-    if not email:
-        return Response({'error': 'Email required'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        user = User.objects.get(email=email)
-        profile = user.profile
-        
-        # Generate reset token (valid for 1 hour)
-        reset_token = secrets.token_urlsafe(32)
-        profile.password_reset_token = reset_token
-        profile.password_reset_token_expires = timezone.now() + timedelta(hours=1)
-        profile.save()
-        
-        # Send reset email
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
-        reset_link = f"{frontend_url}/reset-password?token={reset_token}"
-        try:
-            send_mail(
-                'Password Reset - Emby',
-                f'Click this link to reset your password: {reset_link}\n\nThis link will expire in 1 hour.\n\nIf you did not request this, please ignore this email.',
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=True,
-            )
-            return Response({
-                'message': 'Password reset email sent. Please check your inbox.'
-            }, status=status.HTTP_200_OK)
-        except Exception as e:
-            print(f"Email sending failed: {e}")
-            return Response({
-                'error': 'Failed to send email'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
-    except User.DoesNotExist:
-        # Don't reveal if email exists or not (security)
-        return Response({
-            'message': 'If an account with that email exists, a password reset link has been sent.'
-        }, status=status.HTTP_200_OK)
-
+    from rest_framework import serializers
+    from .passwords import request_password_reset, RESET_MESSAGE
+    email = serializers.EmailField().run_validation(request.data.get('email'))
+    request_password_reset(email)
+    return Response({'message': RESET_MESSAGE})
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def reset_password(request):
-    """Reset password with token"""
-    token = request.data.get('token')
-    new_password = request.data.get('new_password')
-    
-    if not token or not new_password:
-        return Response({'error': 'Token and new password required'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        profile = Profile.objects.get(password_reset_token=token)
-        
-        # Check if token is expired
-        if profile.password_reset_token_expires and profile.password_reset_token_expires < timezone.now():
-            return Response({
-                'error': 'Reset token has expired. Please request a new one.'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Validate password
-        try:
-            validate_password(new_password, user=profile.user)
-        except Exception as e:
-            return Response({
-                'error': str(e)
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Reset password
-        profile.user.set_password(new_password)
-        profile.user.save()
-        
-        # Clear reset token
-        profile.password_reset_token = ''
-        profile.password_reset_token_expires = None
-        profile.save()
-        
-        return Response({
-            'message': 'Password reset successfully. You can now login with your new password.'
-        }, status=status.HTTP_200_OK)
-        
-    except Profile.DoesNotExist:
-        return Response({
-            'error': 'Invalid or expired reset token'
-        }, status=status.HTTP_400_BAD_REQUEST)
-
+    from .passwords import reset_password_with_token
+    reset_password_with_token(request.data.get('token'), request.data.get('new_password'))
+    return Response({'message': 'Password reset successfully. You can now sign in with your new password.'})
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -429,157 +300,18 @@ def get_onboarding_questions(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def submit_onboarding(request):
-    """Submit complete onboarding data"""
+    from .onboarding import complete_onboarding
     serializer = OnboardingSubmitSerializer(data=request.data)
-    
-    if serializer.is_valid():
-        try:
-            user = request.user
-            profile = user.profile
-            
-            role = serializer.validated_data['class_role']
-            school_name = serializer.validated_data['school_name']
-            set_name = serializer.validated_data['set_name']
-            class_code = serializer.validated_data.get('class_code', '')
-            responses = serializer.validated_data.get('responses', [])
-            
-            # Ensure profile defaults to FREE tier during onboarding;
-            # upgrades to PREMIUM strictly require verified payment transactions or admin/class-head approval.
-            if not profile.subscription_tier:
-                profile.subscription_tier = SubscriptionTier.FREE
-            
-            # Get or create school
-            school, _ = School.objects.get_or_create(name=school_name)
-            
-            # Update profile
-            profile.class_role = role
-            profile.school = school
-            profile.set_name = set_name
-            
-            # Handle class code logic
-            if role == ClassRole.CLASS_HEAD:
-                # Request verification for class head
-                profile.class_head_verification_requested = True
-                
-                # Check if class already exists for this school and set
-                class_group = ClassGroup.objects.filter(
-                    school=school,
-                    set_name=set_name
-                ).first()
-                
-                is_new_class = False
-                if class_group:
-                    # Check if class already has 3 heads
-                    if class_group.class_heads.count() >= 3:
-                        return Response({
-                            'error': 'This class already has 3 class heads. Maximum limit reached.'
-                        }, status=status.HTTP_400_BAD_REQUEST)
-                    
-                    # Add to existing class
-                    profile.class_group = class_group
-                    
-                    # Notify existing class heads about new class head
-                    existing_heads = class_group.class_heads.all()
-                    if existing_heads.exists():
-                        existing_heads_emails = [head.email for head in existing_heads]
-                        try:
-                            send_mail(
-                                'New Class Head Added - Emby',
-                                f'A new class head has joined your class: {user.get_full_name()} ({user.email})\n\nYour class now has {class_group.class_heads.count() + 1} class head(s).\n\nClass Code: {class_group.code}',
-                                settings.DEFAULT_FROM_EMAIL,
-                                existing_heads_emails,
-                                fail_silently=True,
-                            )
-                        except Exception as e:
-                            print(f"Email sending to existing heads failed: {e}")
-                else:
-                    # Create new class and generate code
-                    class_group = ClassGroup.objects.create(
-                        code=ClassGroup.generate_code(),
-                        school=school,
-                        set_name=set_name
-                    )
-                    profile.class_group = class_group
-                    is_new_class = True
-                # Capture email details — sent AFTER profile.save() below
-                _send_class_code_email = (user.email, class_group.code, school_name, set_name, is_new_class, class_group.class_heads.count())
-
-            elif class_code:
-                # Join existing class (class_code is already validated and uppercased by serializer)
-                try:
-                    class_group = ClassGroup.objects.get(code=class_code, is_active=True)
-                    profile.class_group = class_group
-                except ClassGroup.DoesNotExist:
-                    return Response({
-                        'error': 'Invalid class code'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-
-            # ----------------------------------------------------------------
-            # SAVE FIRST — always persist before sending emails.
-            # If email fails the user must not have to redo onboarding.
-            # ----------------------------------------------------------------
-            profile.onboarding_completed = True
-            profile.save()
-
-            # Save onboarding responses
-            for response_data in responses:
-                question_id = response_data.get('question_id')
-                answer = response_data.get('answer')
-
-                if question_id and answer:
-                    OnboardingResponse.objects.update_or_create(
-                        user=user,
-                        question_id=question_id,
-                        defaults={'answer': answer}
-                    )
-
-            # ----------------------------------------------------------------
-            # Send emails AFTER data is safely saved (purely informational)
-            # ----------------------------------------------------------------
-            if role == ClassRole.CLASS_HEAD and '_send_class_code_email' in dir():
-                _email, _code, _school, _set, _is_new, _head_count = _send_class_code_email
-                try:
-                    if _is_new:
-                        send_mail(
-                            'Your Class Code - Emby',
-                            f'Congratulations! You are the first class head for {_school} - {_set}.\n\nYour class code is: {_code}\n\nShare this code with your classmates to join.\n\nNote: Your account is pending verification. You will be notified once approved.',
-                            settings.DEFAULT_FROM_EMAIL,
-                            [_email],
-                            fail_silently=True,
-                        )
-                    else:
-                        send_mail(
-                            'Your Class Code - Emby',
-                            f'You have joined as class head for {_school} - {_set}.\n\nYour class code is: {_code}\n\nShare this code with your classmates to join.\n\nThere are currently {_head_count} other class head(s) in this class.\n\nNote: Your account is pending verification. You will be notified once approved.',
-                            settings.DEFAULT_FROM_EMAIL,
-                            [_email],
-                            fail_silently=True,
-                        )
-                except Exception as e:
-                    print(f"Email sending failed (non-fatal): {e}")
-
-            response_data = {
-                'message': 'Onboarding completed successfully',
-                'user': ProfileSerializer(profile).data,
-                'class_code': profile.class_group.code if profile.class_group else None
-            }
-
-            # Add verification message for class heads
-            if role == ClassRole.CLASS_HEAD:
-                response_data['verification_message'] = 'Your class head account is pending verification. You will receive an email once approved.'
-
-            return Response(response_data, status=status.HTTP_200_OK)
-        
-        except Exception as e:
-            import traceback
-            print(f"Onboarding error: {str(e)}")
-            traceback.print_exc()
-            return Response({
-                'error': f'Failed to complete onboarding: {str(e)}'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    print(f"Serializer validation errors: {serializer.errors}")
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer.is_valid(raise_exception=True)
+    profile, created = complete_onboarding(request.user.pk, serializer.validated_data)
+    response = {
+        'message': 'Onboarding completed successfully' if created else 'Onboarding already completed',
+        'user': ProfileSerializer(profile).data,
+        'class_code': profile.class_group.code if profile.class_group else None,
+    }
+    if profile.class_role == ClassRole.CLASS_HEAD and not profile.class_head_verified:
+        response['verification_message'] = 'Your class-head request is pending administrator review.'
+    return Response(response)
 
 
 @api_view(['POST'])
@@ -597,29 +329,14 @@ def validate_class_code(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def join_class(request):
-    """Join class with code"""
+    from .onboarding import join_student_class
     serializer = JoinClassSerializer(data=request.data)
-    
-    if serializer.is_valid():
-        class_code = serializer.validated_data['class_code']
-        profile = request.user.profile
-        
-        try:
-            class_group = ClassGroup.objects.get(code=class_code, is_active=True)
-            profile.class_group = class_group
-            profile.save()
-            
-            return Response({
-                'message': 'Successfully joined class',
-                'class': ClassGroupSerializer(class_group).data
-            }, status=status.HTTP_200_OK)
-            
-        except ClassGroup.DoesNotExist:
-            return Response({
-                'error': 'Invalid class code'
-            }, status=status.HTTP_404_NOT_FOUND)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer.is_valid(raise_exception=True)
+    try:
+        group = join_student_class(request.user.pk, serializer.validated_data['class_code'])
+    except ClassGroup.DoesNotExist:
+        return Response({'error': 'Invalid or inactive class code.'}, status=400)
+    return Response({'message': 'Successfully joined class', 'class': ClassGroupSerializer(group).data})
 
 
 @api_view(['GET'])
@@ -648,15 +365,16 @@ def get_class_members(request):
 
     profiles = (
         Profile.objects.filter(class_group=profile.class_group)
-        .select_related('user')
+        .select_related('user', 'class_group')
         .prefetch_related('user__stats')
     )
-    serializer = ClassMemberSerializer(profiles, many=True)
+    from learning.progress_evidence import roster_streaks
+    streaks = roster_streaks(profiles)
+    serializer = ClassMemberSerializer(profiles, many=True, context={'_roster_streaks': streaks})
     members = list(serializer.data)
-    members.sort(key=lambda m: (m['total_points'] or 0), reverse=True)
+    members.sort(key=lambda m: (-(m['total_points'] or 0), m['user']['id']))
     for idx, m in enumerate(members, start=1):
-        if not m.get('rank'):
-            m['rank'] = idx
+        m['rank'] = idx
 
     return Response(members, status=status.HTTP_200_OK)
 
@@ -668,125 +386,36 @@ def get_class_members(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def request_class_head_verification(request):
-    """Request class head verification"""
-    profile = request.user.profile
-    
-    if profile.class_role != ClassRole.CLASS_HEAD:
-        return Response({
-            'error': 'Only class heads can request verification'
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    if profile.class_head_verified:
-        return Response({
-            'message': 'Already verified'
-        }, status=status.HTTP_200_OK)
-    
-    profile.class_head_verification_requested = True
-    profile.save()
-    
-    return Response({
-        'message': 'Verification request submitted. You will be notified once approved.'
-    }, status=status.HTTP_200_OK)
+    from .class_heads import request_review
+    profile, created = request_review(request.user.pk)
+    message = 'Already approved' if profile.class_head_verified else 'Your request is pending administrator review.'
+    return Response({'message': message, 'user': ProfileSerializer(profile).data})
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def verify_class_head(request):
-    """Admin endpoint to verify class head (requires admin permission)"""
-    if not request.user.is_staff:
-        return Response({
-            'error': 'Admin permission required'
-        }, status=status.HTTP_403_FORBIDDEN)
-    
+    from .class_heads import review_class_head
+    from .permissions import has_platform_admin_access
+    if not has_platform_admin_access(request.user):
+        return Response({'error': 'Admin permission required'}, status=403)
     user_id = request.data.get('user_id')
-    approved = request.data.get('approved', True)
-    rejection_reason = request.data.get('rejection_reason', '')
-    
-    try:
-        profile = Profile.objects.get(user_id=user_id, class_role=ClassRole.CLASS_HEAD)
-        
-        if approved:
-            if profile.class_head_verified:
-                return Response({'message': 'Class head is already verified'}, status=status.HTTP_200_OK)
-
-            # Enforce max 3 class heads limit at the time of verification
-            if profile.class_group and profile.class_group.class_heads.count() >= 3:
-                return Response({'error': 'This class already has the maximum of 3 verified class heads.'}, status=status.HTTP_400_BAD_REQUEST)
-                
-            profile.class_head_verified = True
-            profile.class_head_verification_requested = False
-            profile.class_head_rejection_reason = ''
-            
-            # Add user to class_heads ManyToMany
-            if profile.class_group:
-                profile.class_group.class_heads.add(profile.user)
-            
-            # Send approval email to the verified class head
-            try:
-                send_mail(
-                    'Class Head Verification Approved - Emby',
-                    f'Congratulations! Your class head account has been verified.\n\nYou now have full access to all premium features.\n\nYour class code: {profile.class_group.code if profile.class_group else "N/A"}',
-                    settings.DEFAULT_FROM_EMAIL,
-                    [profile.user.email],
-                    fail_silently=True,
-                )
-            except Exception as e:
-                print(f"Email sending failed: {e}")
-            
-            # Notify other class heads about the verification
-            if profile.class_group:
-                other_heads = profile.class_group.class_heads.exclude(id=profile.user.id)
-                if other_heads.exists():
-                    other_heads_emails = [head.email for head in other_heads]
-                    try:
-                        send_mail(
-                            'Class Head Verified - Emby',
-                            f'{profile.user.get_full_name()} has been verified as a class head for your class.\n\nYour class now has {profile.class_group.class_heads.filter(profile__class_head_verified=True).count()} verified class head(s).',
-                            settings.DEFAULT_FROM_EMAIL,
-                            other_heads_emails,
-                            fail_silently=True,
-                        )
-                    except Exception as e:
-                        print(f"Email sending to other heads failed: {e}")
-            
-            message = 'Class head verified successfully'
-        else:
-            profile.class_head_verified = False
-            profile.class_head_verification_requested = False
-            profile.class_head_rejection_reason = rejection_reason
-            
-            # Send rejection email
-            try:
-                send_mail(
-                    'Class Head Verification - Emby',
-                    f'Your class head verification request was not approved.\n\nReason: {rejection_reason}\n\nPlease contact support for more information.',
-                    settings.DEFAULT_FROM_EMAIL,
-                    [profile.user.email],
-                    fail_silently=True,
-                )
-            except Exception as e:
-                print(f"Email sending failed: {e}")
-            
-            message = 'Class head verification rejected'
-        
-        profile.save()
-        
-        return Response({
-            'message': message,
-            'user': ProfileSerializer(profile).data
-        }, status=status.HTTP_200_OK)
-        
-    except Profile.DoesNotExist:
-        return Response({
-            'error': 'Class head profile not found'
-        }, status=status.HTTP_404_NOT_FOUND)
+    if type(user_id) is not int or user_id < 1:
+        return Response({'error': 'Provide the applicant user_id as a positive integer.'}, status=400)
+    profile, changed = review_class_head(
+        actor=request.user, user_id=user_id, approved=request.data.get('approved'),
+        rejection_reason=request.data.get('rejection_reason', ''),
+    )
+    state = 'approved' if profile.class_head_verified else 'rejected'
+    return Response({'message': f'Class-head request {state}', 'user': ProfileSerializer(profile).data})
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pending_class_head_verifications(request):
     """Admin endpoint to get pending class head verifications"""
-    if not request.user.is_staff:
+    from .permissions import has_platform_admin_access
+    if not has_platform_admin_access(request.user):
         return Response({
             'error': 'Admin permission required'
         }, status=status.HTTP_403_FORBIDDEN)

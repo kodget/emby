@@ -14,49 +14,50 @@ numbers rather than being generic filler.
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-from . import credits, events
-from .models import AIAction, DashboardMessage, LearningEvent, WeakArea
+from curriculum.class_access import content_admin, member_class, visible
+from . import credits
+from .analytics_evidence import Evidence
+from .models import AIAction, DashboardMessage
 
 logger = logging.getLogger(__name__)
 
 
+def _class_scope(user: User) -> dict:
+    group = member_class(user)
+    return {"version": 2, "class_group": group.pk if group else None, "admin": content_admin(user)}
+
+
+def cards_due(user: User) -> int:
+    from curriculum.models import Flashcard, FlashcardProgress
+    return FlashcardProgress.objects.filter(
+        user=user, flashcard__in=visible(Flashcard, user).filter(user=user),
+        due_date__lte=timezone.now(),
+    ).count()
+
+
 def build_context(user: User) -> dict:
     """The real figures the greeting is written from."""
-    from curriculum.models import FlashcardProgress
-
-    stats = getattr(user, "stats", None)
-    since = timezone.now() - timedelta(days=7)
-
-    recent = LearningEvent.objects.filter(user=user, occurred_at__gte=since)
-    attempted = sum(e.total_count for e in recent)
-    correct = sum(e.correct_count for e in recent)
-
-    weakest = (
-        WeakArea.objects.filter(user=user, attempted__gte=3)
-        .order_by("-priority")
-        .first()
-    )
+    evidence = Evidence(user, 7)
+    overview = evidence.overview()
+    consistency = evidence.consistency()
+    weakest = next(iter(evidence.topics()['weakest']), None)
+    last_day = max((timezone.localdate(row['at']) for row in evidence.rows), default=None)
 
     return {
+        "class_scope": _class_scope(user),
         "name": (user.first_name or user.username or "").strip(),
-        "streak": getattr(stats, "active_streak", 0) or 0,
-        "sessions_this_week": recent.count(),
-        "questions_this_week": attempted,
-        "accuracy_this_week": round(correct / attempted, 2) if attempted else None,
-        "cards_due": FlashcardProgress.objects.filter(
-            user=user, due_date__lte=timezone.now()
-        ).count(),
-        "weakest_topic": weakest.label if weakest else None,
-        "days_since_last_study": (
-            (timezone.now().date() - stats.last_activity_date).days
-            if stats and stats.last_activity_date
-            else None
-        ),
+        "streak": consistency['current_streak'],
+        "sessions_this_week": overview['sessions'],
+        "questions_this_week": overview['attempted'],
+        "accuracy_this_week": overview['accuracy'],
+        "cards_due": cards_due(user),
+        "weakest_topic": weakest['label'] if weakest else None,
+        "weakest_area_id": weakest['id'] if weakest else None,
+        "days_since_last_study": (evidence.today - last_day).days if last_day else None,
         "credits": credits.balance(user),
     }
 
@@ -93,7 +94,7 @@ def _generate(user: User, context: dict) -> tuple[str, str]:
     prompt = (
         "You are Emby, a study companion for Nigerian medical students. Write a short "
         "dashboard greeting for this student, grounded ONLY in the figures below.\n\n"
-        f"{context}\n\n"
+        f"{ {key: value for key, value in context.items() if key != 'credits'} }\n\n"
         "Return JSON with two fields:\n"
         '  "headline": at most 8 words, warm, may use their first name.\n'
         '  "body": one or two sentences, at most 40 words, naming something concrete '
@@ -134,16 +135,26 @@ def get_message(user: User, *, force: bool = False) -> dict:
     """
     cached, _ = DashboardMessage.objects.get_or_create(user=user)
 
+    context = build_context(user)
+    cached_context = cached.context if isinstance(cached.context, dict) else {}
     if cached.is_valid and not force:
+        # Refresh changed facts without a new provider call/credit charge during
+        # the existing six-hour window. Credits can change on greeting generation
+        # itself and are not used in the message prompt.
+        stable = lambda value: {key: item for key, item in value.items() if key != 'credits'}
+        changed = stable(cached_context) != stable(context)
+        if changed:
+            cached.headline, cached.body = _fallback(context)
+            cached.context = context
+            cached.save(update_fields=['headline', 'body', 'context'])
         return {
             "headline": cached.headline,
             "body": cached.body,
-            "cached": True,
+            "cached": not changed,
+            "source": 'fallback_updated' if changed else 'cache',
             "generated_at": cached.generated_at,
             "expires_at": cached.expires_at,
         }
-
-    context = build_context(user)
 
     try:
         headline, body = _generate(user, context)

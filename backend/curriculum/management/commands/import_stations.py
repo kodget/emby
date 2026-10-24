@@ -6,7 +6,7 @@ and upserts each record into SpotStation.
 The import is idempotent and non-destructive by default: re-running it updates existing
 rows in place rather than wiping the table, so a human reviewer's approvals and answer
 corrections survive a re-import. Pass --reset-approvals to let the pipeline's own
-verdict win again, or --purge to clear the bank first.
+verdict win again. --purge only clears shared stations unused by any practice session.
 
     python manage.py import_stations
     python manage.py import_stations --dry-run
@@ -22,6 +22,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from curriculum.models import AnatomicalRegion, HistologyTopic, SpotStation
+from learning.models import PracticeSession
 
 DEFAULT_PATH = (
     pathlib.Path(__file__).resolve().parents[4] / "data" / "steeplechase" / "stations.json"
@@ -47,7 +48,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--purge",
             action="store_true",
-            help="Delete every existing station before importing",
+            help="Delete unused shared catalogue stations before importing; private stations and practice history are protected",
         )
         parser.add_argument(
             "--reset-approvals",
@@ -57,6 +58,8 @@ class Command(BaseCommand):
         parser.add_argument(
             "--dry-run", action="store_true", help="Report what would change, write nothing"
         )
+        parser.add_argument('--publish-shared', action='store_true',
+                            help='Explicitly publish these reviewed, unlinked catalogue entries across classes')
 
     def handle(self, *args, **options):
         path = pathlib.Path(options["path"])
@@ -77,9 +80,19 @@ class Command(BaseCommand):
         approved = 0
 
         with transaction.atomic():
-            if options["purge"] and not options["dry_run"]:
-                deleted, _ = SpotStation.objects.all().delete()
-                self.stdout.write(self.style.WARNING(f"Purged {deleted} existing rows"))
+            if options["purge"]:
+                shared = SpotStation.objects.filter(is_shared=True, subject__isnull=True, block__isnull=True)
+                if shared.filter(attempts__isnull=False).exists():
+                    raise CommandError('Cannot purge attempted stations; their learning history must be preserved.')
+                shared_ids = set(shared.values_list('pk', flat=True))
+                for station_ids in PracticeSession.objects.values_list('station_ids', flat=True).iterator():
+                    if not isinstance(station_ids, list) or any(not isinstance(pk, str) for pk in station_ids):
+                        raise CommandError('Cannot purge while malformed practice history requires review.')
+                    if shared_ids.intersection(station_ids):
+                        raise CommandError('Cannot purge stations referenced by a practice session; its history must be preserved.')
+                if not options["dry_run"]:
+                    deleted, _ = shared.delete()
+                    self.stdout.write(self.style.WARNING(f"Purged {deleted} existing rows"))
 
             existing = {
                 s.id: s for s in SpotStation.objects.filter(
@@ -128,6 +141,10 @@ class Command(BaseCommand):
                 }
 
                 current = existing.get(station_id)
+                if current is not None and (current.subject_id or current.block_id):
+                    raise CommandError(f'Station {station_id} belongs to a class source; catalogue import cannot replace it.')
+                if options['publish_shared']:
+                    fields['is_shared'] = True
                 if current is not None and not options["reset_approvals"]:
                     # Preserve a human's decision and any hand-corrected answer.
                     fields["is_approved"] = current.is_approved
@@ -178,6 +195,6 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.WARNING(
                     f"\n  {pending} station(s) need human review before they can be served. "
-                    f"Review them in Django admin under Spot stations."
+                    f"Review the source records and correct their approval/review flags before publication."
                 )
             )

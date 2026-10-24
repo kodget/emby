@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { FileUp, Loader2, Upload, X } from "lucide-react";
 import { deckApi } from "@/lib/api";
+import { uploadIntent, uploadOwner, type UploadIntent } from "@/lib/upload-intent";
 
 interface DeckUploadProps {
   onSuccess?: (deckId: string) => void;
@@ -15,12 +16,15 @@ export function DeckUpload({ onSuccess, onError }: DeckUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const intentRef = useRef<UploadIntent | null>(null);
 
   const SUPPORTED_FORMATS = [".pdf", ".pptx", ".ppt", ".docx"];
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
+    setFile(null);
+    intentRef.current = null;
 
     const fileExtension =
       "." + selectedFile.name.split(".").pop()?.toLowerCase();
@@ -32,9 +36,8 @@ export function DeckUpload({ onSuccess, onError }: DeckUploadProps) {
       return;
     }
 
-    if (selectedFile.size > 500 * 1024 * 1024) {
-      // 500MB limit
-      onError?.("File size must be less than 500MB");
+    if (selectedFile.size === 0 || selectedFile.size > 100 * 1024 * 1024) {
+      onError?.(selectedFile.size === 0 ? "The file is empty." : "Maximum file size is 100 MB.");
       return;
     }
 
@@ -44,6 +47,7 @@ export function DeckUpload({ onSuccess, onError }: DeckUploadProps) {
   };
 
   const handleUpload = async () => {
+    if (uploading) return;
     if (!file || !title.trim()) {
       onError?.("Please select a file and enter a title");
       return;
@@ -53,10 +57,12 @@ export function DeckUpload({ onSuccess, onError }: DeckUploadProps) {
       setUploading(true);
       setProgress(0);
 
-      const deck = await deckApi.uploadDeck(file, title);
+      intentRef.current = uploadIntent(intentRef.current, file, JSON.stringify([uploadOwner(), title.trim()]));
+      const deck = await deckApi.uploadDeck(file, title.trim(), intentRef.current.requestId);
       setProgress(100);
 
       // Reset form
+      intentRef.current = null;
       setFile(null);
       setTitle("");
       if (inputRef.current) {
@@ -64,8 +70,11 @@ export function DeckUpload({ onSuccess, onError }: DeckUploadProps) {
       }
 
       onSuccess?.(deck.id);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Upload failed";
+    } catch (error: any) {
+      const details = error.response?.data;
+      const message = typeof details?.detail === "string" ? details.detail
+        : typeof details?.error === "string" ? details.error
+        : "Upload failed. Please try again.";
       onError?.(message);
     } finally {
       setUploading(false);
@@ -103,7 +112,7 @@ export function DeckUpload({ onSuccess, onError }: DeckUploadProps) {
                   {file ? file.name : "Click to select a file"}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {file ? `${fileSize}` : `PDF, PPTX, PPT, DOCX • Max 500MB`}
+                  {file ? `${fileSize}` : `PDF, PPTX, PPT, DOCX • Max 100 MB`}
                 </p>
               </div>
             </button>
@@ -111,7 +120,9 @@ export function DeckUpload({ onSuccess, onError }: DeckUploadProps) {
 
           {file && (
             <button
+              disabled={uploading}
               onClick={() => {
+                intentRef.current = null;
                 setFile(null);
                 if (inputRef.current) {
                   inputRef.current.value = "";
@@ -132,6 +143,7 @@ export function DeckUpload({ onSuccess, onError }: DeckUploadProps) {
           <input
             type="text"
             value={title}
+            maxLength={200}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g., Anatomy Lecture 01"
             disabled={uploading}

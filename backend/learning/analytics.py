@@ -20,8 +20,10 @@ import logging
 from datetime import timedelta
 
 from django.contrib.auth.models import User
-from django.db.models import Avg, Count, Sum
+from django.db.models import Avg, Count, Q, Sum
 from django.utils import timezone
+from curriculum.class_access import scoped_optional_parents, visible
+from curriculum.models import Subject, Block, SubBlock, Topic
 
 from .models import (
     ActivityType,
@@ -39,265 +41,64 @@ MIN_ITEMS_FOR_TREND = 10
 MIN_ITEMS_FOR_ACCURACY = 5
 
 
+def visible_weak_areas(user: User):
+    """Only current-class nodes may contribute names or revision suggestions."""
+    parents = {"subject": Subject, "block": Block, "sub_block": SubBlock, "topic": Topic}
+    rows = scoped_optional_parents(WeakArea.objects.filter(user=user), user, parents)
+    scope_matches = Q()
+    for field, model in parents.items():
+        scope_matches |= Q(scope=field.upper(), **{field + "__in": visible(model, user)})
+    return rows.filter(scope_matches)
+
+
 def _window(days: int):
     end = timezone.now()
     return end - timedelta(days=days), end
 
 
 def overview(user: User, days: int = 30) -> dict:
-    """Headline performance for the period, with an honest empty state."""
-    since, _ = _window(days)
-    events = LearningEvent.objects.filter(user=user, occurred_at__gte=since)
-
-    totals = events.aggregate(
-        attempted=Sum("total_count"),
-        correct=Sum("correct_count"),
-        seconds=Sum("duration_seconds"),
-        sessions=Count("id"),
-    )
-    attempted = totals["attempted"] or 0
-    correct = totals["correct"] or 0
-
-    return {
-        "window_days": days,
-        "has_data": attempted > 0,
-        "attempted": attempted,
-        "correct": correct,
-        "incorrect": max(0, attempted - correct),
-        "accuracy": round(correct / attempted, 3) if attempted else None,
-        "sessions": totals["sessions"] or 0,
-        "study_minutes": round((totals["seconds"] or 0) / 60),
-    }
+    from .analytics_evidence import Evidence
+    return Evidence(user, days).overview()
 
 
 def improvement(user: User, days: int = 30) -> dict:
-    """Compare the most recent half of the window against the earlier half.
-
-    Returns `direction: "insufficient_data"` rather than a fake 0% when either half is
-    too thin to compare — a trend drawn from three questions is noise, not progress.
-    """
-    since, now = _window(days)
-    midpoint = since + (now - since) / 2
-
-    def slice_accuracy(start, end):
-        agg = LearningEvent.objects.filter(
-            user=user, occurred_at__gte=start, occurred_at__lt=end
-        ).aggregate(attempted=Sum("total_count"), correct=Sum("correct_count"))
-        attempted = agg["attempted"] or 0
-        if attempted < MIN_ITEMS_FOR_TREND:
-            return None, attempted
-        return (agg["correct"] or 0) / attempted, attempted
-
-    earlier, earlier_n = slice_accuracy(since, midpoint)
-    recent, recent_n = slice_accuracy(midpoint, now)
-
-    if earlier is None or recent is None:
-        return {
-            "direction": "insufficient_data",
-            "earlier_accuracy": earlier,
-            "recent_accuracy": recent,
-            "earlier_items": earlier_n,
-            "recent_items": recent_n,
-            "change": None,
-            "note": (
-                f"At least {MIN_ITEMS_FOR_TREND} answered questions in each half of the "
-                f"period are needed before a trend means anything."
-            ),
-        }
-
-    change = recent - earlier
-    direction = "up" if change > 0.02 else "down" if change < -0.02 else "flat"
-    return {
-        "direction": direction,
-        "earlier_accuracy": round(earlier, 3),
-        "recent_accuracy": round(recent, 3),
-        "earlier_items": earlier_n,
-        "recent_items": recent_n,
-        "change": round(change, 3),
-    }
+    from .analytics_evidence import Evidence
+    return Evidence(user, days).improvement()
 
 
 def daily_activity(user: User, days: int = 30) -> list[dict]:
-    """One row per day, including days with nothing — gaps are the point of the chart."""
-    from curriculum.models import DailyStudySession
-
-    since, now = _window(days)
-    rows = {
-        r.date: r
-        for r in DailyStudySession.objects.filter(user=user, date__gte=since.date())
-    }
-
-    out = []
-    for offset in range(days):
-        day = (since + timedelta(days=offset)).date()
-        row = rows.get(day)
-        out.append(
-            {
-                "date": day.isoformat(),
-                "minutes": row.minutes_studied if row else 0,
-                "sessions": row.sessions_count if row else 0,
-            }
-        )
-    return out
+    from .analytics_evidence import Evidence
+    return Evidence(user, days).daily()
 
 
 def consistency(user: User, days: int = 30) -> dict:
-    """How regularly this student shows up."""
-    from curriculum.models import DailyStudySession
-
-    since, _ = _window(days)
-    rows = DailyStudySession.objects.filter(
-        user=user, date__gte=since.date(), minutes_studied__gt=0
-    )
-    active_days = rows.count()
-    stats = getattr(user, "stats", None)
-
-    return {
-        "active_days": active_days,
-        "window_days": days,
-        "active_rate": round(active_days / days, 3) if days else 0,
-        "current_streak": getattr(stats, "active_streak", 0) or 0,
-        "longest_streak": getattr(stats, "longest_streak", 0) or 0,
-        "total_minutes": rows.aggregate(total=Sum("minutes_studied"))["total"] or 0,
-        "average_minutes_per_active_day": (
-            round((rows.aggregate(total=Sum("minutes_studied"))["total"] or 0) / active_days)
-            if active_days
-            else 0
-        ),
-    }
+    from .analytics_evidence import Evidence
+    return Evidence(user, days).consistency()
 
 
 def by_assessment(user: User, days: int = 30) -> list[dict]:
-    """Performance split by what kind of practice it was."""
-    since, _ = _window(days)
-    labels = {
-        ActivityType.QUIZ_COMPLETED: "Quizzes",
-        ActivityType.STEEPLECHASE_COMPLETED: "Steeplechase",
-        ActivityType.HISTOLOGY_COMPLETED: "Histology",
-        ActivityType.BRAIN_BATTLE_COMPLETED: "Brain Battle",
-        ActivityType.FLASHCARD_REVIEWED: "Flashcards",
-        ActivityType.QUESTION_ANSWERED: "Practice questions",
-    }
-
-    rows = (
-        LearningEvent.objects.filter(
-            user=user, occurred_at__gte=since, activity__in=labels.keys(), total_count__gt=0
-        )
-        .values("activity")
-        .annotate(
-            attempted=Sum("total_count"),
-            correct=Sum("correct_count"),
-            sessions=Count("id"),
-            seconds=Sum("duration_seconds"),
-        )
-    )
-
-    return [
-        {
-            "activity": r["activity"],
-            "label": labels[r["activity"]],
-            "sessions": r["sessions"],
-            "attempted": r["attempted"],
-            "correct": r["correct"],
-            "accuracy": round((r["correct"] or 0) / r["attempted"], 3) if r["attempted"] else None,
-            "minutes": round((r["seconds"] or 0) / 60),
-        }
-        for r in sorted(rows, key=lambda r: -(r["attempted"] or 0))
-    ]
+    from .analytics_evidence import Evidence
+    return Evidence(user, days).by_assessment()
 
 
-def topic_performance(user: User, limit: int = 8) -> dict:
-    """Strongest and weakest curriculum nodes, from the shared weak-area engine."""
-
-    def serialise(area: WeakArea) -> dict:
-        return {
-            "label": area.label,
-            "scope": area.scope,
-            "attempted": area.attempted,
-            "correct": area.correct,
-            "accuracy": round(area.accuracy, 3) if area.accuracy is not None else None,
-            "mastery": round(area.mastery, 3),
-            "priority": area.priority,
-            "last_practised_at": area.last_practised_at,
-        }
-
-    # Require real evidence before calling anything a strength or a weakness.
-    graded = WeakArea.objects.filter(user=user, attempted__gte=3)
-
-    # Report a single scope rather than mixing levels: listing "Upper Limb" beside
-    # "Anatomy" invites the reader to compare a topic with the subject that contains it.
-    # The finest scope that has data is the most actionable, so prefer that.
-    scope = None
-    for candidate in (
-        WeakArea.Scope.TOPIC,
-        WeakArea.Scope.SUB_BLOCK,
-        WeakArea.Scope.BLOCK,
-        WeakArea.Scope.SUBJECT,
-    ):
-        if graded.filter(scope=candidate).exists():
-            scope = candidate
-            break
-
-    if scope is None:
-        return {"weakest": [], "strongest": [], "tracked_nodes": 0, "scope": None}
-
-    at_scope = graded.filter(scope=scope)
-
-    # A node is only a *strength* if it is genuinely strong. Sorting by mastery alone
-    # meant that with few tracked topics the weakest one still appeared under
-    # "Strongest", which is worse than showing nothing.
-    STRENGTH_FLOOR = 0.75
-    strongest = at_scope.filter(mastery__gte=STRENGTH_FLOOR).order_by("-mastery")[:limit]
-
-    return {
-        "scope": scope,
-        "weakest": [serialise(a) for a in at_scope.order_by("-priority")[:limit]],
-        "strongest": [serialise(a) for a in strongest],
-        "tracked_nodes": at_scope.count(),
-    }
+def topic_performance(user: User, limit: int = 8, days: int = 30) -> dict:
+    from .analytics_evidence import Evidence
+    return Evidence(user, days).topics(limit=limit)
 
 
 def question_bank(user: User) -> dict:
     """How much of the bank this student has worked through."""
-    from curriculum.models import QuizQuestion
-
-    total = QuizQuestion.objects.count()
-    exposure = QuestionExposure.objects.filter(user=user)
-    seen = exposure.filter(times_seen__gt=0).count()
-    answered = exposure.filter(times_answered__gt=0).count()
-    missed = exposure.filter(times_incorrect__gt=0).count()
-
-    return {
-        "total": total,
-        "seen": seen,
-        "unseen": max(0, total - seen),
-        "answered": answered,
-        "missed": missed,
-        "percent_seen": round(seen / total * 100) if total else 0,
-    }
+    from .selection import coverage
+    return coverage(user, question_type='mcq')
 
 
-def practice_summary(user: User, days: int = 30) -> dict:
+def practice_summary(user: User, days: int = 30, *, since=None, end=None) -> dict:
     """Image-spot practice, per mode."""
-    since, _ = _window(days)
-    out = {}
-    for mode, _label in PracticeMode.choices:
-        rows = PracticeSession.objects.filter(
-            user=user,
-            mode=mode,
-            status=PracticeSession.Status.COMPLETED,
-            completed_at__gte=since,
-        )
-        count = rows.count()
-        out[mode] = {
-            "rounds": count,
-            "stations": rows.aggregate(n=Sum("total_stations"))["n"] or 0,
-            "average_accuracy": (
-                round(rows.aggregate(a=Avg("score"))["a"] or 0, 3) if count else None
-            ),
-            "timed_out": rows.aggregate(n=Sum("timed_out_count"))["n"] or 0,
-        }
-    return out
+    from .analytics_evidence import Evidence
+    evidence = Evidence(user, days, now=end)
+    if since is not None:
+        evidence.window = [r for r in evidence.rows if since <= r['at'] <= evidence.now]
+    return evidence.practice_summary()
 
 
 def full_report(user: User, days: int = 30, *, include_detail: bool = True) -> dict:
@@ -306,16 +107,24 @@ def full_report(user: User, days: int = 30, *, include_detail: bool = True) -> d
     `include_detail` is False for free students: they still get their real headline
     figures and activity, but topic-level analysis is the premium half.
     """
+    from .analytics_evidence import Evidence
+    evidence = Evidence(user, days)
     report = {
-        "generated_at": timezone.now(),
+        "generated_at": evidence.now,
         "window_days": days,
-        "overview": overview(user, days),
-        "improvement": improvement(user, days),
-        "consistency": consistency(user, days),
-        "daily_activity": daily_activity(user, days),
-        "by_assessment": by_assessment(user, days),
-        "practice": practice_summary(user, days),
+        "overview": evidence.overview(),
+        "improvement": evidence.improvement(),
+        "consistency": evidence.consistency(),
+        "daily_activity": evidence.daily(),
+        "by_assessment": evidence.by_assessment(),
+        "practice": evidence.practice_summary(),
         "include_detail": include_detail,
+        "evidence": {"timezone": timezone.get_current_timezone_name(),
+                     "period_start": evidence.start, "period_end": evidence.now,
+                     "historical_assessments_excluded": evidence.excluded_historical,
+                     "historical_image_rounds_excluded_from_accuracy": evidence.historical_image_rounds,
+                     "assessments_awaiting_written_grades": evidence.pending_written,
+                     "note": "Accuracy covers objective scored items, including unanswered questions. Written marks and self-rated flashcards are separate. Historical assessments and image rounds without saved question versions are excluded from accuracy. Activity uses local calendar days through today; planner estimates are not study time. Study time is recorded elapsed time, not a measure of attention."},
     }
 
     # Bank coverage is "how much have you seen", not analysis — every student needs it
@@ -323,6 +132,6 @@ def full_report(user: User, days: int = 30, *, include_detail: bool = True) -> d
     report["question_bank"] = question_bank(user)
 
     if include_detail:
-        report["topics"] = topic_performance(user)
+        report["topics"] = evidence.topics()
 
     return report

@@ -11,7 +11,7 @@ import concurrent.futures
 from django.utils import timezone
 
 from .models import Slide, SlideChunk, SlideProcessingStatus
-from .content_extractor import extract_text_from_slide
+from .services.document_extraction import ensure_slide_extraction, content_text
 
 logger = logging.getLogger(__name__)
 
@@ -104,96 +104,62 @@ class RAGService:
             return None
     
     def process_slide(self, slide: Slide) -> bool:
-        """Extract text, chunk it, and generate embeddings for a slide"""
+        """Publish chunks only when every page and every embedding succeeded."""
+        from django.db import transaction
+        import hashlib
+        from .models import SlideContent
+        status, _ = SlideProcessingStatus.objects.get_or_create(slide=slide)
         try:
-            # Check if already processed
-            status, created = SlideProcessingStatus.objects.get_or_create(slide=slide)
-            if status.is_embedded:
-                logger.info(f"Slide {slide.id} already processed")
+            data = ensure_slide_extraction(slide)
+            digest = hashlib.sha256(content_text(data, require_complete=True).encode()).hexdigest()
+            if (status.is_embedded and data.get('indexed_text_sha256') == digest
+                    and SlideChunk.objects.filter(slide=slide).count() == status.chunk_count and status.chunk_count):
                 return True
-            
-            # Delete existing chunks
-            SlideChunk.objects.filter(slide=slide).delete()
-            
-            # Extract text from PDF - use Cloudinary file or file_url
-            file_url = None
-            if slide.file:
-                # Cloudinary file exists - get its URL
-                file_url = slide.file.url
-            elif slide.file_url:
-                # Legacy file_url exists
-                file_url = slide.file_url
-            
-            if not file_url:
-                logger.error(f"Slide {slide.id} has no file or file_url")
-                status.error_message = "No file URL"
-                status.save()
-                return False
-            
-            pages = extract_text_from_slide(file_url, slide.file_type or 'pdf')
-            
-            if not pages:
-                logger.error(f"No text extracted from slide {slide.id}")
-                status.error_message = "No text extracted"
-                status.save()
-                return False
-            
-            # Chunk each page
-            all_chunks = []
-            for page in pages:
-                page_chunks = self.chunk_text(page['text'], page['page_number'])
-                all_chunks.extend(page_chunks)
-            
-            if not all_chunks:
-                logger.error(f"No chunks created for slide {slide.id}")
-                status.error_message = "No chunks created"
-                status.save()
-                return False
-            
-            # Generate embeddings and save chunks
             chunk_objects = []
-            for chunk_data in all_chunks:
-                embedding = self.generate_embedding(chunk_data['text'])
-                if embedding:
+            for page in data['pages']:
+                for chunk in self.chunk_text(page['text'], page['page_number']):
+                    embedding = self.generate_embedding(chunk['text'])
+                    if not embedding:
+                        raise ValueError('An embedding could not be generated.')
                     chunk_objects.append(SlideChunk(
-                        slide=slide,
-                        chunk_index=chunk_data['chunk_index'],
-                        text=chunk_data['text'],
-                        page_number=chunk_data['page_number'],
-                        word_count=chunk_data['word_count'],
-                        embedding=embedding
-                    ))
-            
-            # Bulk create chunks
-            SlideChunk.objects.bulk_create(chunk_objects)
-            
-            # Update status
-            status.is_chunked = True
-            status.is_embedded = True
-            status.chunk_count = len(chunk_objects)
-            status.processed_at = timezone.now()
-            status.error_message = ""
-            status.save()
-            
-            logger.info(f"Successfully processed slide {slide.id} with {len(chunk_objects)} chunks")
+                        slide=slide, chunk_index=len(chunk_objects), text=chunk['text'],
+                        page_number=chunk['page_number'], word_count=chunk['word_count'], embedding=embedding))
+            if not chunk_objects:
+                raise ValueError('No readable document text.')
+            with transaction.atomic():
+                # Serialize replacements so concurrent requests cannot combine two chunk sets.
+                status = SlideProcessingStatus.objects.select_for_update().get(pk=status.pk)
+                content = SlideContent.objects.select_for_update().get(slide=slide)
+                current_text = content_text(content.content_data, require_complete=True)
+                if hashlib.sha256(current_text.encode()).hexdigest() != digest:
+                    raise ValueError('The extracted document changed during indexing.')
+                SlideChunk.objects.filter(slide=slide).delete()
+                SlideChunk.objects.bulk_create(chunk_objects)
+                status.content_extracted = True
+                status.is_chunked = True
+                status.is_embedded = True
+                status.chunk_count = len(chunk_objects)
+                status.processed_at = timezone.now()
+                status.error_message = ''
+                status.save()
+                content.content_data['indexed_text_sha256'] = digest
+                content.save(update_fields=['content_data', 'updated_at'])
             return True
-            
-        except Exception as e:
-            logger.error(f"Error processing slide {slide.id}: {e}")
-            status.error_message = str(e)
-            status.save()
+        except Exception as exc:
+            logger.error('Error processing slide %s (%s)', slide.id, type(exc).__name__)
+            status.error_message = 'Complete document text could not be indexed. Please retry processing.'
+            status.is_embedded = False
+            status.save(update_fields=['error_message', 'is_embedded'])
             return False
-    
+
     def find_relevant_chunks(self, slide: Slide, query: str, top_k: int = 5) -> List[Tuple[SlideChunk, float]]:
         """Find the most relevant chunks for a query"""
         import numpy as np
         from sklearn.metrics.pairwise import cosine_similarity
         try:
             # Ensure slide is processed
-            status = SlideProcessingStatus.objects.filter(slide=slide).first()
-            if not status or not status.is_embedded:
-                logger.warning(f"Slide {slide.id} not processed, processing now...")
-                self.process_slide(slide)
+            if not self.process_slide(slide):
+                return []
             
             # Get all chunks for this slide
             chunks = SlideChunk.objects.filter(slide=slide, embedding__isnull=False)
@@ -230,6 +196,8 @@ class RAGService:
         
         if not relevant_chunks:
             # Fallback to first few chunks if no relevant ones found
+            if not SlideProcessingStatus.objects.filter(slide=slide, is_embedded=True).exists():
+                return ''
             chunks = SlideChunk.objects.filter(slide=slide).order_by('chunk_index')[:max_chunks]
             context_parts = [chunk.text for chunk in chunks]
         else:

@@ -2,17 +2,16 @@
 
 import { AnimatePresence, motion } from "framer-motion"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faCircleCheck, faSpinner } from "@fortawesome/free-solid-svg-icons"
+import { faCircleCheck, faSpinner, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons"
 import { useAppSelector, useAppDispatch } from "@/store/hooks"
 import { updateProgress, type UploadStatus } from "@/store/uploads-slice"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 
 export function UploadProgressStrip() {
   const dispatch = useAppDispatch()
-  const uploads = useAppSelector((s) => s.uploads.items.filter((u) => u.status !== "done" && u.status !== "error"))
-  const recent = useAppSelector((s) =>
-    s.uploads.items.filter((u) => u.status === "done" || u.status === "error").slice(0, 1)
-  )
+  const items = useAppSelector((s) => s.uploads.items)
+  const uploads = useMemo(() => items.filter((u) => u.status !== "done" && u.status !== "error"), [items])
+  const recent = useMemo(() => items.filter((u) => u.status === "done" || u.status === "error").slice(0, 1), [items])
   const visible = [...uploads, ...recent].slice(0, 1)
 
   useEffect(() => {
@@ -52,7 +51,7 @@ export function UploadProgressStrip() {
             }
 
             if (status !== u.status || progress !== u.progress) {
-              dispatch(updateProgress({ id: u.id, progress, status }));
+              dispatch(updateProgress({ id: u.id, progress, status, error: data.error_message || undefined }));
             }
           }
         } catch (e) {
@@ -88,6 +87,8 @@ export function UploadProgressStrip() {
           <div className="flex items-center gap-2 text-[12px]">
             {u.status === "done" ? (
               <FontAwesomeIcon icon={faCircleCheck} className="size-3.5 text-primary shrink-0" />
+            ) : u.status === "error" ? (
+              <FontAwesomeIcon icon={faTriangleExclamation} className="size-3.5 text-destructive shrink-0" />
             ) : (
               <FontAwesomeIcon icon={faSpinner} className="size-3.5 text-muted-foreground shrink-0 animate-spin" />
             )}
@@ -96,7 +97,8 @@ export function UploadProgressStrip() {
               {getStatusText(u.status, u.progress)}
             </span>
           </div>
-          {u.status !== "done" && (
+          {u.status === "error" && u.error && <p role="alert" className="mt-2 text-xs text-destructive">{u.error}</p>}
+          {u.status !== "done" && u.status !== "error" && (
             <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
               <motion.div
                 className="h-full rounded-full bg-primary"

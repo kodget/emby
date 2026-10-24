@@ -34,7 +34,9 @@ import {
 } from "lucide-react";
 
 import type { Slide } from "@/lib/api";
-import { aiApi, progressApi, statsApi } from "@/lib/api";
+import { aiApi, progressApi } from "@/lib/api";
+import { useReadingProgress } from "@/hooks/use-reading-progress";
+import { UnavailableReadingSave } from "./unavailable-reading-save";
 import { cn } from "@/lib/utils";
 import { ReaderContent, type SelectionPayload } from "./reader-content";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -49,6 +51,8 @@ import {
 import { imageUrlToBase64, prefetchSlideImages } from "@/lib/slide-image-utils";
 import { AiChatPanel } from "./ai-chat-panel";
 import { ResourcePanel } from "./resource-panel";
+import { ExtractionNotice } from "./extraction-notice";
+import { QuestionBankNotice } from "./question-bank-notice";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -66,19 +70,21 @@ export function Reader({
   slideContent,
   suggestedVideos,
   courseBreadcrumb,
+  onAccessDenied,
 }: {
   courseId: string;
   slide: Slide;
   slideContent: any;
   suggestedVideos?: any[];
   courseBreadcrumb: string;
+  onAccessDenied: () => void;
 }) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("ai");
   const [selection, setSelection] = useState<SelectionPayload | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [timeSpent, setTimeSpent] = useState(0);
-  const startTimeRef = useRef<number>(Date.now());
+  const requestVersion = useRef(0);
+  const [loadedPage, setLoadedPage] = useState<string | null>(null);
+  const accessRevoked = useRef(false);
   const searchParams = useSearchParams();
   const isSession = searchParams?.get("session") === "true";
 
@@ -92,6 +98,11 @@ export function Reader({
   const { hasAccess, isPremium, isTrial } = useFeatureAccess();
   const usage = useAppSelector((s) => s.user.usage);
   const user = useAppSelector((s) => s.user);
+  useEffect(() => {
+    requestVersion.current++;
+    useSlideStore.getState().reset();
+    return () => { requestVersion.current++; useSlideStore.getState().reset(); };
+  }, [slide.id, user.id, user.school, user.setName, user.isSignedIn]);
 
   const isClassHead = user.role === "class-rep" || user.isVerifiedClassHead;
   const hasPremiumAccess = isPremium || isTrial || isClassHead;
@@ -134,36 +145,23 @@ export function Reader({
     prefetchSlideImages(urls, currentSlideIndex, 2);
   }, [currentSlideIndex, slides]);
 
-  // ── Time tracking ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 60000);
-      if (elapsed > 0) {
-        setTimeSpent((p) => p + elapsed);
-        startTimeRef.current = Date.now();
-      }
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      const total =
-        timeSpent + Math.floor((Date.now() - startTimeRef.current) / 60000);
-      if (total > 0) {
-        progressApi
-          .updateProgress({
-            slide_id: slide.id,
-            current_page: currentPage,
-            total_pages: slide.page_count,
-            time_spent_minutes: total,
-          })
-          .catch(() => {});
-        statsApi.awardPoints(5, "Reading slide").catch(() => {});
-        statsApi.updateStreak().catch(() => {});
-      }
-    };
-  }, [slide.id, currentPage, timeSpent, slide.page_count]);
+  const pageKey = `${currentSlideIndex}:${slideContent?.pages?.[currentSlideIndex]?.image_url ?? ''}`;
+  const reading = useReadingProgress({ sourceId: slide.id, namespace: 'course-reading',
+    ready: slides.length > 0, page: currentSlideIndex + 1, maxPage: slides.length, loaded: loadedPage === pageKey,
+    setPage: page => {
+      const index = Math.max(0, Math.min(slides.length - 1, page - 1));
+      if (index !== useSlideStore.getState().currentSlideIndex) setLoadedPage(null);
+      setCurrentSlideIndex(index);
+    },
+    load: async () => {
+      const rows = await progressApi.getProgress(slide.id);
+      const saved = rows.find(row => row.slide === slide.id);
+      return { current_page: Math.max(1, Math.min(slides.length, saved?.current_page ?? 1)) };
+    },
+    save: data => progressApi.updateProgress({ slide_id: slide.id, ...data }),
+    authorized: () => !accessRevoked.current,
+    denied: () => { accessRevoked.current = true; onAccessDenied(); },
+  });
 
   // ── AI chat ───────────────────────────────────────────────────────────────
   const sendMessage = useCallback(
@@ -175,6 +173,9 @@ export function Reader({
         return;
       }
 
+      const version = requestVersion.current;
+      const session = sessionStorage.getItem('user');
+      const active = () => version === requestVersion.current && session === sessionStorage.getItem('user');
       const idx = currentSlideIndex;
       const currentSlide = slides[idx];
 
@@ -195,6 +196,7 @@ export function Reader({
           ? await imageUrlToBase64(currentSlide.imageUrl).catch(() => undefined)
           : undefined;
 
+        if (!active()) return;
         // Build conversation history for THIS slide only
         const history = getChatHistory(idx).map((m) => ({
           role: m.role === "ai" ? "assistant" : "user",
@@ -209,6 +211,7 @@ export function Reader({
           conversation_history: history,
         });
 
+        if (!active()) return;
         const aiMsg: ChatMessage = {
           id: `a-${Date.now()}`,
           role: "ai",
@@ -225,6 +228,7 @@ export function Reader({
         };
         addChatMessage(idx, aiMsg);
       } catch (err) {
+        if (!active()) return;
         addChatMessage(idx, {
           id: `err-${Date.now()}`,
           role: "ai",
@@ -232,7 +236,7 @@ export function Reader({
             "Sorry, I had trouble answering that. Please try again in a moment.",
         });
       } finally {
-        setLoading("chat", false);
+        if (active()) setLoading("chat", false);
       }
     },
     [
@@ -260,24 +264,10 @@ export function Reader({
   );
 
   // ── Navigation ────────────────────────────────────────────────────────────
-  const goToPage = async (newIndex: number) => {
+  const goToPage = (newIndex: number) => {
     const clampedIndex = Math.max(0, Math.min(newIndex, slides.length - 1));
-    setCurrentSlideIndex(clampedIndex);
-    setCurrentPage(clampedIndex + 1);
-
-    const totalTime =
-      timeSpent + Math.floor((Date.now() - startTimeRef.current) / 60000);
-    if (totalTime > 0) {
-      progressApi
-        .updateProgress({
-          slide_id: slide.id,
-          current_page: clampedIndex + 1,
-          total_pages: slides.length || slide.page_count,
-          time_spent_minutes: totalTime,
-        })
-        .catch(() => {});
-    }
-    startTimeRef.current = Date.now();
+    reading.changePage(clampedIndex + 1);
+    setSelection(null);
   };
 
   const totalPages = slides.length || slide.page_count || 1;
@@ -286,6 +276,16 @@ export function Reader({
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col">
+      <ExtractionNotice key={slide.id} slideId={slide.id} summary={slideContent?.text_extraction} canReprocess={slideContent?.can_reprocess} />
+      <QuestionBankNotice key={`${slide.id}:${user.id}:${user.school}:${user.setName}`} slideId={slide.id} canGenerate={!!slideContent?.can_reprocess} textReady={slideContent?.text_extraction?.status === "complete"} />
+      {reading.loadError && <div role="status" className="p-2 text-center text-sm">
+        Your saved reading position could not be loaded. Reading time is paused until you retry. <button className="underline" onClick={reading.retry}>Retry saved position</button>
+      </div>}
+      {reading.unavailableSave && <UnavailableReadingSave checkpoint={reading.unavailableSave}
+        retry={reading.retry} discard={reading.discardUnavailable} />}
+      {reading.saveError && !reading.unavailableSave && <div role="status" className="p-2 text-center text-sm">
+        Your reading position and time have not synced. Keep this tab open and retry. <button className="underline" onClick={reading.retry}>Retry saving</button>
+      </div>}
       {/* ── Toolbar ─────────────────────────────────────────────────────── */}
       <ReaderToolbar
         courseId={courseId}
@@ -308,6 +308,8 @@ export function Reader({
               blocks={[]}
               slideContent={slideContent}
               currentPageIndex={currentSlideIndex}
+              onPageLoad={() => setLoadedPage(pageKey)}
+              onPageError={() => setLoadedPage(null)}
               onSelect={setSelection}
               onExplain={askAboutSelection}
               fallbackTitle={slide.title}
@@ -379,7 +381,7 @@ export function Reader({
 
               {/* Resources: textbook + videos + MCQs + Flashcards */}
               {(tab === "textbook" || tab === "videos" || tab === "quiz" || tab === "flashcards") &&
-                (hasPremiumAccess ? (
+                (hasPremiumAccess || tab === "quiz" ? (
                   <ResourcePanel
                     slideId={slide.id}
                     slideIndex={currentSlideIndex}

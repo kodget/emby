@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { canAccessAdmin } from "@/lib/guards";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { authApi, adminApi } from "@/lib/api";
@@ -34,7 +35,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const checkAuth = async () => {
       try {
         const profile = await authApi.getProfile();
-        if (!profile.is_superuser && !profile.is_staff) {
+        if (!canAccessAdmin(profile)) {
+          setUser(null);
+          setSchema([]);
           router.push("/admin/login");
         } else {
           setUser(profile);

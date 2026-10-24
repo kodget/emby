@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { curriculumApi, progressApi, type Topic, type Block, type Slide, type Material, type UserProgress } from "@/lib/api"
 import { ModuleUploadButton } from "@/components/app/module-upload-button"
+import { MaterialFileLink } from "@/components/app/material-file-link"
 
 const subjectColors: Record<string, string> = {
   anatomy: "#0d6b5e",
@@ -70,7 +71,10 @@ export default function CourseDetailPage() {
         let subjectName = ''
         
         if (topicData) {
-          const block = await curriculumApi.getBlock(topicData.id.split('-').slice(0, -1).join('-'))
+          const parentBlockId = topicData.block || (topicData.sub_block
+            ? (await curriculumApi.getSubBlock(topicData.sub_block)).block : null)
+          if (!parentBlockId) throw new Error('This topic has no parent module')
+          const block = await curriculumApi.getBlock(parentBlockId)
           subjectId = block.subject
           const subject = await curriculumApi.getSubjects().then(subjects => 
             subjects.find(s => s.id === subjectId)
@@ -302,10 +306,8 @@ export default function CourseDetailPage() {
               
               return (
                 <li key={material.id}>
-                  <a
-                    href={material.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <MaterialFileLink
+                    id={material.id}
                     className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:bg-primary/5 hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/10"
                   >
                     <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
@@ -325,7 +327,7 @@ export default function CourseDetailPage() {
                         {material.uploaded_by_name || 'Unknown'} · {formatDate(material.created_at)}
                       </p>
                     </div>
-                  </a>
+                  </MaterialFileLink>
                 </li>
               )
             })}

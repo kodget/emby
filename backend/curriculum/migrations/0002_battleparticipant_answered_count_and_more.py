@@ -22,17 +22,17 @@ def backfill_codes(apps, schema_editor):
         c for c in string.ascii_uppercase + string.digits if c not in "O0I1LS5B8"
     )
     used = set(
-        BrainBattle.objects.exclude(code="").values_list("code", flat=True)
+        BrainBattle.objects.using(schema_editor.connection.alias).exclude(code="").values_list("code", flat=True)
     )
 
-    for battle in BrainBattle.objects.filter(code="").iterator():
+    for battle in BrainBattle.objects.using(schema_editor.connection.alias).filter(code="").iterator():
         while True:
             code = "".join(random.choices(alphabet, k=6))
             if code not in used:
                 used.add(code)
                 break
         battle.code = code
-        battle.save(update_fields=["code"])
+        battle.save(using=schema_editor.connection.alias, update_fields=["code"])
 
 
 def noop(apps, schema_editor):
@@ -62,12 +62,14 @@ class Migration(migrations.Migration):
             field=models.DateTimeField(blank=True, null=True),
         ),
 
-        # 1. add the column without the unique constraint
+        # 1. add without an index or unique constraint. PostgreSQL defers the
+        # initial index until migration exit; adding it here and making the
+        # field unique below schedules the same pattern-ops index twice.
         migrations.AddField(
             model_name='brainbattle',
             name='code',
             field=models.CharField(
-                blank=True, db_index=True, default='',
+                blank=True, default='',
                 help_text='Short code participants type to join', max_length=8,
             ),
         ),

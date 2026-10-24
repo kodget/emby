@@ -58,7 +58,11 @@ export default function SignUpPage() {
 
       toast({
         title: "Account created!",
-        description: "Please check your email to verify your account.",
+        description: response.email_status === "sent"
+          ? "Please check your inbox and spam folder to verify your email."
+          : response.email_status === "unavailable" || response.email_status === "failed"
+            ? "Your account is saved. Email delivery is unavailable; request a new verification email from your account later."
+            : response.message,
       });
 
       router.push("/onboarding");
@@ -67,7 +71,9 @@ export default function SignUpPage() {
         err.response?.data?.email?.[0] ||
         err.response?.data?.password?.[0] ||
         err.response?.data?.error ||
-        "Signup failed. Please try again.";
+        (!err.response
+          ? "We couldn't confirm signup. Check your connection, then try signing in before creating another account."
+          : "Signup failed. Please try again.");
       setError(errorMessage);
     } finally {
       setLoading(false);

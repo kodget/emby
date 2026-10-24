@@ -208,6 +208,10 @@ class LearningEvent(models.Model):
     resource_type = models.CharField(max_length=40, blank=True)
     resource_id = models.CharField(max_length=64, blank=True)
 
+    # Blank on historical rows; new retries share a per-user key.
+    idempotency_key = models.CharField(max_length=160, blank=True)
+    xp_processed = models.BooleanField(default=False)
+
     metadata = models.JSONField(default=dict, blank=True)
 
     occurred_at = models.DateTimeField(default=timezone.now, db_index=True)
@@ -215,6 +219,10 @@ class LearningEvent(models.Model):
 
     class Meta:
         ordering = ["-occurred_at"]
+        constraints = [models.UniqueConstraint(
+            fields=["user", "idempotency_key"], condition=~models.Q(idempotency_key=""),
+            name="unique_learning_event_request",
+        )]
         indexes = [
             models.Index(fields=["user", "-occurred_at"]),
             models.Index(fields=["user", "activity", "-occurred_at"]),
@@ -317,6 +325,18 @@ class QuestionExposure(models.Model):
 # ---------------------------------------------------------------------------
 # WEAK AREAS
 # ---------------------------------------------------------------------------
+class ActivityCacheReconciliation(models.Model):
+    """Receipt of an explicitly reviewed time/streak cache repair; never rewrites evidence."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_cache_repairs')
+    fingerprint = models.CharField(max_length=64)
+    before = models.JSONField()
+    after = models.JSONField()
+    applied_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'fingerprint'], name='unique_activity_cache_repair')]
+
+
 class WeakArea(models.Model):
     """A rolling mastery estimate for one curriculum node, for one student.
 
@@ -332,6 +352,9 @@ class WeakArea(models.Model):
         TOPIC = "TOPIC", "Topic"
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="weak_areas")
+
+    # Legacy rows stay intact; only the adopted row receives this unique write key.
+    canonical_key = models.CharField(max_length=150, null=True, blank=True)
 
     scope = models.CharField(max_length=12, choices=Scope.choices)
     # Exactly one of these is set, matching `scope`.
@@ -370,6 +393,7 @@ class WeakArea(models.Model):
             models.Index(fields=["user", "scope"]),
         ]
         constraints = [
+            models.UniqueConstraint(fields=['user', 'canonical_key'], name='unique_canonical_weak_area'),
             models.UniqueConstraint(
                 fields=["user", "scope", "subject", "block", "sub_block", "topic"],
                 name="unique_weak_area_node_per_user",
@@ -413,6 +437,8 @@ class PracticeSession(models.Model):
 
     # Ordered station ids, fixed at creation so refreshes cannot reroll the session.
     station_ids = models.JSONField(default=list)
+    # Questions and keys as presented at the start; never reconstructed for old rounds.
+    station_snapshots = models.JSONField(default=list, blank=True)
     seconds_per_station = models.IntegerField(default=STATION_SECONDS)
 
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.IN_PROGRESS)
@@ -673,7 +699,7 @@ class PushSubscription(models.Model):
 class QuestionGenerationJob(models.Model):
     """Tracks the one-off bulk question generation for an uploaded slide.
 
-    A slide gets 50 MCQs and 10 theory questions generated once, in the background.
+    A slide gets 15 MCQs (5 easy, 5 medium, 5 hard) and 10 theory questions generated once, in the background.
     This row is what makes that safe and observable:
 
       * `OneToOne` on the slide means a second job can never be created for the same
@@ -683,7 +709,7 @@ class QuestionGenerationJob(models.Model):
         the previous run already saved.
     """
 
-    TARGET_MCQ = 50
+    TARGET_MCQ = 15
     TARGET_THEORY = 10
     MAX_ATTEMPTS = 3
 
@@ -706,6 +732,12 @@ class QuestionGenerationJob(models.Model):
 
     attempts = models.IntegerField(default=0)
     error = models.TextField(blank=True)
+    lease_token = models.UUIDField(null=True, blank=True, editable=False)
+    lease_expires_at = models.DateTimeField(null=True, blank=True)
+    next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    source_key = models.CharField(max_length=64, blank=True)
+    source_digest = models.CharField(max_length=64, blank=True)
+    bank_key = models.CharField(max_length=64, blank=True)
 
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
@@ -722,7 +754,8 @@ class QuestionGenerationJob(models.Model):
     @property
     def is_complete(self) -> bool:
         return (
-            self.mcq_generated >= self.mcq_target
+            self.status == self.Status.COMPLETED and bool(self.bank_key)
+            and self.mcq_generated >= self.mcq_target
             and self.theory_generated >= self.theory_target
         )
 

@@ -6,6 +6,12 @@ from .models import PushSubscription, Notification
 
 logger = logging.getLogger(__name__)
 
+
+@shared_task
+def recover_question_generation_task():
+    from .generation_dispatch import recover_generation_jobs
+    return recover_generation_jobs()
+
 @shared_task
 def send_push_notification_task(notification_id):
     try:

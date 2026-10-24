@@ -28,6 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { SessionFooter } from "@/components/session-footer";
 import api, { quizApi, curriculumApi, aiApi } from "@/lib/api";
+import { DeckPractice } from "@/components/quiz/deck-practice";
 
 function SessionContent() {
   const router = useRouter();
@@ -41,6 +42,7 @@ function SessionContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingQuiz, setLoadingQuiz] = useState(false);
+  const [choosingDeck, setChoosingDeck] = useState(false);
   
   // Session Data
   const [sessionData, setSessionData] = useState<any>(null);
@@ -70,27 +72,7 @@ function SessionContent() {
   }, []);
 
   const startPracticeQuiz = async () => {
-    setLoadingQuiz(true);
-    setError(null);
-    try {
-      const attempt = await quizApi.createQuizAttempt({
-        subject: targetSubjectId || undefined,
-        exam_type: "practice",
-        is_timed: false,
-        configuration: {
-          mcq_count: 10,
-          theory_count: 0,
-          difficulty: "medium",
-        },
-      });
-
-      // Redirect to quiz, and on submit, redirect back to session?step=4
-      router.push(`/quiz/attempt/${attempt.id}?session=true&nextStep=4`);
-    } catch (err: any) {
-      console.error("Failed to create quiz attempt:", err);
-      setError(err?.response?.data?.message || "Failed to initialize practice quiz.");
-      setLoadingQuiz(false);
-    }
+    setChoosingDeck(true);
   };
 
   const toggleStudyPlanItem = async (itemId: number, currentStatus: string) => {
@@ -126,6 +108,7 @@ function SessionContent() {
     return 0;
   };
 
+  if (choosingDeck) return <DeckPractice session onBack={() => setChoosingDeck(false)} />;
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
@@ -275,10 +258,10 @@ function SessionContent() {
                     </div>
                     <h3 className="font-semibold text-foreground flex items-center gap-1.5">
                       <BookOpen className="size-4 text-primary" />
-                      10 Questions focus: {sessionData?.practice_topic || "General"}
+                      Saved questions from one deck
                     </h3>
                     <p className="text-xs text-zinc-500">
-                      Emby will generate medium-difficulty questions focusing on your weakest subject area.
+                      Choose your deck, difficulty and question count before starting practice.
                     </p>
                   </div>
 

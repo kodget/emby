@@ -34,8 +34,13 @@ export interface ChatMessage {
 
 export interface YouTubeResource {
   title: string;
-  query: string;
-  reason: string;
+  query?: string;
+  reason?: string;
+  url?: string;
+  video_id?: string;
+  channel?: string;
+  thumbnail?: string;
+  duration?: string;
 }
 
 export interface TextbookResource {
@@ -106,7 +111,11 @@ export const useSlideStore = create<SlideStore>((set, get) => ({
   mcqAnswers: new Map(),
   isLoading: { chat: false, resources: false },
 
-  setSlides: (slides) => set({ slides, currentSlideIndex: 0 }),
+  setSlides: (slides) => set((state) => {
+    const sameDeck = slides.length > 0 && slides[0]?.slideId === state.slides[0]?.slideId;
+    return sameDeck ? { slides, currentSlideIndex: Math.min(state.currentSlideIndex, slides.length - 1) }
+      : { slides, currentSlideIndex: 0, chatHistory: new Map(), resources: new Map(), mcqAnswers: new Map() };
+  }),
 
   setCurrentSlideIndex: (index) => set({ currentSlideIndex: index }),
 
@@ -149,5 +158,6 @@ export const useSlideStore = create<SlideStore>((set, get) => ({
       chatHistory: new Map(),
       resources: new Map(),
       mcqAnswers: new Map(),
+      isLoading: { chat: false, resources: false },
     }),
 }));

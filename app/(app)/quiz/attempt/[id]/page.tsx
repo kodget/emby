@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, use } from "react";
+import { useEffect, useCallback, use, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Send, Menu, X, AlertTriangle } from "lucide-react";
@@ -32,11 +32,46 @@ export default function ExamInterfacePage({ params }: ExamInterfacePageProps) {
   const router = useRouter();
   const { toast } = useToast();
   const dispatch = useAppDispatch();
-  const { currentAttempt, currentQuestionIndex, answers, questionStatuses, timeRemainingSeconds, timerActive, loading, submitting, isSubmitted } = useAppSelector((s) => s.quizAttempt);
+  const { currentAttempt, currentQuestionIndex, answers, questionStatuses, timeRemainingSeconds, timerActive, loading, submitting, isSubmitted, error } = useAppSelector((s) => s.quizAttempt);
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const drafts = useRef<Record<string, string>>({});
+  const saveQueue = useRef<Promise<boolean>>(Promise.resolve(true));
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const generation = useRef(0);
+
+  const flushTheory = useCallback(() => {
+    if (debounce.current) clearTimeout(debounce.current);
+    const version = generation.current;
+    const work = async () => {
+      if (version !== generation.current) return false;
+      if (!Object.keys(drafts.current).length) return true;
+      savingRef.current = true; setSaving(true);
+      try {
+        while (Object.keys(drafts.current).length && version === generation.current) {
+          const [questionId, text] = Object.entries(drafts.current)[0];
+          const result = await dispatch(saveAnswer({ attemptId, answer: {
+            question_id: questionId, text_answer: text, time_taken_seconds: 0,
+          } }));
+          if (!saveAnswer.fulfilled.match(result)) return false;
+          if (drafts.current[questionId] === text) delete drafts.current[questionId];
+        }
+        return version === generation.current;
+      } finally {
+        if (version === generation.current) { savingRef.current = false; setSaving(false); }
+      }
+    };
+    saveQueue.current = saveQueue.current.then(work, work);
+    return saveQueue.current;
+  }, [attemptId, dispatch]);
 
   useEffect(() => {
     dispatch(loadAttempt(attemptId)).then(() => { dispatch(startTimer()); });
-    return () => { dispatch(resetAttempt()); };
+    return () => {
+      generation.current++; drafts.current = {};
+      if (debounce.current) clearTimeout(debounce.current);
+      dispatch(resetAttempt());
+    };
   }, [attemptId, dispatch]);
 
   const searchParams = useSearchParams();
@@ -44,46 +79,53 @@ export default function ExamInterfacePage({ params }: ExamInterfacePageProps) {
   const nextStep = searchParams.get("nextStep") || "4";
 
   useEffect(() => {
-    if (isSubmitted) {
+    if (isSubmitted || currentAttempt?.historical_read_only) {
       if (isSession) {
         router.push(`/quiz/attempt/${attemptId}/results?session=true&nextStep=${nextStep}`);
       } else {
         router.push(`/quiz/attempt/${attemptId}/results`);
       }
     }
-  }, [isSubmitted, attemptId, router, isSession, nextStep]);
+  }, [isSubmitted, currentAttempt?.historical_read_only, attemptId, router, isSession, nextStep]);
 
   const handleTick = useCallback(() => { dispatch(tickTimer()); }, [dispatch]);
 
   const handleTimerExpire = useCallback(() => {
-    toast({ title: "Time is up!", description: "Your exam has been automatically submitted." });
+    toast({ title: "Time is up!", description: "Submitting the answers saved before the deadline." });
     dispatch(autoSubmitAttempt(attemptId));
   }, [dispatch, attemptId, toast]);
 
-  const handleMCQSelect = (questionId: string, option: string) => {
-    dispatch(setMCQAnswer({ questionId, option }));
-    dispatch(saveAnswer({ attemptId, answer: { question_id: questionId, selected_option: option, time_taken_seconds: 30 } }));
+  const handleMCQSelect = async (questionId: string, option: string) => {
+    if (savingRef.current || submitting) return;
+    savingRef.current = true; setSaving(true);
+    await dispatch(saveAnswer({ attemptId, answer: { question_id: questionId, selected_option: option, time_taken_seconds: 0 } }));
+    savingRef.current = false; setSaving(false);
   };
 
   const handleTheoryChange = (questionId: string, text: string) => {
     dispatch(setTheoryAnswer({ questionId, text }));
+    drafts.current[questionId] = text;
+    if (debounce.current) clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => { void flushTheory(); }, 600);
   };
 
   const handleTheoryBlur = (questionId: string) => {
-    const answer = answers[questionId];
-    if (answer?.text_answer) {
-      dispatch(saveAnswer({ attemptId, answer: { question_id: questionId, text_answer: answer.text_answer, time_taken_seconds: 60 } }));
-    }
+    void flushTheory();
   };
 
   const handleFlag = (questionId: string) => {
-    dispatch(toggleFlag(questionId));
-    dispatch(flagQuestion({ attemptId, questionId }));
+    dispatch(flagQuestion({ attemptId, questionId, isFlagged: questionStatuses[questionId] !== "flagged" }));
   };
 
   const handleSubmit = async () => {
+    if (savingRef.current && !Object.keys(drafts.current).length) return;
+    if (!await flushTheory()) return;
     await dispatch(submitAttempt(attemptId));
   };
+
+  if (error && !currentAttempt && !loading) return <div role="alert" className="p-8 text-center">
+    <p>{error}</p><Button onClick={() => dispatch(loadAttempt(attemptId))}>Retry loading practice</Button>
+  </div>;
 
   if (loading || !currentAttempt) {
     return (
@@ -97,6 +139,7 @@ export default function ExamInterfacePage({ params }: ExamInterfacePageProps) {
   }
 
   const questions = currentAttempt.questions;
+  if (currentAttempt.historical_read_only) return <p className="p-8">Opening the read-only historical record…</p>;
 
   if (!questions || questions.length === 0) {
     return (
@@ -127,7 +170,7 @@ export default function ExamInterfacePage({ params }: ExamInterfacePageProps) {
     );
   }
   const questionIds = questions.map((q) => q.id);
-  const answeredCount = Object.values(questionStatuses).filter((s) => s === "answered").length;
+  const answeredCount = Object.values(answers).filter(answer => answer.selected_option || answer.text_answer?.trim()).length;
   const totalSeconds = currentAttempt.duration_minutes ? currentAttempt.duration_minutes * 60 : 0;
 
   return (
@@ -169,19 +212,24 @@ export default function ExamInterfacePage({ params }: ExamInterfacePageProps) {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Review First</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleSubmit}>Submit Exam</AlertDialogAction>
+                  <AlertDialogAction disabled={saving || submitting} onClick={handleSubmit}>Submit Exam</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           </div>
         </div>
       </header>
+      {error && <p role="alert" className="mx-auto max-w-3xl p-3 text-destructive">{error} Your last change was not saved. Select your answer again or retry submission.
+        {Object.keys(drafts.current).length > 0 && <button className="ml-2 underline" onClick={() => void flushTheory()}>Retry saving written answers</button>}
+      </p>}
+      {saving && <p role="status" className="text-center p-2">Saving answer…</p>}
 
       {/* Main Content */}
       <div className="flex-1 max-w-6xl mx-auto w-full px-4 py-6 grid grid-cols-1 md:grid-cols-[1fr_280px] gap-6">
         {/* Question Area */}
         <Card className="h-fit">
           <CardContent className="pt-6 pb-8 px-6">
+            <fieldset disabled={saving || submitting}>
             <AnimatePresence mode="wait">
               {currentQuestion.question_type === "mcq" ? (
                 <MCQQuestionCard
@@ -203,10 +251,12 @@ export default function ExamInterfacePage({ params }: ExamInterfacePageProps) {
                   answer={answers[currentQuestion.id]?.text_answer || ""}
                   isFlagged={questionStatuses[currentQuestion.id] === "flagged"}
                   onChange={(text) => handleTheoryChange(currentQuestion.id, text)}
+                  onBlur={() => handleTheoryBlur(currentQuestion.id)}
                   onFlag={() => handleFlag(currentQuestion.id)}
                 />
               )}
             </AnimatePresence>
+            </fieldset>
           </CardContent>
 
           {/* Navigation footer */}

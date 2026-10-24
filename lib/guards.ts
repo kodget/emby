@@ -1,5 +1,8 @@
 import { UserProfile } from "./api";
 
+export const canAccessAdmin = (profile: UserProfile | null | undefined): boolean =>
+  profile?.is_platform_admin === true || profile?.is_superuser === true;
+
 export const isAuthenticated = (): boolean => {
   if (typeof window === "undefined") return false;
   return !!sessionStorage.getItem("token");
@@ -8,7 +11,12 @@ export const isAuthenticated = (): boolean => {
 export const getStoredProfile = (): UserProfile | null => {
   if (typeof window === "undefined") return null;
   const profile = sessionStorage.getItem("user");
-  return profile ? JSON.parse(profile) : null;
+  if (!profile) return null;
+  try {
+    return JSON.parse(profile) as UserProfile;
+  } catch {
+    return null;
+  }
 };
 
 export const hasCompletedOnboarding = (): boolean => {
@@ -24,7 +32,7 @@ export const isEmailVerified = (): boolean => {
 export const isClassHeadVerified = (): boolean => {
   const profile = getStoredProfile();
   if (profile?.class_role !== "class_head") return true;
-  return profile?.class_head_verified ?? false;
+  return profile?.class_head_verified === true;
 };
 
 export const canAccessApp = (): boolean => {
@@ -78,8 +86,9 @@ export const canEngageCommunity = (): boolean => {
 export const canUploadMaterials = (): boolean => {
   const profile = getStoredProfile();
   if (!profile) return false;
-  // Material uploaders and class heads can upload materials
-  return ["material_uploader", "class_head"].includes(profile.class_role);
+  return profile.class_role === "material_uploader" || (
+    profile.class_role === "class_head" && profile.class_head_verified === true
+  );
 };
 
 export const canManageClass = (): boolean => {

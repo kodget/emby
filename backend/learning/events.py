@@ -20,11 +20,13 @@ Callers should not write XPAward, WeakArea or DailyStudySession directly.
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import date
 
 from django.contrib.auth.models import User
 from django.db import transaction
+from django.db.models import F, Sum
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 
 from . import xp
 from .models import ActivityType, LearningEvent, WeakArea
@@ -40,8 +42,19 @@ SCORING_ACTIVITIES = {
     ActivityType.STEEPLECHASE_COMPLETED,
     ActivityType.HISTOLOGY_COMPLETED,
     ActivityType.BRAIN_BATTLE_COMPLETED,
-    ActivityType.FLASHCARD_REVIEWED,
 }
+
+COMPLETION_RESOURCES = {'QuizAttempt', 'practice_session', 'brain_battle', 'schedule_item'}
+
+
+def lock_stats(user):
+    """All event/reward writers serialize on the same account row."""
+    from curriculum.models import UserStats
+    stats, _ = UserStats.objects.get_or_create(user=user)
+    stats = UserStats.objects.select_for_update().get(pk=stats.pk)
+    # A caller may have cached stats before awarding quiz points with F().
+    user.stats = stats
+    return stats
 
 
 @transaction.atomic
@@ -61,12 +74,58 @@ def record(
     metadata: dict | None = None,
     occurred_at=None,
     award_xp: bool = True,
+    idempotency_key: str = "",
 ) -> LearningEvent:
     """Record one learning activity and fan out its consequences.
 
-    Returns the LearningEvent. The XP award, if any, is available as
-    `event.xp_awards.first()`.
+    Returns the LearningEvent. `_record_created` identifies a new write for
+    callers updating related progress in the same transaction. The XP award,
+    if any, is available as `event.xp_awards.first()`.
     """
+    now = timezone.now()
+    occurred_at = occurred_at or now
+    if activity not in ActivityType.values:
+        raise ValidationError('Unknown learning activity.')
+    for value in (correct_count, total_count, duration_seconds):
+        if type(value) is not int or value < 0 or value > 2147483647:
+            raise ValidationError('Activity counts and seconds must be nonnegative whole numbers.')
+    if correct_count > total_count:
+        raise ValidationError('Correct answers cannot exceed the item count.')
+    if timezone.is_naive(occurred_at) or occurred_at > now:
+        raise ValidationError('Activity time must be timezone-aware and cannot be in the future.')
+    if metadata is not None and not isinstance(metadata, dict):
+        raise ValidationError('Activity metadata must be an object.')
+    resource_id = str(resource_id or '')
+    if not isinstance(resource_type, str) or len(resource_type) > 40 or len(resource_id) > 64:
+        raise ValidationError('Invalid activity resource identifier.')
+    if not isinstance(idempotency_key, str) or len(idempotency_key) > 160:
+        raise ValidationError('Invalid activity request identifier.')
+    completion = bool(resource_id and resource_type in COMPLETION_RESOURCES)
+    if completion:
+        idempotency_key = f'{activity}:{resource_type}:{resource_id}'
+
+    lock_stats(user)
+    existing = None
+    if idempotency_key:
+        existing = LearningEvent.objects.filter(user=user, idempotency_key=idempotency_key).first()
+    if existing is None and completion:
+        # Historical completions have no key. Do not replay their side effects.
+        existing = LearningEvent.objects.filter(user=user, activity=activity,
+            resource_type=resource_type, resource_id=resource_id).order_by('created_at', 'pk').first()
+    if existing is not None:
+        # A completion is an immutable fact. For caller-supplied request keys,
+        # reject accidental reuse for a different action instead of losing it.
+        if not completion and any(getattr(existing, field) != value for field, value in {
+            'activity': activity, 'resource_type': resource_type, 'resource_id': resource_id,
+            'correct_count': correct_count, 'total_count': total_count,
+            'duration_seconds': duration_seconds, 'metadata': metadata or {},
+            'subject_id': getattr(subject, 'pk', None), 'block_id': getattr(block, 'pk', None),
+            'sub_block_id': getattr(sub_block, 'pk', None), 'topic_id': getattr(topic, 'pk', None),
+        }.items()):
+            raise ValidationError('This activity request identifier was already used for different data.')
+        existing._record_created = False
+        return existing
+
     accuracy = (correct_count / total_count) if total_count else None
 
     event = LearningEvent.objects.create(
@@ -79,33 +138,38 @@ def record(
         correct_count=correct_count,
         total_count=total_count,
         accuracy=accuracy,
-        duration_seconds=max(0, duration_seconds),
+        duration_seconds=duration_seconds,
         resource_type=resource_type,
-        resource_id=str(resource_id or ""),
+        resource_id=resource_id,
+        idempotency_key=idempotency_key,
+        xp_processed=not award_xp,
         metadata=metadata or {},
-        occurred_at=occurred_at or timezone.now(),
+        occurred_at=occurred_at,
     )
 
     if duration_seconds > 0:
-        _add_study_time(user, event.occurred_at.date(), duration_seconds)
+        _add_study_time(user, timezone.localdate(event.occurred_at), duration_seconds)
 
-    _touch_streak(user, event.occurred_at.date())
+    _touch_streak(user, refresh_day=timezone.localdate(occurred_at))
 
     if activity in SCORING_ACTIVITIES and total_count:
         update_weak_areas(event)
 
     if award_xp:
         try:
-            xp.award_for_event(event)
+            with transaction.atomic():
+                xp.award_for_event(event)
         except Exception:  # noqa: BLE001 - XP must never break the student's action
             logger.exception("XP award failed for event %s", event.id)
 
     try:
         from .gamification import AchievementEngine
-        AchievementEngine.evaluate_event(event)
+        with transaction.atomic():
+            AchievementEngine.evaluate_event(event)
     except Exception:
         logger.exception("Gamification engine failed for event %s", event.id)
 
+    event._record_created = True
     return event
 
 
@@ -115,9 +179,11 @@ def record(
 def _add_study_time(user: User, day: date, seconds: int) -> None:
     from curriculum.models import DailyStudySession
 
-    minutes = max(0, round(seconds / 60))
-    if minutes <= 0:
-        return
+    # Carry sub-minute work across events. Preserve existing legacy minute totals
+    # until an explicit reconciliation, rather than silently replacing history.
+    total_seconds = LearningEvent.objects.filter(user=user, occurred_at__date=day,
+        duration_seconds__gte=0).aggregate(total=Sum('duration_seconds'))['total'] or 0
+    minutes = total_seconds // 60 - (total_seconds - seconds) // 60
 
     session, created = DailyStudySession.objects.get_or_create(
         user=user, date=day, defaults={"minutes_studied": minutes, "sessions_count": 1}
@@ -129,32 +195,31 @@ def _add_study_time(user: User, day: date, seconds: int) -> None:
 
     stats = getattr(user, "stats", None)
     if stats is not None:
-        stats.total_study_minutes = (stats.total_study_minutes or 0) + minutes
-        stats.save(update_fields=["total_study_minutes", "updated_at"])
+        type(stats).objects.filter(pk=stats.pk).update(
+            total_study_minutes=F('total_study_minutes') + minutes, updated_at=timezone.now())
+        stats.refresh_from_db()
 
 
-def _touch_streak(user: User, day: date) -> None:
-    """Advance the study streak, but only once per calendar day."""
+def _touch_streak(user: User, refresh_day=None) -> None:
+    """Refresh date-ordered evidence while the caller holds the user's stats lock."""
     stats = getattr(user, "stats", None)
     if stats is None:
         return
 
-    last = stats.last_activity_date
-    if last == day:
-        return
-
-    if last == day - timedelta(days=1):
-        stats.current_streak = (stats.current_streak or 0) + 1
-    else:
-        stats.current_streak = 1
-
-    stats.longest_streak = max(stats.longest_streak or 0, stats.current_streak)
-    stats.last_activity_date = day
+    from .analytics_evidence import Evidence
+    evidence = Evidence(user, 7)
+    consistency = evidence.consistency()
+    stats.current_streak = consistency['current_streak']
+    stats.longest_streak = consistency['longest_streak']
+    stats.last_activity_date = max((timezone.localdate(row['at']) for row in evidence.rows), default=None)
     stats.save(
         update_fields=[
             "current_streak", "longest_streak", "last_activity_date", "updated_at"
         ]
     )
+    from .activity_reconciliation import refresh_reconciled_time
+    refresh_reconciled_time(user, stats, evidence, refresh_day)
+
 
 
 # ---------------------------------------------------------------------------
@@ -207,10 +272,18 @@ def update_weak_areas(event: LearningEvent) -> list[WeakArea]:
         if node is None:
             continue
 
-        area, created = WeakArea.objects.get_or_create(
-            user=event.user, scope=scope, **key,
-            defaults={"label": _node_label(node), "mastery": accuracy},
-        )
+        # record() holds the account lock. Nullable legacy composite keys may
+        # contain duplicates: adopt one row without adding uncertain old totals.
+        canonical_key = f'{scope}:{node.pk}'
+        area = WeakArea.objects.filter(user=event.user, canonical_key=canonical_key).first()
+        created = False
+        if area is None:
+            area = WeakArea.objects.filter(user=event.user, scope=scope, canonical_key__isnull=True,
+                                           **key).order_by('-updated_at', '-pk').first()
+            if area is None:
+                area = WeakArea(user=event.user, scope=scope, **key, mastery=accuracy)
+                created = True
+            area.canonical_key = canonical_key
 
         area.attempted += event.total_count
         area.correct += event.correct_count or 0
@@ -219,7 +292,7 @@ def update_weak_areas(event: LearningEvent) -> list[WeakArea]:
             accuracy if created else (1 - MASTERY_ALPHA) * area.mastery + MASTERY_ALPHA * accuracy
         )
         area.label = _node_label(node)
-        area.last_practised_at = event.occurred_at
+        area.last_practised_at = max(area.last_practised_at, event.occurred_at) if area.last_practised_at else event.occurred_at
         area.priority = _priority(area)
         area.save()
         updated.append(area)
@@ -255,15 +328,11 @@ def _priority(area: WeakArea) -> float:
 
 
 def weakest(user: User, *, scope: str = WeakArea.Scope.TOPIC, limit: int = 5):
-    """The nodes a student should revise next."""
-    return list(
-        WeakArea.objects.filter(user=user, scope=scope, attempted__gt=0)
-        .order_by("-priority")[:limit]
-    )
+    """Current, authorized objective evidence; legacy EMA rows are diagnostic only."""
+    from .analytics_evidence import Evidence
+    return Evidence(user, 30).topics(scope=scope, limit=limit)['weakest']
 
 
 def strongest(user: User, *, scope: str = WeakArea.Scope.TOPIC, limit: int = 5):
-    return list(
-        WeakArea.objects.filter(user=user, scope=scope, attempted__gte=5)
-        .order_by("-mastery")[:limit]
-    )
+    from .analytics_evidence import Evidence
+    return Evidence(user, 30).topics(scope=scope, limit=limit)['strongest']

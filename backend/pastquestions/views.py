@@ -3,16 +3,20 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.authentication import SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import PastQuestionUpload
 from .services import process_past_question_upload
+from curriculum.class_access import require_visible, scoped_optional_parents
+from curriculum.content_permissions import CanWriteUploadedContent
+from curriculum.models import Subject, Block, Topic
 
 
 @api_view(["POST"])
 @authentication_classes([JWTAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([CanWriteUploadedContent])
 def upload_past_questions(request):
     """
     Upload past question content for AI processing.
@@ -30,10 +34,13 @@ def upload_past_questions(request):
             data = json.loads(request.body)
         except Exception:
             return Response({"error": "Invalid JSON"}, status=status.HTTP_400_BAD_REQUEST)
+    if not isinstance(data, dict):
+        return Response({"error": "Expected an object"}, status=status.HTTP_400_BAD_REQUEST)
 
     content = data.get("content", "")
-    if isinstance(content, str):
-        content = content.strip()
+    if not isinstance(content, str):
+        return Response({"error": "content must be text"}, status=status.HTTP_400_BAD_REQUEST)
+    content = content.strip()
     if not content:
         return Response({"error": "content is required"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -41,10 +48,20 @@ def upload_past_questions(request):
     block_id = data.get("block_id")
     topic_id = data.get("topic_id")
 
-    from curriculum.models import Subject, Block, Topic
-    subject = Subject.objects.filter(id=subject_id).first() if subject_id else None
-    block = Block.objects.filter(id=block_id).first() if block_id else None
-    topic = Topic.objects.filter(id=topic_id).first() if topic_id else None
+    if not subject_id:
+        return Response({"error": "subject_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+    subject = require_visible(Subject, request.user, subject_id)
+    block = require_visible(Block, request.user, block_id) if block_id else None
+    topic = require_visible(Topic, request.user, topic_id) if topic_id else None
+    if topic:
+        topic_block = topic.sub_block.block if topic.sub_block_id else topic.block
+        if topic_block is None or (topic.block_id and topic.block_id != topic_block.pk):
+            raise ValidationError({"topic_id": "This topic needs its hierarchy repaired."})
+        if block and block != topic_block:
+            raise ValidationError({"topic_id": "This topic does not belong to the selected module."})
+        block = topic_block
+    if block and block.subject_id != subject.pk:
+        raise ValidationError({"block_id": "This module does not belong to the selected course."})
 
     upload = PastQuestionUpload.objects.create(
         uploaded_by=request.user,
@@ -71,7 +88,11 @@ def upload_past_questions(request):
 def get_upload_status(request, upload_id):
     """Check processing status of a past question upload."""
     try:
-        upload = PastQuestionUpload.objects.get(id=upload_id, uploaded_by=request.user)
+        uploads = scoped_optional_parents(
+            PastQuestionUpload.objects.filter(uploaded_by=request.user, subject__isnull=False),
+            request.user, {"subject": Subject, "block": Block, "topic": Topic},
+        )
+        upload = uploads.get(id=upload_id)
     except PastQuestionUpload.DoesNotExist:
         return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
 

@@ -1,10 +1,13 @@
 from rest_framework import serializers
+from .hierarchy import ContentAncestryMixin, StableHierarchyMixin, ClassScopedRelationsMixin, validate_ancestry
+from .class_access import visible
+from .private_media import PrivateAssetSerializerMixin
 from .models import (
     Subject, Block, SubBlock, Topic, Slide, Material, UserProgress, ScheduleItem,
     UserStats, CommunityPost, PostComment, UpcomingTest, QuizQuestion, Quiz, QuizAnswer,
     SlideDeck, SlidePage, QuizAttempt, QuizAttemptResponse,
     Flashcard, FlashcardProgress, FlashcardReview, StudyProfile,
-    FriendChallenge, BrainBattle, BattleParticipant, SteeplechaseQuestion
+    FriendChallenge, BrainBattle, BattleParticipant, SteeplechaseQuestion, MediaAsset
 )
 
 
@@ -24,12 +27,12 @@ def generate_unique_id(model_class, name, max_length=50):
             return candidate
 
 
-class SubjectSerializer(serializers.ModelSerializer):
-    id = serializers.CharField(required=False, allow_blank=True)
+class SubjectSerializer(StableHierarchyMixin, serializers.ModelSerializer):
+    id = serializers.CharField(max_length=50, required=False, allow_blank=True)
 
     class Meta:
         model = Subject
-        fields = ['id', 'name', 'description', 'order', 'created_at']
+        fields = ['class_group', 'id', 'name', 'description', 'order', 'created_at']
 
     def create(self, validated_data):
         if 'id' not in validated_data or not validated_data['id']:
@@ -37,13 +40,22 @@ class SubjectSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class TopicSerializer(serializers.ModelSerializer):
-    id = serializers.CharField(required=False, allow_blank=True)
+class TopicSerializer(StableHierarchyMixin, serializers.ModelSerializer):
+    parent_fields = ('sub_block', 'block')
+    id = serializers.CharField(max_length=50, required=False, allow_blank=True)
     topic = serializers.PrimaryKeyRelatedField(source='sub_block', queryset=SubBlock.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = Topic
         fields = ['id', 'name', 'description', 'order', 'sub_block', 'topic', 'block', 'created_at']
+
+    def to_internal_value(self, data):
+        if 'topic' in data and 'sub_block' in data and data['topic'] != data['sub_block']:
+            raise serializers.ValidationError({'topic': 'The legacy topic alias must match sub_block.'})
+        return super().to_internal_value(data)
+
+    def validate(self, attrs):
+        return super().validate(validate_ancestry(attrs, self.instance, topic_record=True))
 
     def create(self, validated_data):
         if 'id' not in validated_data or not validated_data['id']:
@@ -51,9 +63,15 @@ class TopicSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class SubBlockSerializer(serializers.ModelSerializer):
-    topics = TopicSerializer(many=True, read_only=True)
-    id = serializers.CharField(required=False, allow_blank=True)
+class SubBlockSerializer(StableHierarchyMixin, serializers.ModelSerializer):
+    parent_fields = ('block',)
+    topics = serializers.SerializerMethodField()
+    id = serializers.CharField(max_length=50, required=False, allow_blank=True)
+
+    def get_topics(self, obj):
+        request = self.context.get('request')
+        qs = visible(Topic, request.user).filter(sub_block=obj) if request else obj.topics.all()
+        return TopicSerializer(qs, many=True, context=self.context).data
     
     class Meta:
         model = SubBlock
@@ -65,10 +83,14 @@ class SubBlockSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class BlockSerializer(serializers.ModelSerializer):
+class BlockSerializer(StableHierarchyMixin, serializers.ModelSerializer):
+    parent_fields = ('subject',)
     sub_blocks = SubBlockSerializer(many=True, read_only=True)
-    topics = TopicSerializer(many=True, read_only=True)
-    id = serializers.CharField(required=False, allow_blank=True)
+    topics = serializers.SerializerMethodField()
+    id = serializers.CharField(max_length=50, required=False, allow_blank=True)
+
+    def get_topics(self, obj):
+        return TopicSerializer(obj.topics.filter(sub_block__isnull=True), many=True, context=self.context).data
     
     class Meta:
         model = Block
@@ -80,7 +102,9 @@ class BlockSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class SlideSerializer(serializers.ModelSerializer):
+class SlideSerializer(PrivateAssetSerializerMixin, ContentAncestryMixin, serializers.ModelSerializer):
+    asset_id = serializers.PrimaryKeyRelatedField(source='asset', queryset=MediaAsset.objects.none(), required=False)
+    file_url = serializers.SerializerMethodField()
     uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
     subject_name = serializers.CharField(source='subject.name', read_only=True, allow_null=True)
     block_name = serializers.CharField(source='block.name', read_only=True, allow_null=True)
@@ -90,49 +114,27 @@ class SlideSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Slide
-        fields = [
+        fields = ['class_group',
             'id', 'title', 'subject', 'subject_name', 'block', 'block_name',
             'sub_block', 'sub_block_name', 'topic', 'topic_name',
-            'file_url', 'file_type', 'page_count', 'generation_status',
+            'asset_id', 'file_url', 'file_type', 'page_count', 'generation_status',
             'uploaded_by', 'uploaded_by_name', 'created_at', 'updated_at'
         ]
+        read_only_fields = ['uploaded_by', 'page_count', 'generation_status', 'created_at', 'updated_at']
     
     def create(self, validated_data):
         if 'id' not in validated_data or not validated_data['id']:
             import uuid
             validated_data['id'] = str(uuid.uuid4())[:8]
         
-        # If file_url is provided, try to extract Cloudinary public_id and populate file field
-        file_url = validated_data.get('file_url')
-        if file_url and 'cloudinary.com' in file_url:
-            try:
-                # Extract public_id from Cloudinary URL
-                # URL format: https://res.cloudinary.com/cloud_name/resource_type/upload/public_id.ext
-                import re
-                from cloudinary import CloudinaryResource
-                
-                # Extract public_id from URL
-                match = re.search(r'/upload/(?:v\d+/)?(.+?)(?:\.[^.]+)?$', file_url)
-                if match:
-                    public_id = match.group(1)
-                    
-                    # Create CloudinaryResource and assign to file field
-                    validated_data['file'] = CloudinaryResource(
-                        public_id=public_id,
-                        resource_type='raw'  # For PDFs, PPTX, etc.
-                    )
-                    
-                    print(f"Extracted Cloudinary public_id: {public_id}")
-                else:
-                    print(f"Could not extract public_id from URL: {file_url}")
-            except Exception as e:
-                print(f"Error processing Cloudinary URL: {e}")
-                # Keep file_url as fallback
-        
         return super().create(validated_data)
 
+    def get_file_url(self, obj):
+        return obj.get_file_url
 
-class MaterialSerializer(serializers.ModelSerializer):
+
+class MaterialSerializer(PrivateAssetSerializerMixin, ContentAncestryMixin, serializers.ModelSerializer):
+    asset_id = serializers.PrimaryKeyRelatedField(source='asset', queryset=MediaAsset.objects.none(), required=False)
     uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
     subject_name = serializers.CharField(source='subject.name', read_only=True)
     block_name = serializers.CharField(source='block.name', read_only=True)
@@ -143,13 +145,14 @@ class MaterialSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Material
-        fields = [
+        fields = ['class_group',
             'id', 'title', 'description', 'material_type',
             'subject', 'subject_name', 'block', 'block_name',
             'sub_block', 'sub_block_name', 'topic', 'topic_name',
-            'file_url', 'file_size',
+            'asset_id', 'file_url', 'file_size',
             'uploaded_by', 'uploaded_by_name', 'created_at', 'updated_at'
         ]
+        read_only_fields = ['uploaded_by', 'file_size', 'created_at', 'updated_at']
     
     def get_file_url(self, obj):
         return obj.get_file_url
@@ -161,7 +164,7 @@ class MaterialSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class UserProgressSerializer(serializers.ModelSerializer):
+class UserProgressSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     slide_title = serializers.CharField(source='slide.title', read_only=True)
     progress_percentage = serializers.IntegerField(read_only=True)
     
@@ -173,8 +176,16 @@ class UserProgressSerializer(serializers.ModelSerializer):
         ]
 
 
-class StudyProfileSerializer(serializers.ModelSerializer):
+class StudyProfileSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     target_subjects = serializers.PrimaryKeyRelatedField(many=True, queryset=Subject.objects.all(), required=False)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if request:
+            data['target_subjects'] = list(visible(Subject, request.user).filter(
+                targeted_by_profiles=instance).values_list('pk', flat=True))
+        return data
     
     class Meta:
         model = StudyProfile
@@ -183,7 +194,7 @@ class StudyProfileSerializer(serializers.ModelSerializer):
         ]
 
 
-class ScheduleItemSerializer(serializers.ModelSerializer):
+class ScheduleItemSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     """Serializer for planner items.
 
     This previously declared a `topic` field, but ScheduleItem has no such relation — it
@@ -204,14 +215,37 @@ class ScheduleItemSerializer(serializers.ModelSerializer):
             'scheduled_date', 'scheduled_time', 'estimated_minutes',
             'completed', 'completed_at', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['completed_at', 'created_at', 'updated_at']
+        read_only_fields = ['completed', 'completed_at', 'created_at', 'updated_at']
 
 
-class UserStatsSerializer(serializers.ModelSerializer):
+class UserStatsSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     name = serializers.CharField(source='user.first_name', read_only=True)
     usage = serializers.SerializerMethodField()
-    current_streak = serializers.IntegerField(source='active_streak', read_only=True)
+    current_streak = serializers.SerializerMethodField()
+    longest_streak = serializers.SerializerMethodField()
+    total_study_minutes = serializers.SerializerMethodField()
+    quizzes_taken = serializers.SerializerMethodField()
+    slides_completed = serializers.SerializerMethodField()
+
+    def progress(self, obj, field):
+        from learning.progress_evidence import summary
+        return summary(obj.user, self.context)[field]
+
+    def get_current_streak(self, obj):
+        return self.progress(obj, 'current_streak')
+
+    def get_longest_streak(self, obj):
+        return self.progress(obj, 'longest_streak')
+
+    def get_total_study_minutes(self, obj):
+        return self.progress(obj, 'total_study_minutes')
+
+    def get_quizzes_taken(self, obj):
+        return self.progress(obj, 'quizzes_taken')
+
+    def get_slides_completed(self, obj):
+        return self.progress(obj, 'slides_completed')
     
     class Meta:
         model = UserStats
@@ -221,6 +255,7 @@ class UserStatsSerializer(serializers.ModelSerializer):
             'public_rank', 'total_study_minutes', 'slides_completed', 'quizzes_taken',
             'usage'
         ]
+        read_only_fields = ['points', 'rank']
 
     def get_usage(self, obj):
         from .models import QuizAttempt, Flashcard
@@ -247,7 +282,7 @@ class UserStatsSerializer(serializers.ModelSerializer):
         }
 
 
-class PostCommentSerializer(serializers.ModelSerializer):
+class PostCommentSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.first_name', read_only=True)
     
     class Meta:
@@ -255,7 +290,7 @@ class PostCommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'user_name', 'content', 'created_at']
 
 
-class CommunityPostSerializer(serializers.ModelSerializer):
+class CommunityPostSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.first_name', read_only=True)
     user_photo = serializers.SerializerMethodField()
     comments = PostCommentSerializer(many=True, read_only=True)
@@ -275,9 +310,10 @@ class CommunityPostSerializer(serializers.ModelSerializer):
         return None
 
 
-class UpcomingTestSerializer(serializers.ModelSerializer):
+class UpcomingTestSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     subject_name = serializers.CharField(source='subject.name', read_only=True)
-    topics_list = TopicSerializer(source='topics', many=True, read_only=True)
+    topics = serializers.PrimaryKeyRelatedField(source='sub_blocks', queryset=SubBlock.objects.all(), many=True, required=False)
+    topics_list = SubBlockSerializer(source='sub_blocks', many=True, read_only=True)
     
     class Meta:
         model = UpcomingTest
@@ -288,12 +324,12 @@ class UpcomingTestSerializer(serializers.ModelSerializer):
         ]
 
 
-class SteeplechaseQuestionSerializer(serializers.ModelSerializer):
+class SteeplechaseQuestionSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     class Meta:
         model = SteeplechaseQuestion
         fields = ['id', 'image_url', 'prompt', 'source_file']
         
-class QuizQuestionSerializer(serializers.ModelSerializer):
+class QuizQuestionSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     subject_name = serializers.CharField(source='subject.name', read_only=True)
     block_name = serializers.CharField(source='block.name', read_only=True, allow_null=True)
     sub_block_name = serializers.CharField(source='sub_block.name', read_only=True, allow_null=True)
@@ -309,9 +345,11 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
             'question_text', 'explanation',
             'option_a', 'option_b', 'option_c', 'option_d', 'correct_option',
             'model_answer', 'source_type', 'created_at',
-            'ideal_answer', 'marking_rubric', 'maximum_marks', 'source_text', 'question_options_order'
+            'ideal_answer', 'marking_rubric', 'maximum_marks', 'source_text', 'source_page', 'needs_review', 'reviewed_at', 'question_options_order'
         ]
     
+        read_only_fields = ['source_page', 'needs_review', 'reviewed_at']
+
     def to_representation(self, instance):
         """Hide answers and explanations during active attempts"""
         data = super().to_representation(instance)
@@ -320,6 +358,7 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
         hide_answers = self.context.get('hide_answers', False)
         
         if hide_answers:
+            data.pop('source_text', None)
             # Hide correct answers and explanations for MCQ questions
             if instance.question_type == 'mcq':
                 data.pop('correct_option', None)
@@ -338,7 +377,7 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
 # -------------------------
 # SLIDE DECK & PAGE SERIALIZERS
 # -------------------------
-class SlidePageSerializer(serializers.ModelSerializer):
+class SlidePageSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     """Serializer for individual pages in a slide deck"""
     image_url = serializers.SerializerMethodField()
     
@@ -353,7 +392,7 @@ class SlidePageSerializer(serializers.ModelSerializer):
         return obj.get_image_url
 
 
-class SlideDeckSerializer(serializers.ModelSerializer):
+class SlideDeckSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     """Serializer for slide decks with nested pages"""
     uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
     pages = SlidePageSerializer(many=True, read_only=True)
@@ -361,13 +400,21 @@ class SlideDeckSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = SlideDeck
-        fields = [
+        fields = ['class_group',
             'id', 'title', 'file_type', 'file_size',
             'processing_status', 'processing_error',
+            'text_extraction',
             'page_count', 'uploaded_by', 'uploaded_by_name',
             'pages', 'created_at', 'updated_at'
         ]
     
+    def get_fields(self):
+        fields = super().get_fields()
+        for name, field in fields.items():
+            if name != 'title':
+                field.read_only = True
+        return fields
+
     def create(self, validated_data):
         if 'id' not in validated_data or not validated_data['id']:
             import uuid
@@ -375,7 +422,7 @@ class SlideDeckSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class SlideDeckListSerializer(serializers.ModelSerializer):
+class SlideDeckListSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     """Lightweight serializer for listing slide decks"""
     uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
     
@@ -388,7 +435,7 @@ class SlideDeckListSerializer(serializers.ModelSerializer):
         ]
 
 
-class QuizAnswerSerializer(serializers.ModelSerializer):
+class QuizAnswerSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     question = QuizQuestionSerializer(read_only=True)
     question_id = serializers.CharField(write_only=True)
     
@@ -401,7 +448,7 @@ class QuizAnswerSerializer(serializers.ModelSerializer):
         ]
 
 
-class QuizSerializer(serializers.ModelSerializer):
+class QuizSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     subject_name = serializers.CharField(source='subject.name', read_only=True, allow_null=True)
     block_name = serializers.CharField(source='block.name', read_only=True, allow_null=True)
     sub_block_name = serializers.CharField(source='sub_block.name', read_only=True, allow_null=True)
@@ -423,9 +470,27 @@ class QuizSerializer(serializers.ModelSerializer):
 # -------------------------
 # QUIZ EXAMINATION SYSTEM SERIALIZERS  
 # -------------------------
-class QuizAttemptResponseSerializer(serializers.ModelSerializer):
+class QuizAttemptResponseSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     question = QuizQuestionSerializer(read_only=True)
     question_id = serializers.CharField(write_only=True)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        from .practice_attempts import public_questions
+        if instance.attempt.question_snapshots:
+            key = instance.snapshot_question_id or instance.question_id
+            data['question'] = next((q for q in public_questions(instance.attempt) if q['id'] == key), None)
+        if instance.attempt.status == 'in_progress':
+            for key in ('is_correct', 'ai_score', 'ai_feedback', 'ai_rubric_breakdown'):
+                data.pop(key, None)
+            if data.get('question'):
+                for key in ('correct_option', 'explanation', 'ideal_answer', 'model_answer', 'marking_rubric', 'source_text'):
+                    data['question'].pop(key, None)
+        if instance.attempt.assessment_id and not instance.attempt.assessment.answers_released_at:
+            # Written feedback can contain the answer key and rubric text.
+            data.pop('ai_feedback', None)
+            data.pop('ai_rubric_breakdown', None)
+        return data
     
     class Meta:
         model = QuizAttemptResponse
@@ -437,7 +502,33 @@ class QuizAttemptResponseSerializer(serializers.ModelSerializer):
         read_only_fields = ['is_correct', 'ai_evaluation_status', 'ai_score', 'ai_feedback', 'ai_rubric_breakdown']
 
 
-class QuizAttemptSerializer(serializers.ModelSerializer):
+class QuizAttemptSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
+    feedback = serializers.SerializerMethodField()
+
+    def to_representation(self, instance):
+        from .assessment_history import is_historical, representation
+        if is_historical(instance):
+            return representation(instance)
+        return super().to_representation(instance)
+
+    def get_feedback(self, obj):
+        from .assessment_feedback import build
+        return build(obj)
+
+    topic_breakdown = serializers.SerializerMethodField()
+    grading = serializers.SerializerMethodField()
+    answers_released = serializers.SerializerMethodField()
+
+    def get_topic_breakdown(self, obj):
+        return obj.analysis_data.get('topic_breakdown', []) if obj.status != 'in_progress' else []
+
+    def get_grading(self, obj):
+        from .assessment_grading import public_status
+        return public_status(obj)
+
+    def get_answers_released(self, obj):
+        return obj.status != 'in_progress' and (not obj.assessment_id or bool(obj.assessment.answers_released_at))
+
     subject_name = serializers.CharField(source='subject.name', read_only=True, allow_null=True)
     block_name = serializers.CharField(source='block.name', read_only=True, allow_null=True)  
     sub_block_name = serializers.CharField(source='sub_block.name', read_only=True, allow_null=True)
@@ -459,12 +550,12 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuizAttempt
         fields = [
-            'id', 'user', 'subject', 'subject_name', 'block', 'block_name',
+            'id', 'user', 'assessment', 'answers_released', 'subject', 'subject_name', 'block', 'block_name',
             'sub_block', 'sub_block_name', 'topic', 'topic_name', 'slide', 'slide_name', 'exam_type', 'is_timed', 'duration_minutes',
             'configuration', 'question_ids', 'flagged_questions', 'status',
             'started_at', 'submitted_at', 'deadline', 'mcq_score', 'mcq_total',
             'theory_score', 'theory_total', 'overall_percentage',
-            'theory_grading_pending', 'theory_grading_completed',
+            'theory_grading_pending', 'theory_grading_completed', 'grading', 'topic_breakdown', 'feedback',
             'questions', 'responses', 'time_taken_minutes', 'time_remaining_seconds', 'analysis_data',
             'created_at', 'updated_at'
         ]
@@ -476,11 +567,15 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
     
     def get_questions(self, obj):
         from .models import QuizQuestion
+        if obj.question_snapshots:
+            from .practice_attempts import public_questions
+            return public_questions(obj)
         
         if not obj.question_ids:
             return []
         
-        questions = QuizQuestion.objects.filter(id__in=obj.question_ids)
+        request = self.context.get('request')
+        questions = visible(QuizQuestion, request.user if request else obj.user).filter(id__in=obj.question_ids)
         question_dict = {q.id: q for q in questions}
         ordered_questions = [question_dict[qid] for qid in obj.question_ids if qid in question_dict]
         
@@ -556,7 +651,7 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class QuizAttemptCreateSerializer(serializers.ModelSerializer):
+class QuizAttemptCreateSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     topic = serializers.PrimaryKeyRelatedField(queryset=Topic.objects.all(), required=False, allow_null=True)
     
     class Meta:
@@ -610,7 +705,7 @@ class QuizAttemptCreateSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class QuizAttemptListSerializer(serializers.ModelSerializer):
+class QuizAttemptListSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     subject_name = serializers.CharField(source='subject.name', read_only=True, allow_null=True)
     block_name = serializers.CharField(source='block.name', read_only=True, allow_null=True)
     sub_block_name = serializers.CharField(source='sub_block.name', read_only=True, allow_null=True)
@@ -634,7 +729,7 @@ class QuizAttemptListSerializer(serializers.ModelSerializer):
 # -------------------------
 # FLASHCARD SERIALIZERS
 # -------------------------
-class FlashcardProgressSerializer(serializers.ModelSerializer):
+class FlashcardProgressSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     is_due = serializers.BooleanField(read_only=True)
 
     class Meta:
@@ -645,7 +740,7 @@ class FlashcardProgressSerializer(serializers.ModelSerializer):
         ]
 
 
-class FlashcardSerializer(serializers.ModelSerializer):
+class FlashcardSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     # Nested read-only progress for the requesting user
     progress = serializers.SerializerMethodField()
 
@@ -667,12 +762,13 @@ class FlashcardSerializer(serializers.ModelSerializer):
             'sub_block', 'sub_block_name',
             'topic', 'topic_name',
             'source_question', 'source_question_text',
+            'source_slide',
             'front', 'back', 'explanation',
             'source',
             'progress',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['user', 'source_question_text', 'progress']
+        read_only_fields = ['user', 'source_question_text', 'source_slide', 'progress']
 
     def get_progress(self, obj):
         request = self.context.get('request')
@@ -697,7 +793,7 @@ class FlashcardSerializer(serializers.ModelSerializer):
         return flashcard
 
 
-class FlashcardReviewSerializer(serializers.ModelSerializer):
+class FlashcardReviewSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     class Meta:
         model = FlashcardReview
         fields = ['id', 'rating', 'reviewed_at', 'previous_interval', 'next_interval']
@@ -707,7 +803,7 @@ class FlashcardReviewSerializer(serializers.ModelSerializer):
 # SOCIAL & COMPETITION
 # -------------------------
 
-class FriendChallengeSerializer(serializers.ModelSerializer):
+class FriendChallengeSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     challenger_name = serializers.CharField(source='challenger.first_name', read_only=True)
     challenged_name = serializers.CharField(source='challenged.first_name', read_only=True)
 
@@ -717,7 +813,7 @@ class FriendChallengeSerializer(serializers.ModelSerializer):
         read_only_fields = ['challenger', 'status', 'challenger_score', 'challenged_score', 'created_at', 'completed_at']
 
 
-class BattleParticipantSerializer(serializers.ModelSerializer):
+class BattleParticipantSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     name = serializers.CharField(source='user.first_name', read_only=True)
 
@@ -726,9 +822,10 @@ class BattleParticipantSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class BrainBattleSerializer(serializers.ModelSerializer):
+class BrainBattleSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     host_name = serializers.CharField(source='host.first_name', read_only=True)
     participants_count = serializers.SerializerMethodField()
+    question_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = BrainBattle
@@ -737,7 +834,24 @@ class BrainBattleSerializer(serializers.ModelSerializer):
         # be able to choose or overwrite it.
         read_only_fields = [
             'host', 'class_group', 'status', 'start_time', 'created_at', 'code',
+            'questions', 'current_question_index', 'current_question_started_at',
+            'current_question_revealed_at',
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if getattr(getattr(request, 'user', None), 'pk', None) != instance.host_id:
+            data['questions'] = []
+        return data
+
+    def validate_time_per_question(self, value):
+        if not 1 <= value <= 300:
+            raise serializers.ValidationError("Time per question must be between 1 and 300 seconds.")
+        if self.instance and self.instance.status != "scheduled":
+            if value != self.instance.time_per_question:
+                raise serializers.ValidationError("Battle timing cannot change after it starts.")
+        return value
 
     def get_participants_count(self, obj):
         return obj.participants.count()

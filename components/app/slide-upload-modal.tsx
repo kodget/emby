@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
+import api from "@/lib/api";
+import { uploadIntent, uploadOwner, type UploadIntent } from "@/lib/upload-intent";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -46,7 +48,9 @@ export function SlideUploadModal() {
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const intentRef = useRef<UploadIntent | null>(null);
 
   // Hierarchical selection state
   const [selectedSubject, setSelectedSubject] = useState<SubjectId | null>(
@@ -60,6 +64,7 @@ export function SlideUploadModal() {
   // Load curriculum from API
   useEffect(() => {
     if (isModalOpen) {
+      setErrorMsg("");
       setLoadingCurriculum(true);
       loadCurriculum()
         .then((data) => {
@@ -76,11 +81,14 @@ export function SlideUploadModal() {
 
   const handleFile = useCallback(
     (f: File) => {
-      const allowed = [
-        "application/pdf",
-      ];
-      if (!allowed.includes(f.type) && !f.name.match(/\.(pdf)$/i)) {
-        setErrorMsg("Only PDF files are supported.");
+      if (!/\.(pdf|ppt|pptx|docx)$/i.test(f.name)) {
+        setFile(null);
+        setErrorMsg("Choose a PDF, PPT, PPTX or DOCX file.");
+        return;
+      }
+      if (f.size === 0 || f.size > 100 * 1024 * 1024) {
+        setFile(null);
+        setErrorMsg(f.size === 0 ? "The file is empty." : "Maximum file size is 100 MB.");
         return;
       }
       setErrorMsg("");
@@ -94,13 +102,16 @@ export function SlideUploadModal() {
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
+    if (submitting) return;
     const f = e.dataTransfer.files[0];
     if (f) handleFile(f);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!file || !title.trim() || !selectedSubject || !selectedBlock) return;
+    if (submitting || !file || !title.trim() || !selectedSubject || !selectedBlock) return;
+    setSubmitting(true);
+    setErrorMsg("");
 
     const uploadId = `upload-${Date.now()}`;
 
@@ -121,37 +132,18 @@ export function SlideUploadModal() {
         setName: userSetName,
       }),
     );
-    const apiBase =
-      process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-
-    dispatch(closeUploadModal());
-
     try {
-      // Send the raw file directly to Django — it processes, converts to JPGs,
-      // uploads to Cloudinary, and returns the finished Slide record.
-      // This avoids the frontend→Cloudinary→backend download 401 problem.
       let topicId = selectedTopic;
 
       if (customTopicName.trim()) {
-        const createSecResponse = await fetch(`${apiBase}/api/topics/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            name: customTopicName.trim(),
-            sub_block: selectedSubBlock,
-            block: selectedBlock,
-          }),
+        const { data: newTopic } = await api.post("/api/topics/", {
+          name: customTopicName.trim(),
+          ...(selectedSubBlock ? { sub_block: selectedSubBlock } : {}),
+          block: selectedBlock,
         });
-        if (createSecResponse.ok) {
-          const newSec = await createSecResponse.json();
-          topicId = newSec.id;
-        } else {
-          const errorData = await createSecResponse.json().catch(() => ({}));
-          throw new Error(errorData.error || "Failed to create new topic");
-        }
+        topicId = newTopic.id;
+        setSelectedTopic(topicId);
+        setCustomTopicName("");
       }
 
       const formData = new FormData();
@@ -161,28 +153,19 @@ export function SlideUploadModal() {
       formData.append("block", selectedBlock);
       if (selectedSubBlock) formData.append("sub_block", selectedSubBlock);
       if (topicId) formData.append("topic", topicId);
+      intentRef.current = uploadIntent(intentRef.current, file, JSON.stringify([
+        uploadOwner(), title.trim(), selectedSubject, selectedBlock, selectedSubBlock, topicId,
+      ]));
+      formData.append("request_id", intentRef.current.requestId);
 
       dispatch(
         updateProgress({ id: uploadId, progress: 30, status: "uploading" }),
       );
 
-      const response = await fetch(
-        `${apiBase}/api/slides/upload_and_process/`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-          },
-          body: formData,
-        },
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Upload failed");
-      }
-
-      const slideData = await response.json();
+      const { data: slideData } = await api.post("/api/slides/upload_and_process/", formData, {
+        headers: { "Content-Type": undefined },
+        timeout: 120000,
+      });
 
       dispatch(
         updateProgress({
@@ -193,17 +176,26 @@ export function SlideUploadModal() {
           pages: slideData.page_count || 0,
         }),
       );
+      dispatch(closeUploadModal());
+      intentRef.current = null;
+      setTitle("");
+      setFile(null);
     } catch (err: any) {
-      console.error(err);
-      dispatch(updateProgress({ id: uploadId, progress: 0, status: "error" }));
-      setErrorMsg(err.message || "Upload failed. Please try again.");
+      const details = err.response?.data;
+      const message = typeof details?.error === "string" ? details.error
+        : typeof details?.detail === "string" ? details.detail
+        : details && typeof details === "object" ? Object.values(details).flat().join(" ")
+        : "Upload failed. Please try again.";
+      dispatch(updateProgress({ id: uploadId, progress: 0, status: "error", error: message }));
+      setErrorMsg(message);
+    } finally {
+      setSubmitting(false);
     }
-
-    setTitle("");
-    setFile(null);
   }
 
   function reset() {
+    if (submitting) return;
+    intentRef.current = null;
     dispatch(closeUploadModal());
     setTitle("");
     setFile(null);
@@ -308,14 +300,14 @@ export function SlideUploadModal() {
                   Loading courses...
                 </p>
               </div>
-            ) : errorMsg ? (
+            ) : errorMsg && curriculum.length === 0 ? (
               /* ── Error state ── */
               <div className="flex flex-col items-center gap-4 rounded-2xl border border-destructive/20 bg-destructive/5 py-10 text-center">
                 <span className="flex size-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">
                   <FontAwesomeIcon icon={faTriangleExclamation} className="size-6" />
                 </span>
                 <div className="space-y-1">
-                  <p className="font-semibold text-destructive">{errorMsg}</p>
+                  <p role="alert" className="font-semibold text-destructive">{errorMsg}</p>
                 </div>
               </div>
             ) : curriculum.length === 0 ? (
@@ -326,7 +318,8 @@ export function SlideUploadModal() {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit}>
+                <fieldset disabled={submitting} className="space-y-4">
                 {/* Subject Selection */}
                 <div>
                   <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
@@ -342,6 +335,7 @@ export function SlideUploadModal() {
                           setSelectedBlock(null);
                           setSelectedSubBlock(null);
                           setSelectedTopic(null);
+                          setCustomTopicName("");
                         }}
                         className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
                           selectedSubject === subj.id
@@ -370,6 +364,7 @@ export function SlideUploadModal() {
                             setSelectedBlock(blk.id);
                             setSelectedSubBlock(null);
                             setSelectedTopic(null);
+                            setCustomTopicName("");
                           }}
                           className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
                             selectedBlock === blk.id
@@ -401,6 +396,7 @@ export function SlideUploadModal() {
                           onClick={() => {
                             setSelectedSubBlock(subBlk.id);
                             setSelectedTopic(null);
+                            setCustomTopicName("");
                           }}
                           className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
                             selectedSubBlock === subBlk.id
@@ -444,7 +440,7 @@ export function SlideUploadModal() {
                         </div>
                       </div>
                     )}
-                    <div>
+                    {isVerifiedClassHead && <div>
                       <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
                         {topics.length > 0 ? "Or Enter New Topic Name" : "Topic Name (Optional)"}
                       </label>
@@ -458,7 +454,7 @@ export function SlideUploadModal() {
                         }}
                         className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
                       />
-                    </div>
+                    </div>}
                   </div>
                 )}
 
@@ -482,7 +478,7 @@ export function SlideUploadModal() {
                       <input
                         ref={inputRef}
                         type="file"
-                        accept=".pdf"
+                        accept=".pdf,.ppt,.pptx,.docx"
                         className="sr-only"
                         onChange={(e) =>
                           e.target.files?.[0] && handleFile(e.target.files[0])
@@ -509,7 +505,7 @@ export function SlideUploadModal() {
                             className="size-8 text-muted-foreground"
                           />
                           <p className="text-center text-sm text-muted-foreground">
-                            Drop PDF here
+                            Drop PDF, PPT, PPTX or DOCX here
                             <br />
                             <span className="text-primary">
                               or click to browse
@@ -520,7 +516,7 @@ export function SlideUploadModal() {
                     </div>
 
                     {errorMsg && (
-                      <p className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+                      <p role="alert" className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
                         <FontAwesomeIcon
                           icon={faTriangleExclamation}
                           className="size-3.5 shrink-0"
@@ -540,6 +536,7 @@ export function SlideUploadModal() {
                       <input
                         id="slide-title"
                         type="text"
+                        maxLength={200}
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="e.g. Axilla: Boundaries & Contents"
@@ -549,14 +546,15 @@ export function SlideUploadModal() {
 
                     <motion.button
                       type="submit"
-                      disabled={!file || !title.trim()}
+                      disabled={submitting || !file || !title.trim()}
                       whileTap={{ scale: 0.97 }}
                       className="h-11 w-full rounded-full bg-primary text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
                     >
-                      Upload slides
+                      {submitting ? "Saving upload..." : "Upload slides"}
                     </motion.button>
                   </>
                 )}
+                </fieldset>
               </form>
             )}
           </motion.div>

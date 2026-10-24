@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Trophy, Clock, Users, ArrowRight, Play, CheckCircle2, XCircle, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,12 @@ type BattleState = {
   status: 'scheduled' | 'active' | 'completed';
   current_question_index: number;
   total_questions: number;
+  seconds_per_question?: number;
+  remaining_ms?: number;
+  question_revealed?: boolean;
+  answer_data?: AnswerData;
+  has_answered?: boolean;
+  selected_answer?: number | null;
   current_question?: {
     question: string;
     options: string[];
@@ -45,9 +51,31 @@ export function BattleArena({ battleId }: { battleId: string }) {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerData, setAnswerData] = useState<AnswerData | null>(null);
   const [pointsEarned, setPointsEarned] = useState<number | null>(null);
+  const [battleError, setBattleError] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const isHostRef = useRef(false);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectDelayRef = useRef(1000);
+  const battleStateRef = useRef<BattleState | null>(battleState);
+  const revealRequestedRef = useRef<number | null>(null);
+  wsRef.current = ws;
+  isHostRef.current = isHost;
+  battleStateRef.current = battleState;
+
+  const requestAnswerReveal = useCallback(() => {
+    const index = battleStateRef.current?.current_question_index;
+    const socket = wsRef.current;
+    if (
+      index === undefined ||
+      revealRequestedRef.current === index ||
+      socket?.readyState !== WebSocket.OPEN
+    ) return;
+    socket.send(JSON.stringify({ type: 'host_action', action: 'show_answer' }));
+    revealRequestedRef.current = index;
+  }, []);
 
   const playSound = (type: 'pop' | 'correct' | 'wrong' | 'tada') => {
     if (!soundEnabled) return;
@@ -83,88 +111,135 @@ export function BattleArena({ battleId }: { battleId: string }) {
       const user = JSON.parse(userStr);
       setCurrentUserId(user.id);
       api.get(`/api/battles/${battleId}/`).then(res => {
-        setIsHost(res.data.host === Number(user.id));
+        const host = res.data.host === Number(user.id);
+        isHostRef.current = host;
+        setIsHost(host);
       }).catch(console.error);
     }
 
-    const token = sessionStorage.getItem("token");
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
     const wsBase = baseUrl.replace(/^http/, 'ws');
-    const wsUrl = `${wsBase}/ws/battle/${battleId}/?token=${token}`;
-    const socket = new WebSocket(wsUrl);
+    let cancelled = false;
+    let socket: WebSocket | null = null;
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("WS MESSAGE:", data);
+    const connect = () => {
+      if (cancelled) return;
+      const token = sessionStorage.getItem("token");
+      const wsUrl = `${wsBase}/ws/battle/${battleId}/?token=${token}`;
+      socket = new WebSocket(wsUrl);
+      wsRef.current = socket;
 
-      if (data.type === 'battle_state') {
-        setBattleState(data.state);
-        setParticipants(data.participants);
-        if (data.state.status === 'scheduled') setView('lobby');
-        if (data.state.status === 'active') setView('question');
-        if (data.state.status === 'completed') setView('podium');
-      } 
-      else if (data.type === 'new_question') {
-        setBattleState(prev => prev ? { 
-          ...prev, 
-          status: 'active',
-          current_question_index: data.question_data.index,
-          current_question: {
-            question: data.question_data.question,
-            options: data.question_data.options
+      socket.onopen = () => {
+        reconnectDelayRef.current = 1000;
+        setWs(socket);
+      };
+
+      socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'battle_state') {
+          const state = data.state as BattleState;
+          setBattleState(state);
+          setParticipants(data.participants);
+          if (state.status === 'scheduled') setView('lobby');
+          if (state.status === 'active') {
+            setSelectedAnswer(state.has_answered ? state.selected_answer ?? null : null);
+            setAnswerData(state.question_revealed ? state.answer_data ?? null : null);
+            setView(state.question_revealed ? 'leaderboard' : 'question');
+            if (state.question_revealed) {
+              if (timerRef.current) clearInterval(timerRef.current);
+            } else {
+              startTimer(state.remaining_ms ?? (state.seconds_per_question ?? 20) * 1000);
+            }
           }
-        } : null);
-        setSelectedAnswer(null);
-        setAnswerData(null);
-        setPointsEarned(null);
-        setView('question');
-        startTimer(20); // TODO: get time from battle model correctly
-        playSound('pop');
-      }
-      else if (data.type === 'show_answer') {
-        clearInterval(timerRef.current!);
-        setAnswerData(data.answer_data);
-        setParticipants(data.participants);
-        setView('leaderboard');
-      }
-      else if (data.type === 'answer_result') {
-        setPointsEarned(data.points_earned);
-        if (data.points_earned > 0) playSound('correct');
-        else playSound('wrong');
-      }
-      else if (data.type === 'battle_ended') {
-        setParticipants(data.participants);
-        setView('podium');
-        playSound('tada');
-      }
-    };
+          if (state.status === 'completed') setView('podium');
+        } else if (data.type === 'new_question') {
+          revealRequestedRef.current = null;
+          setBattleState(prev => prev ? {
+            ...prev,
+            status: 'active',
+            current_question_index: data.question_data.index,
+            current_question: {
+              question: data.question_data.question,
+              options: data.question_data.options
+            },
+            seconds_per_question: data.question_data.seconds,
+            remaining_ms: data.question_data.remaining_ms,
+            question_revealed: false,
+            has_answered: false,
+          } : null);
+          setSelectedAnswer(null);
+          setAnswerData(null);
+          setPointsEarned(null);
+          setBattleError(null);
+          setView('question');
+          startTimer(data.question_data.remaining_ms ?? data.question_data.seconds * 1000);
+          playSound('pop');
+        } else if (data.type === 'show_answer') {
+          if (timerRef.current) clearInterval(timerRef.current);
+          setAnswerData(data.answer_data);
+          setParticipants(data.participants);
+          setView('leaderboard');
+        } else if (data.type === 'answer_result') {
+          setPointsEarned(data.points_earned);
+          if (data.points_earned > 0) playSound('correct');
+          else playSound('wrong');
+        } else if (data.type === 'battle_error') {
+          setBattleError(data.detail || "That battle action could not be completed.");
+        } else if (data.type === 'battle_ended') {
+          setParticipants(data.participants);
+          setView('podium');
+          playSound('tada');
+        }
+      };
 
-    setWs(socket);
+      socket.onclose = (event) => {
+        if (wsRef.current === socket) {
+          wsRef.current = null;
+          setWs(null);
+        }
+        if (!cancelled && event.code !== 4403) {
+          const delay = reconnectDelayRef.current;
+          reconnectDelayRef.current = Math.min(delay * 2, 10000);
+          reconnectTimerRef.current = setTimeout(connect, delay);
+        }
+      };
+    };
+    connect();
 
     return () => {
-      socket.close();
+      cancelled = true;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (socket) socket.close();
+      wsRef.current = null;
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [battleId]);
 
-  const startTimer = (seconds: number) => {
+  const startTimer = (remainingMs: number) => {
+    const seconds = Math.ceil(Math.max(0, remainingMs) / 1000);
     setTimeLeft(seconds);
     if (timerRef.current) clearInterval(timerRef.current);
+    if (seconds === 0) {
+      if (isHostRef.current) requestAnswerReveal();
+      return;
+    }
     
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
-          if (isHost && ws) {
-            // Automatically show answer when time is up
-            ws.send(JSON.stringify({ type: 'host_action', action: 'show_answer' }));
-          }
+          if (isHostRef.current) requestAnswerReveal();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
   };
+
+  useEffect(() => {
+    if (isHost && view === 'question' && timeLeft <= 0) requestAnswerReveal();
+  }, [isHost, timeLeft, view, battleState?.current_question_index, requestAnswerReveal]);
 
   const handleStart = () => {
     if (ws && isHost) {
@@ -183,12 +258,12 @@ export function BattleArena({ battleId }: { battleId: string }) {
   };
 
   const submitAnswer = (index: number) => {
-    if (selectedAnswer !== null || !ws || isHost) return;
+    if (selectedAnswer !== null || !ws || isHost || timeLeft <= 0) return;
     setSelectedAnswer(index);
     ws.send(JSON.stringify({ 
       type: 'submit_answer', 
       answer_index: index,
-      time_left_ms: timeLeft * 1000
+      question_index: battleState?.current_question_index,
     }));
   };
 
@@ -210,6 +285,7 @@ export function BattleArena({ battleId }: { battleId: string }) {
     return (
       <div className="max-w-4xl mx-auto text-center space-y-12 py-12 relative">
         <SoundToggle />
+        {battleError && <p role="alert" className="text-sm text-destructive">{battleError}</p>}
         <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400 animate-pulse">
           Waiting for players...
         </h1>
@@ -237,6 +313,7 @@ export function BattleArena({ battleId }: { battleId: string }) {
     return (
       <div className="max-w-4xl mx-auto text-center space-y-12 py-12 relative">
         <SoundToggle />
+        {battleError && <p role="alert" className="text-sm text-destructive">{battleError}</p>}
         <h1 className="text-6xl font-black text-yellow-400 mb-12">Final results</h1>
         <div className="flex justify-center items-end gap-6 h-64">
           {/* 2nd Place */}
@@ -276,6 +353,7 @@ export function BattleArena({ battleId }: { battleId: string }) {
   return (
     <div className="max-w-5xl mx-auto space-y-8 relative">
       <SoundToggle />
+      {battleError && <p role="alert" className="text-sm text-destructive">{battleError}</p>}
       <div className="flex justify-between items-center bg-muted/10 p-4 rounded-xl border border-muted/20 mt-8">
         <Badge variant="secondary" className="text-lg py-1">Q {battleState.current_question_index + 1} / {battleState.total_questions}</Badge>
         <div className="flex items-center gap-2 text-2xl font-black text-emerald-400">
@@ -297,7 +375,7 @@ export function BattleArena({ battleId }: { battleId: string }) {
                   key={idx}
                   onClick={() => submitAnswer(idx)}
                   className={`h-32 text-2xl font-bold whitespace-normal ${colors[idx % 4]} hover:opacity-80 transition-all ${isSelected ? 'ring-4 ring-white scale-[1.02]' : ''} ${selectedAnswer !== null && !isSelected ? 'opacity-50' : ''}`}
-                  disabled={selectedAnswer !== null || isHost}
+                  disabled={selectedAnswer !== null || isHost || timeLeft <= 0}
                 >
                   {opt}
                 </Button>
