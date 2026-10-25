@@ -13,10 +13,8 @@ The whole design is built around *not* becoming spam:
   * **Quiet hours** push a notification to the next reasonable time rather than firing
     at 3am.
   * **Preferences gate each type**, so switching one off actually stops it being created.
-  * **Nothing claims to be delivered that wasn't.** In-app notifications are marked
-    delivered when they become visible; browser push is only marked delivered if a
-    transport actually accepted it, and there is no transport wired yet, so push stays
-    honestly unsent.
+  * **Delivery has an outbox.** In-app notices remain available during transport
+    outages; due notices are retried and browser push honours opt-in preferences.
 """
 
 from __future__ import annotations
@@ -52,6 +50,7 @@ PRIORITY = [
 ]
 
 PREFERENCE_FIELD = {
+    NotificationType.EXAM_COUNTDOWN: "academic_enabled",
     NotificationType.FLASHCARDS_DUE: "flashcards_enabled",
     NotificationType.FLASHCARDS_MISSED: "flashcards_enabled",
     NotificationType.PLANNER_UPCOMING: "planner_enabled",
@@ -97,7 +96,7 @@ def _prefs(user: User) -> NotificationPreference:
 
 def _in_quiet_hours(prefs: NotificationPreference, when) -> bool:
     start, end = prefs.quiet_hours_start, prefs.quiet_hours_end
-    hour = when.hour
+    hour = timezone.localtime(when).hour
     if start == end:
         return False
     if start < end:               # e.g. 01:00 -> 07:00
@@ -119,7 +118,7 @@ def _next_allowed_time(prefs: NotificationPreference, when):
 
 
 def _sent_today(user: User) -> int:
-    start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    start = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
     return Notification.objects.filter(
         user=user, created_at__gte=start
     ).exclude(status=Notification.Status.CANCELLED).count()
@@ -142,20 +141,22 @@ def schedule(
 
     Returns None when it was suppressed — that is a normal outcome, not an error.
     """
+    # Serialize the daily budget as well as the dedupe constraint for this account.
+    User.objects.select_for_update().get(pk=user.pk)
     prefs = _prefs(user)
 
     field = PREFERENCE_FIELD.get(type_)
     if field and not getattr(prefs, field, True):
         return None
 
-    if _sent_today(user) >= max(1, prefs.max_per_day):
+    if _sent_today(user) >= max(0, prefs.max_per_day):
         logger.debug("Daily notification budget reached for %s", user.id)
         return None
 
     when = _next_allowed_time(prefs, when or timezone.now())
 
     # The day is part of the key, so a daily reminder is raised at most once per day.
-    key = dedupe_key or f"{type_}:{timezone.now():%Y-%m-%d}"
+    key = dedupe_key or f"{type_}:{timezone.localdate()}"
 
     try:
         notification = Notification.objects.create(
@@ -170,36 +171,55 @@ def schedule(
             dedupe_key=key,
         )
         
-        # Send to WebSocket if it's scheduled for now (or in the past)
-        if notification.scheduled_for <= timezone.now():
-            from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
-            from .tasks import send_push_notification_task
-            
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                f"user_{user.id}_notifications",
-                {
-                    "type": "notification_message",
-                    "message": {
-                        "id": str(notification.id),
-                        "type": notification.type,
-                        "priority": notification.priority,
-                        "title": notification.title,
-                        "body": notification.body,
-                        "action_url": notification.action_url,
-                        "created_at": notification.created_at.isoformat(),
-                    }
-                }
-            )
-            
-            # Send Web Push via Celery
-            send_push_notification_task.delay(notification.id)
-            
+        # Delivery failures must never roll back an announcement or study action.
+        transaction.on_commit(lambda: dispatch_notification(notification.pk))
         return notification
     except IntegrityError:
         # The unique constraint on (user, dedupe_key) did its job.
         return None
+
+
+def dispatch_notification(notification_id):
+    """Retryable outbox: persist first, dispatch only when due, keep failures pending."""
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    from .tasks import send_push_notification_task
+    try:
+        with transaction.atomic():
+            notification = Notification.objects.select_for_update().filter(
+                pk=notification_id, dispatched_at__isnull=True, scheduled_for__lte=timezone.now(),
+                status__in=[Notification.Status.SCHEDULED, Notification.Status.DELIVERED],
+            ).first()
+            if notification is None:
+                return
+            async_to_sync(get_channel_layer().group_send)(
+                f'user_{notification.user_id}_notifications', {
+                    'type': 'notification_message', 'message': {
+                        'id': str(notification.pk), 'type': notification.type,
+                        'title': notification.title, 'body': notification.body,
+                        'priority': notification.priority, 'action_url': notification.action_url,
+                        'created_at': notification.created_at.isoformat(),
+                    },
+                })
+            send_push_notification_task.delay(str(notification.pk))
+            notification.dispatched_at = timezone.now()
+            notification.save(update_fields=['dispatched_at'])
+    except Exception:
+        logger.exception('Notification delivery is pending for %s', notification_id)
+
+
+def dispatch_due():
+    ids = Notification.objects.filter(dispatched_at__isnull=True, scheduled_for__lte=timezone.now(),
+        status__in=[Notification.Status.SCHEDULED, Notification.Status.DELIVERED]).values_list('pk', flat=True)[:500]
+    for notification_id in list(ids):
+        dispatch_notification(notification_id)
+
+
+def announce_to_class(announcement):
+    for user in User.objects.filter(is_active=True, profile__class_group_id=announcement.class_group_id).iterator():
+        schedule(user, NotificationType.HEAD_ANNOUNCEMENT, announcement.title,
+                 announcement.content, action_url='/class/announcements',
+                 dedupe_key=f'announcement:{announcement.pk}:{announcement.updated_at.isoformat()}')
 
 
 # ---------------------------------------------------------------------------
@@ -207,27 +227,45 @@ def schedule(
 # ---------------------------------------------------------------------------
 def build_for_user(user: User) -> list[Notification]:
     """Work out this student's notifications for right now."""
-    from curriculum.models import FlashcardProgress, ScheduleItem
+    from curriculum.models import Flashcard, FlashcardProgress, ScheduleItem
+    from curriculum.class_access import visible, member_class
+    from accounts.models import ExamCountdown
+    from django.db.models import Exists, OuterRef, Q
 
     created: list[Notification] = []
     now = timezone.now()
     today = timezone.localdate(now)
 
+    group = member_class(user)
+    if group:
+        for exam in ExamCountdown.objects.filter(class_group=group, exam_date__gte=today,
+                                                 exam_date__lte=today + timedelta(days=7)):
+            days = (exam.exam_date - today).days
+            if days not in (0, 1, 3, 7):
+                continue
+            n = schedule(user, NotificationType.EXAM_COUNTDOWN,
+                f'{exam.title}: ' + ('today' if days == 0 else f'in {days} day' + ('s' if days != 1 else '')),
+                f"{exam.exam_date:%d %b}" + (f" at {exam.exam_time:%H:%M}" if exam.exam_time else ''),
+                action_url='/class/exams', dedupe_key=f'exam:{exam.pk}:{exam.exam_date}:{days}')
+            if n:
+                created.append(n)
+
     # --- flashcards actually due -------------------------------------------------
-    due = FlashcardProgress.objects.filter(user=user, due_date__lte=now).count()
+    progress = FlashcardProgress.objects.filter(user=user, flashcard_id=OuterRef('pk'))
+    cards = visible(Flashcard, user).annotate(
+        reviewed=Exists(progress), due_for_user=Exists(progress.filter(due_date__lte=now)),
+    ).filter(Q(reviewed=False) | Q(due_for_user=True))
+    due = cards.count()
     if due:
         overdue = FlashcardProgress.objects.filter(
-            user=user, due_date__lte=now - timedelta(days=1)
+            user=user, flashcard__in=cards, due_date__lte=now - timedelta(days=1)
         ).count()
+        card = cards.order_by('?').first()
         n = schedule(
             user,
             NotificationType.FLASHCARDS_DUE,
             f"{due} flashcard{'s' if due != 1 else ''} ready for review",
-            (
-                f"{overdue} of them are overdue — a short session clears the backlog."
-                if overdue
-                else "A few minutes now keeps them from piling up."
-            ),
+            f"Quick recall: {card.front[:350]}",
             action_url="/flashcards/study",
             dedupe_key=f"flashcards_due:{today}",
             payload={"due": due, "overdue": overdue},
@@ -333,9 +371,8 @@ def run_for_all(limit: int | None = None) -> dict:
 def mark_delivered(notification: Notification) -> None:
     """Record that a notification actually reached the student.
 
-    Called when the in-app list serves it. Browser push has no transport wired yet, so
-    push notifications are never marked delivered — the model tells the truth about what
-    was sent rather than assuming.
+    Called when the in-app list serves it. Enqueuing browser push alone does not
+    establish that a device received the notification.
     """
     if notification.status != Notification.Status.SCHEDULED:
         return

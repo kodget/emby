@@ -16,7 +16,8 @@ from .generation_dispatch import request_generation
 
 
 def deck_version(deck):
-    value = [deck.pk, deck.class_group_id, deck.asset_id, str(deck.original_file or ''),
+    original_id = getattr(deck.original_file, 'public_id', deck.original_file) or ''
+    value = [deck.pk, deck.class_group_id, deck.asset_id, str(original_id),
              deck.file_type, deck.processing_status, deck.page_count, deck.text_extraction,
              list(deck.pages.order_by('slide_number').values_list('slide_number', 'extracted_text', 'asset_id'))]
     return hashlib.sha256(json.dumps(value, default=str, sort_keys=True).encode()).hexdigest()

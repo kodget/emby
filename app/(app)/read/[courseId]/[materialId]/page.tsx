@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { curriculumApi, type Slide } from "@/lib/api"
+import { api, curriculumApi, type Slide } from "@/lib/api"
 import { Reader } from "@/components/reader/reader"
 import { SessionFooter } from "@/components/session-footer"
 import { usePrivateMediaRefresh } from "@/hooks/use-private-media-refresh"
@@ -22,6 +22,7 @@ export default function ReadPage() {
   const [suggestedVideos, setSuggestedVideos] = useState<any[]>([])
   const [courseBreadcrumb, setCourseBreadcrumb] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [preparing, setPreparing] = useState(false)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
   const refreshMedia = usePrivateMediaRefresh(`${materialId}:${sessionKey}`,
@@ -35,11 +36,33 @@ export default function ReadPage() {
   )
 
   useEffect(() => {
+    if (!['pending', 'running'].includes(slideContent?.ai_index?.status)) return
+    const session = sessionStorage.getItem('user')
+    let cancelled = false
+    const timer = setInterval(() => {
+      void api.get(`/api/slides/${materialId}/status/`).then(async ({ data }) => {
+        if (!data.ai_index || ['pending', 'running'].includes(data.ai_index.status)) return
+        const content = data.ai_index.status === 'complete' ? await curriculumApi.getSlideContent(materialId) : null
+        if (!cancelled && session === sessionStorage.getItem('user')) {
+          setSlideContent((previous: any) => content || { ...previous, ai_index: data.ai_index })
+        }
+      }).catch((error: any) => {
+        if (!cancelled && [401, 403, 404].includes(error?.response?.status)) {
+          setSlide(null); setSlideContent(null); router.push('/courses')
+        }
+      })
+    }, 10000)
+    return () => { cancelled = true; clearInterval(timer) }
+  }, [materialId, sessionKey, slideContent?.ai_index?.status, router])
+
+  useEffect(() => {
     const version = ++loadVersion.current
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
     const session = sessionStorage.getItem('user')
     const active = () => version === loadVersion.current && session === sessionStorage.getItem('user')
-    setSlide(null); setSlideContent(null); setSuggestedVideos([]); setCourseBreadcrumb(''); setError('')
+    setSlide(null); setSlideContent(null); setSuggestedVideos([]); setCourseBreadcrumb(''); setError(''); setPreparing(false)
     async function fetchData() {
+      let waitingForPages = false
       try {
         setLoading(true)
         
@@ -53,8 +76,15 @@ export default function ReadPage() {
           const content = await curriculumApi.getSlideContent(materialId)
           if (!active()) return
           if (!content?.pages?.length) {
+            if (content?.processing) {
+              waitingForPages = true
+              setPreparing(true)
+              retryTimer = setTimeout(fetchData, 2000)
+              return
+            }
             setError('This document has no readable pages yet. Please try again shortly.'); return
           }
+          setPreparing(false)
           setSlideContent(content)
         } catch (error: any) {
           if (!active()) return
@@ -91,12 +121,12 @@ export default function ReadPage() {
             : 'Could not load this document. Please try again.')
         }
       } finally {
-        if (active()) setLoading(false)
+        if (active() && !waitingForPages) setLoading(false)
       }
     }
     
     fetchData()
-    return () => { loadVersion.current++ }
+    return () => { loadVersion.current++; clearTimeout(retryTimer) }
   }, [courseId, materialId, router, sessionKey, attempt])
 
   if (loading) {
@@ -104,7 +134,8 @@ export default function ReadPage() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-          <p className="mt-4 text-sm text-muted-foreground">Loading slide...</p>
+          <p role="status" className="mt-4 text-sm text-muted-foreground">{preparing ? 'Upload saved. Preparing your slide pages...' : 'Loading slide...'}</p>
+          {preparing && <button className="mt-3 underline" onClick={() => router.push('/courses')}>Back to courses</button>}
         </div>
       </div>
     )

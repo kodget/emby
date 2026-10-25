@@ -129,13 +129,16 @@ class ExtractionIntegrationTests(TestCase):
         with patch.dict(os.environ, {'TESSDATA_PREFIX': '/missing-data'}), patch(
                 'curriculum.private_media.upload_asset', side_effect=self.asset):
             result = process_slide_task.run(self.slide.pk)
-        self.assertFalse(result['success'])
+        self.assertTrue(result['success'])
         self.assertTrue(result['reading_ready'])
+        self.assertFalse(result['ai_ready'])
         content = SlideContent.objects.get(slide=self.slide)
         self.assertTrue(content.is_extracted)
         self.assertEqual(len(content.content_data['pages']), 2)
         self.assertEqual(content.content_data['text_extraction']['missing_pages'], [2])
-        self.assertEqual(result['page_errors'], {'ocr_unavailable': 1})
+        self.assertEqual(result['page_errors'], {'incomplete': 1})
+        from curriculum.models import DocumentIndexJob
+        self.assertEqual(DocumentIndexJob.objects.get(slide=self.slide).status, 'pending')
         self.queue.assert_not_called()
 
     def test_rag_indexes_all_pages_in_global_order_and_reuses_verified_index(self):

@@ -426,6 +426,7 @@ export default function CoursesPage() {
   const [filteredCards, setFilteredCards] = useState<CourseCard[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   // Stores one randomly assigned theme per subject.
   const [subjectThemes, setSubjectThemes] = useState<
@@ -447,6 +448,8 @@ export default function CoursesPage() {
   }, [selectedSubject, courseCards]);
 
   const loadData = async () => {
+    setLoading(true);
+    setLoadError("");
     try {
       const subjectsData = await curriculumApi.getSubjects();
 
@@ -546,6 +549,7 @@ export default function CoursesPage() {
       setFilteredCards(cards);
     } catch (error) {
       console.error("Failed to load courses:", error);
+      setLoadError("Your class subjects could not load. Please retry.");
     } finally {
       setLoading(false);
     }
@@ -561,6 +565,8 @@ export default function CoursesPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
+      {loadError && <div role="alert" className="mb-4 rounded-xl border border-destructive p-4"><p>{loadError}</p><button onClick={loadData} className="mt-2 underline">Try again</button></div>}
+      {!loadError && subjects.length === 0 && <p className="mb-4 rounded-xl border p-4 text-sm">No subjects are assigned to your current class yet. Your class head can add them in Manage curriculum. If your class previously had subjects, ask the class head to check the class and database connection before recreating them.</p>}
       <header className="mb-4">
         <h1 className="font-display text-2xl tracking-tight sm:text-3xl">My courses</h1>
         <p className="mt-1 text-sm text-muted-foreground">

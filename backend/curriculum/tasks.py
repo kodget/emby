@@ -11,6 +11,18 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(soft_time_limit=450, time_limit=480, ignore_result=True)
+def index_document_task(job_id):
+    from .document_index import run
+    return run(job_id)
+
+
+@shared_task(ignore_result=True)
+def recover_document_indexes_task():
+    from .document_index import recover
+    return recover()
+
+
+@shared_task(soft_time_limit=450, time_limit=480, ignore_result=True)
 def generate_assessment_draft_task(job_id):
     from .assessment_drafts import run
     return run(job_id)

@@ -5,6 +5,32 @@ import shutil
 import subprocess
 import tempfile
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
+
+RENDER_ERRORS = {
+    'office_unavailable': 'PowerPoint and Word conversion is unavailable on the server. Ask the administrator to enable LibreOffice, or upload a PDF exported from the original document.',
+    'office_timeout': 'The document took too long to convert. Try exporting it as a PDF and uploading that file.',
+    'office_failed': 'The document could not be converted. Check that it opens correctly, or export it as a PDF and upload that file.',
+    'render_failed': 'The document could not be rendered. Check the original file and retry.',
+}
+
+
+class DocumentRenderingError(RuntimeError):
+    """Only predefined, safe messages cross the processing/status boundary."""
+    def __init__(self, code):
+        self.code = code if code in RENDER_ERRORS else 'render_failed'
+        super().__init__(RENDER_ERRORS[self.code])
+
+
+def rendering_failure(exc):
+    if isinstance(exc, DocumentRenderingError):
+        return exc.code, str(exc)
+    from .document_extraction import ExtractionError
+    if isinstance(exc, ExtractionError):
+        return exc.code, str(exc)
+    return 'render_failed', RENDER_ERRORS['render_failed']
 
 
 def office_executable():
@@ -15,22 +41,29 @@ def office_executable():
                       r'C:\Program Files (x86)\LibreOffice\program\soffice.exe'):
         if Path(candidate).is_file():
             return candidate
-    raise RuntimeError('Office document conversion is unavailable. Install LibreOffice on the worker.')
+    raise DocumentRenderingError('office_unavailable')
 
 
 def office_to_pdf(source, output):
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
     # An isolated profile prevents concurrent jobs from attaching to an existing GUI process.
-    with tempfile.TemporaryDirectory(prefix='emby-office-') as profile:
-        result = subprocess.run([
-            office_executable(), f'-env:UserInstallation={Path(profile).resolve().as_uri()}',
-            '--headless', '--convert-to', 'pdf', '--outdir', str(output), str(Path(source).resolve()),
-        ], capture_output=True, timeout=120,
-            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+    try:
+        with tempfile.TemporaryDirectory(prefix='emby-office-') as profile:
+            result = subprocess.run([
+                office_executable(), f'-env:UserInstallation={Path(profile).resolve().as_uri()}',
+                '--headless', '--convert-to', 'pdf', '--outdir', str(output), str(Path(source).resolve()),
+            ], capture_output=True, timeout=120,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+    except subprocess.TimeoutExpired:
+        raise DocumentRenderingError('office_timeout') from None
+    except OSError:
+        raise DocumentRenderingError('office_unavailable') from None
     pdf = output / (Path(source).stem + '.pdf')
     if result.returncode or not pdf.is_file() or pdf.stat().st_size == 0:
-        raise RuntimeError('The office document could not be converted to PDF.')
+        # Converter output can include filenames/document text. Log only safe diagnostics.
+        logger.warning('Office conversion failed: exit_code=%s pdf_created=%s', result.returncode, pdf.is_file())
+        raise DocumentRenderingError('office_failed')
     return str(pdf)
 
 

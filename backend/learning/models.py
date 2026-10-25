@@ -531,6 +531,7 @@ class PracticeRoundUsage(models.Model):
 class NotificationType(models.TextChoices):
     # Existing
     FLASHCARDS_DUE = "FLASHCARDS_DUE", "Flashcards due"
+    EXAM_COUNTDOWN = "EXAM_COUNTDOWN", "Exam countdown"
     FLASHCARDS_MISSED = "FLASHCARDS_MISSED", "Missed flashcards"
     PLANNER_UPCOMING = "PLANNER_UPCOMING", "Planned session starting"
     PLANNER_MISSED = "PLANNER_MISSED", "Planned session missed"
@@ -613,6 +614,7 @@ class Notification(models.Model):
     scheduled_for = models.DateTimeField(default=timezone.now, db_index=True)
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.SCHEDULED)
     delivered_at = models.DateTimeField(null=True, blank=True)
+    dispatched_at = models.DateTimeField(null=True, blank=True)
 
     read = models.BooleanField(default=False)
     read_at = models.DateTimeField(null=True, blank=True)

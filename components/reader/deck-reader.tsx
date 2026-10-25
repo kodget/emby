@@ -14,7 +14,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import type { SlideDeck, SlidePage } from "@/lib/api";
-import { deckApi } from "@/lib/api";
+import { api, deckApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { usePrivateMediaRefresh } from "@/hooks/use-private-media-refresh";
 import { DeckQuestionBank } from "./deck-question-bank";
@@ -34,6 +34,32 @@ export function DeckReader({
   const [deck, setDeck] = useState<SlideDeck | null>(null);
   const [pages, setPages] = useState<SlidePage[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [aiRetryError, setAiRetryError] = useState('');
+  const [aiRetrying, setAiRetrying] = useState(false);
+
+  const retryAi = async () => {
+    const session = sessionStorage.getItem('user');
+    setAiRetrying(true); setAiRetryError('');
+    try {
+      await api.post(`/api/decks/${deckId}/prepare-ai/`);
+      const fresh = await deckApi.getDeck(deckId);
+      if (session === sessionStorage.getItem('user')) setDeck(fresh);
+    } catch {
+      if (session === sessionStorage.getItem('user')) setAiRetryError('Could not queue AI preparation. Please retry.');
+    } finally { setAiRetrying(false); }
+  };
+
+  useEffect(() => {
+    if (!['pending', 'running'].includes(deck?.ai_index?.status ?? '')) return;
+    let cancelled = false;
+    const session = sessionStorage.getItem('user');
+    const timer = setInterval(() => {
+      void deckApi.getDeck(deckId).then(fresh => {
+        if (!cancelled && session === sessionStorage.getItem('user')) setDeck(fresh);
+      }).catch(() => {});
+    }, 10000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [deckId, deck?.ai_index?.status]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -261,11 +287,17 @@ export function DeckReader({
         <button className="underline" onClick={reading.retry}>Retry reading progress</button>
       </p>}
       <DeckQuestionBank key={deckId} deckId={deckId} />
-      {deck.text_extraction?.status !== "complete" && <p role="status" aria-label="Document text status" className="bg-amber-950 p-3 text-sm text-amber-100">
-        {deck.text_extraction?.missing_pages?.length
+      {deck.text_extraction?.status !== "complete" && <div role="status" aria-label="Document text status" className="bg-amber-950 p-3 text-sm text-amber-100">
+        {['pending', 'running'].includes(deck.ai_index?.status ?? '')
+          ? "Ready to read. AI is preparing the document in the background; you can already ask about the page on screen."
+          : deck.text_extraction?.missing_pages?.length
           ? `Text could not be fully read on pages ${deck.text_extraction.missing_pages.join(", ")}.`
           : "Document text has not been fully checked yet."} The original pages are still available to read.
-      </p>}
+        {deck.can_prepare_ai && !['pending', 'running'].includes(deck.ai_index?.status ?? '') && <button
+          className="ml-2 underline disabled:opacity-60" disabled={aiRetrying} onClick={retryAi}>
+          {aiRetrying ? 'Queuing…' : 'Retry AI preparation'}</button>}
+        {aiRetryError && <p role="alert">{aiRetryError}</p>}
+      </div>}
       {downloadError && <p role="alert" className="bg-red-950 p-2 text-center text-white">{downloadError}</p>}
       {imageError && <div role="alert" className="bg-red-950 p-2 text-center text-white">
         This page could not be displayed. <button className="underline" onClick={() => setAttempt(value => value + 1)}>Try again</button>
@@ -332,7 +364,7 @@ export function DeckReader({
         </div>
         {chatOpen && (
           <aside className="absolute inset-0 z-10 bg-gray-900 lg:static lg:w-[390px] lg:shrink-0">
-            <DeckAiChat key={deckId} deckId={deckId} title={deck.title || title} />
+            <DeckAiChat key={deckId} deckId={deckId} title={deck.title || title} pageNumber={currentPage} />
           </aside>
         )}
       </div>

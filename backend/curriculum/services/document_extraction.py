@@ -191,6 +191,14 @@ def ensure_slide_extraction(slide):
     key = source_key(slide)
     if is_complete(data) and data['text_extraction'].get('source_key') == key:
         return data
+    if content.is_extracted and data.get('pages') and data.get('text_extraction', {}).get('source_key') == key:
+        # Rendered documents are indexed once in the background, never scanned again
+        # inside a student request (or in a competing question-bank worker).
+        from curriculum.document_index import request_index
+        from curriculum.models import SlideDeck
+        origin = SlideDeck.objects.filter(curriculum_slide=slide, asset_id=slide.asset_id).first()
+        request_index(origin or slide)
+        raise ExtractionError('incomplete', data.get('text_extraction'))
     try:
         result = extract_document(content_file_url(slide), slide.file_type)
     except ExtractionError as exc:

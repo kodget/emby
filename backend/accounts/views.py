@@ -123,9 +123,6 @@ def google_login(request):
         
         try:
             # Verify Google token
-            print(f"Verifying Google token...")
-            print(f"Client ID: {settings.GOOGLE_CLIENT_ID}")
-            print(f"Token length: {len(token)}")
             
             idinfo = id_token.verify_oauth2_token(
                 token, 
@@ -133,17 +130,22 @@ def google_login(request):
                 settings.GOOGLE_CLIENT_ID
             )
             
-            print(f"Token verified successfully: {idinfo}")
             
-            email = idinfo['email']
+            if idinfo.get('email_verified') is not True:
+                return Response({'error': 'Use a verified Google email address.'}, status=401)
+            email = idinfo['email'].strip().lower()
             first_name = idinfo.get('given_name', '')
             last_name = idinfo.get('family_name', '')
             photo_url = idinfo.get('picture', '')
             
-            print(f"User info - Email: {email}, Name: {first_name} {last_name}")
             
             # Get or create user — filter by email to avoid MultipleObjectsReturned
-            user = User.objects.filter(email=email).first()
+            matches = list(User.objects.filter(email__iexact=email).order_by('pk')[:2])
+            if len(matches) > 1:
+                return Response({'error': 'Multiple accounts use this email. Contact support to recover the correct account.'}, status=409)
+            user = matches[0] if matches else None
+            if user and not user.is_active:
+                return Response({'error': 'This account is inactive.'}, status=403)
             created = False
             if not user:
                 username = email
@@ -158,7 +160,6 @@ def google_login(request):
                 )
                 created = True
             
-            print(f"User {'created' if created else 'found'}: {user.email}")
             
             # Get or create profile
             profile, profile_created = Profile.objects.get_or_create(
@@ -176,12 +177,10 @@ def google_login(request):
                 profile.photo_url = photo_url
             profile.save()
             
-            print(f"Profile ready: {profile.id}")
             
             # Generate tokens
             tokens = get_tokens_for_user(user)
             
-            print(f"Tokens generated successfully")
             
             return Response({
                 'message': 'Login successful' if not created else 'Account created successfully',
@@ -499,64 +498,56 @@ def update_onboarding_responses(request):
 # ANNOUNCEMENT ENDPOINTS
 # -------------------------
 
-class AnnouncementViewSet(viewsets.ModelViewSet):
-    serializer_class = AnnouncementSerializer
+class ClassNoticeViewSet(viewsets.ModelViewSet):
+    """Read notices within one active class; only its managers may mutate them."""
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        from accounts.permissions import IsClassHead
+        permissions = super().get_permissions()
+        if self.request.method not in ('GET', 'HEAD', 'OPTIONS'):
+            permissions.append(IsClassHead())
+        return permissions
+
     def get_queryset(self):
-        user = self.request.user
-        profile = user.profile
-        
-        if profile.class_group:
-            return Announcement.objects.filter(class_group=profile.class_group)
-        return Announcement.objects.none()
+        from curriculum.class_access import member_class
+        group = member_class(self.request.user)
+        model = self.serializer_class.Meta.model
+        return model.objects.filter(class_group=group) if group else model.objects.none()
 
     def perform_create(self, serializer):
-        profile = self.request.user.profile
-        
-        # Only class managers can create announcements
-        if not can_manage_class(profile):
-            raise PermissionError("Only verified class heads can create announcements")
-        
-        if not profile.class_group:
-            raise PermissionError("You must be part of a class to create announcements")
-        
-        serializer.save(
-            created_by=self.request.user,
-            class_group=profile.class_group
-        )
+        from curriculum.class_access import upload_class
+        serializer.save(created_by=self.request.user, class_group=upload_class(self.request.user))
+
+
+class AnnouncementViewSet(ClassNoticeViewSet):
+    serializer_class = AnnouncementSerializer
+
+    def _notify(self, announcement):
+        import logging
+        from django.db import transaction
+        from learning.notifications import announce_to_class
+        def send():
+            try:
+                announce_to_class(announcement)
+            except Exception:
+                logging.getLogger(__name__).exception('Announcement notification dispatch failed')
+        transaction.on_commit(send)
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        self._notify(serializer.instance)
+
+    def perform_update(self, serializer):
+        self._notify(serializer.save())
 
 
 # -------------------------
 # EXAM COUNTDOWN ENDPOINTS
 # -------------------------
 
-class ExamCountdownViewSet(viewsets.ModelViewSet):
+class ExamCountdownViewSet(ClassNoticeViewSet):
     serializer_class = ExamCountdownSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        profile = user.profile
-        
-        if profile.class_group:
-            return ExamCountdown.objects.filter(class_group=profile.class_group)
-        return ExamCountdown.objects.none()
-
-    def perform_create(self, serializer):
-        profile = self.request.user.profile
-        
-        # Only class managers can create exam countdowns
-        if not can_manage_class(profile):
-            raise PermissionError("Only verified class heads can create exam countdowns")
-        
-        if not profile.class_group:
-            raise PermissionError("You must be part of a class to create exam countdowns")
-        
-        serializer.save(
-            created_by=self.request.user,
-            class_group=profile.class_group
-        )
 
 
 # -------------------------

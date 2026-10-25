@@ -43,6 +43,8 @@ export function BattleArena({ battleId }: { battleId: string }) {
   const [battleState, setBattleState] = useState<BattleState | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [isHost, setIsHost] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [previewQuestions, setPreviewQuestions] = useState<{ question: string; options: string[]; correct_index: number }[]>([]);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   // Gamification States
@@ -109,16 +111,19 @@ export function BattleArena({ battleId }: { battleId: string }) {
     const userStr = sessionStorage.getItem("user");
     if (userStr) {
       const user = JSON.parse(userStr);
-      setCurrentUserId(user.id);
+      const userId = Number(user.user_id ?? user.id);
+      setCurrentUserId(userId);
       api.get(`/api/battles/${battleId}/`).then(res => {
-        const host = res.data.host === Number(user.id);
+        setJoinCode(res.data.code);
+        setPreviewQuestions(res.data.questions || []);
+        const host = Number(res.data.host) === userId;
         isHostRef.current = host;
         setIsHost(host);
-      }).catch(console.error);
+      }).catch(() => setBattleError("This battle could not load. Check your connection and class membership."));
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-    const wsBase = baseUrl.replace(/^http/, 'ws');
+    const wsBase = baseUrl.replace(/^http/, 'ws').replace(/\/$/, '');
     let cancelled = false;
     let socket: WebSocket | null = null;
 
@@ -138,6 +143,7 @@ export function BattleArena({ battleId }: { battleId: string }) {
         const data = JSON.parse(event.data);
 
         if (data.type === 'battle_state') {
+          setBattleError(null);
           const state = data.state as BattleState;
           setBattleState(state);
           setParticipants(data.participants);
@@ -175,6 +181,8 @@ export function BattleArena({ battleId }: { battleId: string }) {
           setView('question');
           startTimer(data.question_data.remaining_ms ?? data.question_data.seconds * 1000);
           playSound('pop');
+        } else if (data.type === 'participants_update') {
+          setParticipants(data.participants);
         } else if (data.type === 'show_answer') {
           if (timerRef.current) clearInterval(timerRef.current);
           setAnswerData(data.answer_data);
@@ -193,12 +201,26 @@ export function BattleArena({ battleId }: { battleId: string }) {
         }
       };
 
-      socket.onclose = (event) => {
+      socket.onclose = async (event) => {
         if (wsRef.current === socket) {
           wsRef.current = null;
           setWs(null);
         }
-        if (!cancelled && event.code !== 4403) {
+        if (cancelled) return;
+        if (event.code === 4403) {
+          // A long game may outlive its access token. The HTTP interceptor refreshes
+          // an expired session; a membership rejection must remain a rejection.
+          const previousToken = sessionStorage.getItem('token');
+          try {
+            await api.get('/auth/profile/');
+            if (!cancelled && sessionStorage.getItem('token') !== previousToken) {
+              connect();
+              return;
+            }
+          } catch { /* The existing HTTP session handling owns login recovery. */ }
+          if (!cancelled) setBattleError('This battle is unavailable. Check your session and join the game with its code.');
+        } else {
+          setBattleError('The live connection was interrupted. Reconnecting…');
           const delay = reconnectDelayRef.current;
           reconnectDelayRef.current = Math.min(delay * 2, 10000);
           reconnectTimerRef.current = setTimeout(connect, delay);
@@ -267,12 +289,16 @@ export function BattleArena({ battleId }: { battleId: string }) {
     }));
   };
 
-  if (!battleState) return <div className="text-center text-white py-20 text-xl animate-pulse">Connecting to Battle Arena...</div>;
+  if (!battleState) return <div className="space-y-4 py-20 text-center">
+    {battleError ? <><p role="alert">{battleError}</p><Button variant="outline" onClick={() => window.location.reload()}>Retry connection</Button><Button variant="ghost" onClick={() => router.push('/battles')}>Back to Brain Battles</Button></>
+      : <p role="status">Connecting to Battle Arena…</p>}
+  </div>;
 
   const SoundToggle = () => (
     <Button 
       variant="ghost" 
       size="icon" 
+      aria-label={soundEnabled ? 'Mute battle sounds' : 'Enable battle sounds'}
       onClick={() => setSoundEnabled(!soundEnabled)}
       className="absolute top-4 right-4 text-zinc-400 hover:text-white"
     >
@@ -290,7 +316,8 @@ export function BattleArena({ battleId }: { battleId: string }) {
           Waiting for players...
         </h1>
         <div className="flex justify-center flex-wrap gap-4">
-          {participants.length === 0 && <p className="text-zinc-400 italic">No one is here yet...</p>}
+        {joinCode && <p className="w-full text-xl">Join code: <strong className="font-mono tracking-widest">{joinCode}</strong></p>}
+        {participants.length === 0 && <p className="text-zinc-400 italic">No one is here yet...</p>}
           {participants.map(p => (
             <Badge key={p.id} className="text-lg py-2 px-4 bg-white/10 hover:bg-white/20 animate-bounce">
               {p.user_name}
@@ -298,12 +325,13 @@ export function BattleArena({ battleId }: { battleId: string }) {
           ))}
         </div>
         {isHost ? (
-          <Button size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-xl py-8 px-12 rounded-2xl" onClick={handleStart}>
+          <Button size="lg" disabled={!ws || ws.readyState !== WebSocket.OPEN} className="bg-emerald-600 hover:bg-emerald-500 text-xl py-8 px-12 rounded-2xl" onClick={handleStart}>
             <Play className="mr-2 h-6 w-6" /> Start Battle
           </Button>
         ) : (
           <p className="text-zinc-400 text-xl">Waiting for host to start...</p>
         )}
+        {isHost && previewQuestions.length > 0 && <details className="mx-auto max-w-2xl rounded-xl border p-4 text-left"><summary className="cursor-pointer">Review questions before starting ({previewQuestions.length})</summary><ol className="mt-4 space-y-4">{previewQuestions.map((question, index) => <li key={index}><p className="font-semibold">{index + 1}. {question.question}</p><p className="mt-1 text-sm">Correct answer: {question.options[question.correct_index]}</p></li>)}</ol></details>}
       </div>
     );
   }

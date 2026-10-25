@@ -62,7 +62,8 @@ def publish_pending(job_id):
         job.save(update_fields=['next_attempt_at', 'updated_at'])
         slide_id = job.slide_id
     try:
-        generate_question_bank_task.delay(slide_id)
+        from backend.task_dispatch import dispatch_task
+        dispatch_task(generate_question_bank_task, slide_id)
         return True
     except Exception as exc:
         logger.warning('Generation dispatch retained for %s (%s)', slide_id, type(exc).__name__)

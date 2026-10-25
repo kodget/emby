@@ -113,6 +113,14 @@ class DatabaseConfigTests(unittest.TestCase):
         self.assertEqual(result["ENGINE"], "django.db.backends.sqlite3")
         self.assertEqual(result["NAME"], str(self.base_dir / "db.sqlite3"))
 
+    def test_render_debug_cannot_create_ephemeral_database(self):
+        for env in ({}, {"USE_SQLITE": "true"}, {"DATABASE_URL": "sqlite:///db.sqlite3"},
+                    {"DB_NAME": "emby"}):
+            with self.subTest(env=env), self.assertRaises(ImproperlyConfigured):
+                self.config({**env, "RENDER": "true"}, debug=True)
+        self.assertEqual(self.config({"RENDER": "true", "DATABASE_URL": self.postgres_url},
+                                     debug=True)["ENGINE"], "django.db.backends.postgresql")
+
     def test_explicit_development_sqlite_uses_requested_test_file(self):
         result = self.config({"USE_SQLITE": "true", "SQLITE_NAME": ":memory:",
                               "DATABASE_URL": self.postgres_url}, debug=True)

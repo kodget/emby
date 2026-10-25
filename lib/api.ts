@@ -343,6 +343,8 @@ export type SlideDeck = {
   file_type: "pdf" | "pptx" | "ppt" | "docx";
   file_size: number;
   processing_status: "pending" | "processing" | "completed" | "failed";
+  ai_index?: { status: string; error_code?: string };
+  can_prepare_ai?: boolean;
   processing_error?: string;
   text_extraction?: { status?: string; missing_pages?: number[]; processed_pages?: number; total_pages?: number; error_counts?: Record<string, number> };
   page_count: number;
@@ -1056,6 +1058,9 @@ export const curriculumApi = {
     title: string;
     total_pages: number;
     can_reprocess?: boolean;
+    processing?: boolean;
+    processing_status?: string;
+    ai_index?: { status: string; error_code?: string };
     text_extraction?: { status?: string; missing_pages?: number[]; processed_pages?: number; total_pages?: number; error_counts?: Record<string, number> };
     pages: Array<{
       page_number: number;
@@ -1401,6 +1406,10 @@ export const studyPlannerApi = {
 // ==================== STATS API ====================
 
 export const statsApi = {
+  updatePrivacy: async (data: { public_profile?: boolean; public_rank?: boolean }): Promise<UserStats> => {
+    const response = await api.patch('/api/stats/me/', data);
+    return response.data;
+  },
   getMyStats: async (): Promise<UserStats> => {
     const response = await api.get("/api/stats/me/");
     return response.data;
@@ -1711,6 +1720,7 @@ export const aiApi = {
   // Source-aware chat — the backend scopes context and history to a slide or a full deck.
   chatWithSlide: async (data: {
     message: string;
+    page_number?: number;
     slide_image_base64?: string;
     conversation_history?: Array<{ role: string; content: string }>;
   } & ({ slide_id: string; deck_id?: never } | { deck_id: string; slide_id?: never })): Promise<{

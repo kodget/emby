@@ -76,7 +76,7 @@ def _setting(name: str, default: str = "") -> str:
         from django.conf import settings
 
         value = getattr(settings, name, None)
-        if value:
+        if value is not None:
             return str(value)
     except Exception:  # pragma: no cover - settings not ready
         pass
@@ -107,6 +107,7 @@ class Provider(NamedTuple):
     api_key: str
     model: str
     fallback_model: str
+    vision_model: str = ""
 
 
 def providers() -> list[Provider]:
@@ -127,6 +128,7 @@ def providers() -> list[Provider]:
                 api_key=key,
                 model=primary_model(),
                 fallback_model=fallback_model(),
+                vision_model=vision_model(),
             )
         )
 
@@ -144,6 +146,7 @@ def providers() -> list[Provider]:
                 api_key=b_key,
                 model=b_model,
                 fallback_model=_setting(f"LLM_BACKUP_{slot}_FALLBACK_MODEL", "") or "",
+                vision_model=_setting(f"LLM_BACKUP_{slot}_VISION_MODEL", ""),
             )
         )
 
@@ -165,11 +168,12 @@ def vision_model() -> str:
     routed to a multimodal sibling on the same provider. Set LLM_VISION_MODEL to empty
     to disable vision entirely; callers then fall back to text-only context.
     """
-    return _setting("LLM_VISION_MODEL", DEFAULT_VISION_MODEL)
+    default = DEFAULT_VISION_MODEL if base_url() == DEFAULT_BASE_URL else ""
+    return _setting("LLM_VISION_MODEL", default)
 
 
 def supports_vision() -> bool:
-    return bool(vision_model()) and bool(providers())
+    return any(provider.vision_model for provider in providers())
 
 
 def is_configured() -> bool:
@@ -215,6 +219,8 @@ def chat(
     schema_name: str = "response",
     json_object: bool = False,
     return_usage: bool = False,
+    vision: bool = False,
+    require_complete: bool = False,
 ) -> Any:
     """Run a chat completion and return the assistant's text.
 
@@ -229,6 +235,8 @@ def chat(
         LLMError: every model and retry failed.
     """
     chain = providers()
+    if vision:
+        chain = [provider for provider in chain if provider.vision_model]
     if not chain:
         raise LLMNotConfigured(
             "No LLM provider is configured. Add LLM_BASE_URL / LLM_API_KEY / LLM_MODEL "
@@ -254,9 +262,10 @@ def chat(
             "Authorization": f"Bearer {provider.api_key}",
             "Content-Type": "application/json",
         }
-        for candidate in _provider_models(provider, model):
+        for candidate in ([provider.vision_model] if vision else _provider_models(provider, model)):
             payload = dict(payload_base, model=candidate)
-            content, last_error, fatal, total_tokens = _try_model(url, headers, payload, last_error)
+            content, last_error, fatal, total_tokens = _try_model(
+                url, headers, payload, last_error, require_complete=require_complete)
             if content is not None:
                 if return_usage:
                     return content, total_tokens
@@ -284,6 +293,7 @@ def _try_model(
     headers: dict[str, str],
     payload: dict[str, Any],
     last_error: str,
+    *, require_complete: bool = False,
 ) -> tuple[str | None, str, bool, int]:
     """Attempt one model with retries. Returns (content, error, provider_is_dead, total_tokens)."""
     for attempt in range(_MAX_ATTEMPTS):
@@ -299,6 +309,8 @@ def _try_model(
                 resp_json = resp.json()
                 content = resp_json["choices"][0]["message"]["content"] or ""
                 total_tokens = resp_json.get("usage", {}).get("total_tokens", 0)
+                if require_complete and resp_json["choices"][0].get("finish_reason") != "stop":
+                    return None, "incomplete image reading", False, 0
             except (ValueError, KeyError, IndexError) as exc:
                 return None, f"malformed response: {exc}", False, 0
             if content.strip():
@@ -424,6 +436,7 @@ def chat_with_image(
     max_tokens: int = 1200,
     temperature: float = 0.4,
     return_usage: bool = False,
+    require_complete: bool = False,
 ) -> Any:
     """Run a completion that includes an image.
 
@@ -451,7 +464,8 @@ def chat_with_image(
 
     return chat(
         messages,
-        model=vision_model(),
+        vision=True,
+        require_complete=require_complete,
         temperature=temperature,
         max_tokens=max_tokens,
         return_usage=return_usage,

@@ -30,7 +30,10 @@ export function UploadProgressStrip() {
             const data = await res.json();
             let progress = u.progress;
             let status: UploadStatus = "processing";
-            if (data.status === "downloading") {
+            if (data.reading_ready) {
+              progress = 100;
+              status = "done";
+            } else if (data.status === "downloading") {
               progress = 60;
               status = "downloading";
             } else if (data.status === "extracting_text") {
@@ -64,7 +67,7 @@ export function UploadProgressStrip() {
   }, [uploads, dispatch]);
 
   const getStatusText = (status: UploadStatus, progress: number) => {
-    if (status === "done") return "Done"
+    if (status === "done") return "Ready to read"
     if (status === "error") return "Failed"
     if (status === "uploading") return "Uploading..."
     if (status === "downloading") return "Downloading..."

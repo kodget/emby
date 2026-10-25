@@ -21,6 +21,8 @@ export function useCredits() {
 
   useEffect(() => {
     fetchBalance();
+    window.addEventListener("credits-updated", fetchBalance);
+    return () => window.removeEventListener("credits-updated", fetchBalance);
   }, []);
 
   return {

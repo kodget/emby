@@ -134,7 +134,7 @@ class SlideViewSet(PrivateMediaResponseMixin, viewsets.ModelViewSet):
         from django.db import transaction
         from rest_framework.exceptions import ValidationError
         from .models import SlideProcessingStatus
-        from .slide_uploads import validate_slide_file, dispatch_slide_processing
+        from .slide_uploads import validate_slide_file, dispatch_slide_processing, topic_for_upload
 
         file_obj = request.FILES.get('file')
         if file_obj is None:
@@ -160,8 +160,9 @@ class SlideViewSet(PrivateMediaResponseMixin, viewsets.ModelViewSet):
                 logger.warning('Slide storage failed (%s)', type(exc).__name__)
                 raise StorageUnavailable()
             staged.append(asset)
+            topic = topic_for_upload(serializer.validated_data)
             slide = serializer.save(id=f'slide_{uuid.uuid4().hex}', uploaded_by=request.user,
-                class_group=owning_class, asset=asset, file_url='', file=None)
+                class_group=owning_class, asset=asset, file_url='', file=None, topic=topic)
             SlideProcessingStatus.objects.create(slide=slide, status='pending')
             transaction.on_commit(lambda: dispatch_slide_processing(slide.pk), robust=True)
             return slide
@@ -371,20 +372,50 @@ class UserStatsViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return UserStats.objects.filter(user=self.request.user)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get', 'patch'])
     def me(self, request):
         """Get current user's stats"""
         stats, created = UserStats.objects.get_or_create(user=request.user)
+        if request.method == 'PATCH':
+            from rest_framework import serializers
+            values = {key: serializers.BooleanField().run_validation(value)
+                      for key, value in request.data.items() if key in ('public_profile', 'public_rank')}
+            for key, value in values.items():
+                setattr(stats, key, value)
+            if values:
+                stats.save(update_fields=list(values))
         serializer = self.get_serializer(stats)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path=r'public/(?P<user_id>[0-9]+)')
+    def public_profile(self, request, user_id=None):
+        from .class_access import member_class
+        group = member_class(request.user)
+        stats = UserStats.objects.select_related('user__profile__class_group__school').filter(
+            user_id=user_id, user__is_active=True, user__profile__class_group=group,
+        ).first() if group else None
+        if stats is None or (not stats.public_profile and stats.user_id != request.user.pk):
+            return Response({'detail': 'Profile not available.'}, status=404)
+        profile = stats.user.profile
+        return Response({
+            'id': stats.user_id, 'full_name': stats.user.get_full_name() or stats.user.username,
+            'photo_url': profile.photo_url, 'school_name': group.school.name, 'set_name': group.set_name,
+            'points': stats.points if stats.public_rank else None,
+            'current_streak': stats.current_streak,
+        })
     
     @action(detail=False, methods=['get'])
     def leaderboard(self, request):
         """Get leaderboard (top users by points)"""
-        limit = int(request.query_params.get('limit', 10))
+        from .class_access import member_class
+        try:
+            limit = min(100, max(1, int(request.query_params.get('limit', 10))))
+        except (ValueError, TypeError):
+            return Response({'detail': 'Invalid limit.'}, status=400)
+        group = member_class(request.user)
         top_users = UserStats.objects.filter(
-            public_rank=True
-        ).order_by('-points')[:limit]
+            public_rank=True, public_profile=True, user__profile__class_group=group
+        ).order_by('-points')[:limit] if group else UserStats.objects.none()
         
         serializer = self.get_serializer(top_users, many=True)
         return Response(serializer.data)
@@ -568,7 +599,9 @@ def get_slide_content(request, slide_id):
 
     slide_content, _ = SlideContent.objects.get_or_create(slide=slide)
     from .content_permissions import can_reprocess_upload
+    from .document_index import status_for
     extraction_info = {
+        'ai_index': status_for(slide),
         'text_extraction': (slide_content.content_data or {}).get('text_extraction', {'status': 'unverified'}),
         'can_reprocess': can_reprocess_upload(request.user, slide),
     }
@@ -585,7 +618,21 @@ def get_slide_content(request, slide_id):
             **extraction_info,
         }, headers={'Cache-Control': 'private, no-store'})
 
-    # Render on-demand if not cached
+    # A newly uploaded document already has an owned background conversion.
+    # Opening the reader must not start a second render inside a GET request.
+    from .models import SlideProcessingStatus
+    from .slide_processing import ACTIVE_STATES
+    processing = SlideProcessingStatus.objects.filter(slide=slide).first()
+    if processing and processing.status in (*ACTIVE_STATES, 'failed'):
+        failed = processing.status == 'failed'
+        return Response({
+            'slide_id': slide.id, 'title': slide.title, 'pages': [], 'total_pages': 0,
+            'processing': not failed, 'processing_status': processing.status,
+            **extraction_info,
+            **({'error': 'Document preparation failed. Please retry processing.'} if failed else {}),
+        }, status=409 if failed else 202, headers={'Cache-Control': 'private, no-store', 'Retry-After': '2'})
+
+    # Legacy documents without a processing job can still render on demand.
     file_url = slide.get_file_url
     if not file_url:
         return Response({'error': 'Slide has no file URL'}, status=status.HTTP_400_BAD_REQUEST)
@@ -609,14 +656,19 @@ def get_slide_content(request, slide_id):
                 content['text_extraction'] = previous['text_extraction']
                 content['text'] = previous.get('text', '')
             content = {**previous, **content}
+            from .services.document_extraction import source_key
+            content['text_extraction']['source_key'] = source_key(slide)
             slide_content.content_data = content
             slide_content.is_extracted = content['total_pages'] > 0
-            slide_content.extraction_error = '' if is_complete(content) else ERRORS['incomplete']
+            slide_content.extraction_error = ''
             slide_content.extracted_at = timezone.now()
             slide_content.save()
         
         if content['total_pages'] > 0:
             Slide.objects.filter(id=slide.id).update(page_count=content['total_pages'])
+            from .document_index import request_index
+            request_index(slide)
+            extraction_info['ai_index'] = status_for(slide)
         
         return Response({
             'slide_id': slide.id,
@@ -968,18 +1020,18 @@ class SlideDeckViewSet(PrivateMediaResponseMixin, viewsets.ModelViewSet):
             except Exception:
                 raise StorageUnavailable()
             staged.append(asset)
-            return SlideDeck.objects.create(id=f'deck_{uuid.uuid4().hex}', title=title,
+            deck = SlideDeck.objects.create(id=f'deck_{uuid.uuid4().hex}', title=title,
                 file_type=file_type, file_size=file_obj.size, original_file='', asset=asset,
                 uploaded_by=request.user, class_group=owning_class, processing_status='pending')
+            from .slide_uploads import dispatch_standalone_deck_processing
+            transaction.on_commit(lambda: dispatch_standalone_deck_processing(deck.pk), robust=True)
+            return deck
 
         try:
-            deck, replayed = execute_upload(user=request.user, request_id=request.data.get('request_id'),
+            deck, _ = execute_upload(user=request.user, request_id=request.data.get('request_id'),
                 kind='deck', metadata={'title': title, 'file_type': file_type, 'class_group': str(owning_class.pk)},
                 upload=file_obj, create=create, queryset=self.get_queryset())
-            # The original and receipt are committed before conversion. Interrupted
-            # conversions are recoverable without uploading another original.
-            if not replayed:
-                self._process_deck_async(deck)
+            # The saved receipt can be replayed while the worker prepares pages.
             return Response(self.get_serializer(deck).data, status=status.HTTP_201_CREATED)
         except APIException:
             raise
@@ -999,6 +1051,15 @@ class SlideDeckViewSet(PrivateMediaResponseMixin, viewsets.ModelViewSet):
         pages = deck.pages.all().order_by('slide_number')
         serializer = SlidePageSerializer(pages, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='prepare-ai')
+    def prepare_ai(self, request, id=None):
+        from .document_index import request_index, status_for
+        deck = self.get_object()
+        if deck.processing_status != 'completed':
+            return Response({'error': 'Wait for the document pages to finish rendering.'}, status=409)
+        queued = request_index(deck, force=True)
+        return Response({'queued': queued, 'ai_index': status_for(deck)}, status=202)
     
     @action(detail=True, methods=['get'])
     def page(self, request, id=None):
@@ -1403,6 +1464,11 @@ def reprocess_slide(request, slide_id):
         if not CanWriteUploadedContent().has_object_permission(request, None, slide):
             return Response({'error': 'You cannot reprocess this upload.'}, status=403)
 
+        if request.data.get('index_only') is True:
+            from .document_index import request_index, status_for
+            queued = request_index(slide, force=True)
+            return Response({'queued': queued, 'ai_index': status_for(slide)}, status=202)
+
         from .slide_processing import reserve
         from .slide_uploads import dispatch_slide_processing
         token = reserve(slide_id, manual=True)
@@ -1495,6 +1561,11 @@ def slide_processing_status(request, slide_id):
         
         from learning.bank_sources import bank_status
         generation = bank_status(slide)
+        from .document_index import status_for
+        from .models import SlideContent
+        content = SlideContent.objects.filter(slide=slide, is_extracted=True).first()
+        availability = {'reading_ready': bool(content and (content.content_data or {}).get('pages')),
+                        'ai_index': status_for(slide)}
         # Get processing status
         try:
             status_obj = SlideProcessingStatus.objects.get(slide=slide)
@@ -1502,6 +1573,7 @@ def slide_processing_status(request, slide_id):
                 'slide_id': slide_id,
                 'slide_title': slide.title,
                 'question_bank': generation,
+                **availability,
                 'status': status_obj.status,
                 'content_extracted': status_obj.content_extracted,
                 'rag_processed': status_obj.rag_processed,
@@ -1517,6 +1589,7 @@ def slide_processing_status(request, slide_id):
                 'slide_id': slide_id,
                 'slide_title': slide.title,
                 'question_bank': generation,
+                **availability,
                 'status': 'not_processed',
                 'content_extracted': False,
                 'rag_processed': False,
@@ -1627,9 +1700,16 @@ class BrainBattleViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from rest_framework.exceptions import ValidationError
         from .ai_service import generate_battle_questions
+        from .serializers import BattleQuestionSerializer
         
         class_group = upload_class(self.request.user)
+        source = serializer.validated_data.pop('question_source', 'ai')
+        num_questions = serializer.validated_data.pop('num_questions', 10)
+        manual_questions = serializer.validated_data.pop('manual_questions', [])
             
+        if source == 'manual':
+            serializer.save(host=self.request.user, class_group=class_group, questions=manual_questions)
+            return
         battle = serializer.save(host=self.request.user, class_group=class_group)
         
         # Determine topic string from hierarchy
@@ -1640,48 +1720,69 @@ class BrainBattleViewSet(viewsets.ModelViewSet):
         if battle.linked_topic: hierarchy_parts.append(battle.linked_topic.name)
         
         topic_str = " > ".join(hierarchy_parts) or battle.topic or battle.title
+        from .library_tutor import library_context
+        filters = {name + '_id': getattr(battle, 'linked_' + name + '_id')
+                   for name in ('subject', 'block', 'sub_block', 'topic')
+                   if getattr(battle, 'linked_' + name + '_id')}
+        source_text, _, _ = library_context(self.request.user, topic_str, slide_filters=filters)
+        if not source_text:
+            battle.delete()
+            raise ValidationError('No readable slides are available for this battle yet. Wait for AI preparation or add questions manually.')
         
-        try:
-            num_questions = int(self.request.data.get('num_questions', 10))
-        except (TypeError, ValueError):
-            num_questions = 10
-        num_questions = min(40, max(1, num_questions))
-
         # Generating a battle costs AI credits like any other AI action, and the host is
         # the one who pays. A failure here must leave the battle in an honest state
         # rather than a playable-looking one with no questions.
-        from learning import credits
-        from learning.models import AIAction
+        from credits.services import CreditManager, InsufficientCreditsError
 
+        reservation = None
         try:
-            with credits.spend(
-                self.request.user,
-                AIAction.BATTLE_QUESTIONS,
-                resource_type='brain_battle',
-                resource_id=str(battle.id),
-            ):
-                questions = generate_battle_questions(
-                    topic_str, num_questions=num_questions, difficulty=battle.difficulty
-                )
-        except credits.InsufficientCredits as exc:
+            reservation = CreditManager.reserve_credits(
+                self.request.user, 'BRAIN_BATTLE', reference_id=f'battle:{battle.pk}',
+            )
+            questions, tokens = generate_battle_questions(
+                topic_str, num_questions=num_questions, difficulty=battle.difficulty,
+                return_usage=True,
+                source_text=source_text,
+            )
+            if not isinstance(questions, list) or len(questions) != num_questions:
+                raise ValueError('The generator did not return the requested questions.')
+            question_serializer = BattleQuestionSerializer(data=questions, many=True)
+            question_serializer.is_valid(raise_exception=True)
+            from django.db import transaction
+            with transaction.atomic():
+                battle.questions = question_serializer.validated_data
+                battle.save(update_fields=['questions'])
+                CreditManager.commit_usage(self.request.user, reservation, tokens)
+        except InsufficientCreditsError as exc:
+            from rest_framework.exceptions import APIException
             battle.delete()
-            raise ValidationError(str(exc))
+            error = APIException(str(exc), code='insufficient_credits')
+            error.status_code = status.HTTP_402_PAYMENT_REQUIRED
+            raise error from None
         except Exception as exc:
+            if reservation is not None:
+                CreditManager.refund_credits(
+                    self.request.user, reservation['reserved_amount'],
+                    action='REFUND_BATTLE_ERROR', reservation_id=reservation['reservation_id'],
+                )
             battle.delete()
             logger.exception('Battle question generation failed')
             raise ValidationError(
                 'Could not generate questions for this battle. Please try again.'
             ) from exc
 
-        if not questions:
-            battle.delete()
-            raise ValidationError(
-                'The question generator returned nothing for that topic. '
-                'Try a broader topic.'
-            )
-
-        battle.questions = questions
-        battle.save()
+    def perform_update(self, serializer):
+        from rest_framework.exceptions import PermissionDenied, ValidationError
+        battle = self.get_object()
+        if battle.host_id != self.request.user.pk:
+            raise PermissionDenied('Only the host can edit this battle.')
+        if battle.status != 'scheduled':
+            raise ValidationError('Started battles cannot be edited.')
+        for key in ('question_source', 'num_questions', 'manual_questions'):
+            if key in self.request.data:
+                raise ValidationError('Create a new battle to change its question bank.')
+            serializer.validated_data.pop(key, None)
+        serializer.save()
 
     @action(detail=True, methods=['post'])
     def join(self, request, pk=None):

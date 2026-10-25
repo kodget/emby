@@ -9,7 +9,6 @@ import {
   faCloudArrowUp,
   faXmark,
   faFileLines,
-  faCircleCheck,
   faTriangleExclamation,
   faLock,
 } from "@fortawesome/free-solid-svg-icons";
@@ -29,7 +28,6 @@ import {
   type SubjectId,
   type BlockId,
   type SubBlockId,
-  type TopicId,
   type Subject,
 } from "@/lib/curriculum";
 
@@ -58,8 +56,6 @@ export function SlideUploadModal() {
   );
   const [selectedBlock, setSelectedBlock] = useState<BlockId | null>(null);
   const [selectedSubBlock, setSelectedSubBlock] = useState<SubBlockId | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<TopicId | null>(null);
-  const [customTopicName, setCustomTopicName] = useState("");
 
   // Load curriculum from API
   useEffect(() => {
@@ -133,28 +129,14 @@ export function SlideUploadModal() {
       }),
     );
     try {
-      let topicId = selectedTopic;
-
-      if (customTopicName.trim()) {
-        const { data: newTopic } = await api.post("/api/topics/", {
-          name: customTopicName.trim(),
-          ...(selectedSubBlock ? { sub_block: selectedSubBlock } : {}),
-          block: selectedBlock,
-        });
-        topicId = newTopic.id;
-        setSelectedTopic(topicId);
-        setCustomTopicName("");
-      }
-
       const formData = new FormData();
       formData.append("file", file);
       formData.append("title", title.trim());
       formData.append("subject", selectedSubject);
       formData.append("block", selectedBlock);
       if (selectedSubBlock) formData.append("sub_block", selectedSubBlock);
-      if (topicId) formData.append("topic", topicId);
       intentRef.current = uploadIntent(intentRef.current, file, JSON.stringify([
-        uploadOwner(), title.trim(), selectedSubject, selectedBlock, selectedSubBlock, topicId,
+        uploadOwner(), title.trim(), selectedSubject, selectedBlock, selectedSubBlock,
       ]));
       formData.append("request_id", intentRef.current.requestId);
 
@@ -203,8 +185,6 @@ export function SlideUploadModal() {
     setSelectedSubject(null);
     setSelectedBlock(null);
     setSelectedSubBlock(null);
-    setSelectedTopic(null);
-    setCustomTopicName("");
   }
 
   const subject = selectedSubject
@@ -215,12 +195,6 @@ export function SlideUploadModal() {
     ? blocks.find((b) => b.id === selectedBlock)
     : null;
   const subBlocks = block?.subBlocks || [];
-  const subBlock = selectedSubBlock
-    ? subBlocks.find((t) => t.id === selectedSubBlock)
-    : null;
-
-  // Topics can come from either the sub-block or directly from the block
-  const topics = subBlock?.topics || block?.topics || [];
 
   return (
     <AnimatePresence>
@@ -260,9 +234,6 @@ export function SlideUploadModal() {
                     {selectedSubBlock &&
                       subBlocks.find((t) => t.id === selectedSubBlock) &&
                       ` · ${subBlocks.find((t) => t.id === selectedSubBlock)?.title}`}
-                    {selectedTopic &&
-                      topics.find((s) => s.id === selectedTopic) &&
-                      ` · ${topics.find((s) => s.id === selectedTopic)?.title}`}
                   </p>
                 )}
               </div>
@@ -334,8 +305,6 @@ export function SlideUploadModal() {
                           setSelectedSubject(subj.id);
                           setSelectedBlock(null);
                           setSelectedSubBlock(null);
-                          setSelectedTopic(null);
-                          setCustomTopicName("");
                         }}
                         className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
                           selectedSubject === subj.id
@@ -363,8 +332,6 @@ export function SlideUploadModal() {
                           onClick={() => {
                             setSelectedBlock(blk.id);
                             setSelectedSubBlock(null);
-                            setSelectedTopic(null);
-                            setCustomTopicName("");
                           }}
                           className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
                             selectedBlock === blk.id
@@ -395,8 +362,6 @@ export function SlideUploadModal() {
                           type="button"
                           onClick={() => {
                             setSelectedSubBlock(subBlk.id);
-                            setSelectedTopic(null);
-                            setCustomTopicName("");
                           }}
                           className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
                             selectedSubBlock === subBlk.id
@@ -408,53 +373,6 @@ export function SlideUploadModal() {
                         </button>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                {/* Topic Selection */}
-                {selectedBlock && (
-                  <div className="space-y-3">
-                    {topics.length > 0 && (
-                      <div>
-                        <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-                          Select Existing Topic
-                        </label>
-                        <div className="mt-1.5 grid grid-cols-2 gap-2">
-                          {topics.map((topic) => (
-                            <button
-                              key={topic.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedTopic(topic.id);
-                                setCustomTopicName("");
-                              }}
-                              className={`rounded-xl border px-3 py-2 text-sm truncate transition-colors ${
-                                selectedTopic === topic.id
-                                  ? "border-primary bg-primary text-primary-foreground"
-                                  : "border-border bg-background hover:border-primary/50"
-                              }`}
-                            >
-                              {topic.title}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {isVerifiedClassHead && <div>
-                      <label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-                        {topics.length > 0 ? "Or Enter New Topic Name" : "Topic Name (Optional)"}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Upper Limb"
-                        value={customTopicName}
-                        onChange={(e) => {
-                          setCustomTopicName(e.target.value);
-                          setSelectedTopic(null);
-                        }}
-                        className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-                      />
-                    </div>}
                   </div>
                 )}
 
@@ -531,7 +449,7 @@ export function SlideUploadModal() {
                         className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground"
                         htmlFor="slide-title"
                       >
-                        Title
+                        Topic / slide title
                       </label>
                       <input
                         id="slide-title"
@@ -542,6 +460,7 @@ export function SlideUploadModal() {
                         placeholder="e.g. Axilla: Boundaries & Contents"
                         className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary"
                       />
+                      <p className="mt-1 text-xs text-muted-foreground">This name appears as the topic in Learn.</p>
                     </div>
 
                     <motion.button

@@ -620,7 +620,8 @@ test("upload validation leaves the form usable and a failed upload can be retrie
     if (url.pathname === "/api/slides/upload_and_process/") {
       uploads++;
       expect(route.request().headers()["content-type"]).toContain("multipart/form-data; boundary=");
-      expect(route.request().postData()).toContain('name="topic"\r\n\r\nopaque-topic-42');
+      expect(route.request().postData()).not.toContain('name="topic"');
+      expect(route.request().postData()).toContain('name="title"\r\n\r\nlecture');
       const requestId = route.request().postData()?.match(/name="request_id"\r\n\r\n([^\r]+)/)?.[1];
       expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
       requestIds.push(requestId!);
@@ -636,7 +637,7 @@ test("upload validation leaves the form usable and a failed upload can be retrie
   await page.getByRole("button", { name: "Upper limb", exact: true }).click();
   await expect(page.getByRole("button", { name: "Bones", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Hand", exact: true }).click();
-  await page.getByRole("button", { name: "Bones", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Bones", exact: true })).toHaveCount(0);
   const file = page.locator('input[type="file"]');
   await file.setInputFiles({ name: "bad.exe", mimeType: "application/octet-stream", buffer: Buffer.from("MZ") });
   await expect(page.getByRole("alert").filter({ hasText: "Choose a PDF" })).toBeVisible();
@@ -764,7 +765,7 @@ test("a three-segment sub-block course path opens materials and exposes slide te
   await page.getByRole("link", { name: /Scanned lecture/ }).click();
   const notice = page.getByRole("status", { name: "Document text status" });
   await expect(notice).toContainText("pages 1");
-  await notice.getByRole("button", { name: "Retry text processing", exact: true }).click();
+  await notice.getByRole("button", { name: "Retry AI preparation", exact: true }).click();
   await expect(notice).toContainText("Processing queued");
   expect(retries).toBe(1);
 });
@@ -930,9 +931,9 @@ test("extraction warning names missing pages and supports failed retry then succ
   const notice = page.getByRole("status", { name: "Document text status" });
   await expect(notice).toContainText("pages 2, 4");
   await expect(page.getByAltText("Page 1", { exact: true })).toBeVisible();
-  await notice.getByRole("button", { name: "Retry text processing" }).click();
+  await notice.getByRole("button", { name: "Retry AI preparation" }).click();
   await expect(notice.getByRole("alert")).toContainText("could not be queued");
-  await notice.getByRole("button", { name: "Retry text processing" }).click();
+  await notice.getByRole("button", { name: "Retry AI preparation" }).click();
   await expect(notice).toContainText("Processing queued");
   expect(attempts).toBe(2);
   complete = true;
@@ -953,14 +954,14 @@ test("extraction warning lets students read but reserves retry for authorized up
   });
   await page.goto("/read/anatomy/reader-a");
   await expect(page.getByRole("status", { name: "Document text status" })).toContainText("Ask the uploader or class head");
-  await expect(page.getByRole("button", { name: "Retry text processing" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Retry AI preparation" })).toHaveCount(0);
   await expect(page.getByAltText("Page 1", { exact: true })).toBeVisible();
 });
 
 test("extraction does not present a legacy unchecked cache as complete", async ({ page }) => {
   await fixtures(page, readerResponse);
   await page.goto("/read/anatomy/reader-a");
-  await expect(page.getByRole("status", { name: "Document text status" })).toContainText("not been fully checked yet");
+  await expect(page.getByRole("status", { name: "Document text status" })).toContainText("has not finished reading");
   await expect(page.getByAltText("Page 1", { exact: true })).toBeVisible();
 });
 
@@ -989,6 +990,69 @@ async function readerResponse(route: Route, url: URL) {
   })) } : { id: match[1], title: `Lecture ${match[1]}`, subject: "anatomy", file_type: "pdf", page_count: 3 } });
   return true;
 }
+
+test('background upload preparation waits for saved pages and opens the reader automatically', async ({ page }) => {
+  let ready = false;
+  let checks = 0;
+  await fixtures(page, async (route, url) => {
+    if (url.pathname === '/api/slides/reader-a/content/' && !ready) {
+      checks++;
+      await route.fulfill({ status: 202, json: { slide_id: 'reader-a', title: 'Saved lecture',
+        total_pages: 0, pages: [], processing: true, processing_status: 'converting_to_jpg' } });
+      return true;
+    }
+    return readerResponse(route, url);
+  });
+  await page.goto('/read/anatomy/reader-a');
+  await expect(page.getByRole('status').filter({ hasText: 'Upload saved. Preparing your slide pages...' })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'Could not load this document' })).toHaveCount(0);
+  ready = true;
+  await expect(page.getByAltText('Page 1', { exact: true })).toBeVisible();
+  expect(checks).toBeGreaterThan(0);
+  await expect(page.getByText('Upload saved. Preparing your slide pages...')).toHaveCount(0);
+});
+
+test('visual slide preparation keeps scanned pages readable and sends the selected page to chat', async ({ page }) => {
+  test.setTimeout(180000);
+  let ready = false;
+  let sent = false;
+  await fixtures(page, async (route, url) => {
+    if (url.pathname === '/api/slides/reader-a/content/') {
+      await route.fulfill({ json: { total_pages: 2, can_reprocess: true,
+        ai_index: { status: ready ? 'complete' : 'running' },
+        text_extraction: { status: ready ? 'complete' : 'failed', missing_pages: ready ? [] : [1, 2] },
+        pages: [1, 2].map(page_number => ({ page_number, image_url: readerImage, width: 400, height: 300, text: '' })),
+      } }); return true;
+    }
+    if (url.pathname === '/api/slides/reader-a/status/') {
+      await route.fulfill({ json: { reading_ready: true, status: 'indexing', ai_index: { status: ready ? 'complete' : 'running' }, question_bank: {
+        status: 'not_requested', mcq_target: 15, theory_target: 10, mcq_by_difficulty: {}, theory_by_difficulty: {},
+      } } }); return true;
+    }
+    if (url.pathname === '/api/ai/chat/') {
+      const body = route.request().postDataJSON();
+      expect(body.slide_id).toBe('reader-a');
+      expect(body.page_number).toBe(2);
+      expect(body.slide_image_base64).toBeUndefined();
+      sent = true;
+      await route.fulfill({ json: { response: 'The image shows the heart. [Page 2]' } }); return true;
+    }
+    return readerResponse(route, url);
+  });
+  await page.goto('/read/anatomy/reader-a');
+  await expect(page.getByAltText('Page 1', { exact: true })).toBeVisible();
+  const notice = page.getByRole('status', { name: 'Document text status' });
+  await expect(notice).toContainText('Ready to read');
+  await expect(notice.getByRole('button', { name: 'Retry AI preparation' })).toHaveCount(0);
+  await page.getByRole('navigation', { name: 'Page navigation' }).getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('textbox', { name: 'Ask the Emby tutor' }).fill('Explain the diagram');
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(page.getByText('The image shows the heart. [Page 2]', { exact: true })).toBeVisible();
+  expect(sent).toBe(true);
+  ready = true;
+  await expect(notice).toHaveCount(0, { timeout: 25000 });
+  await expect(page.getByAltText('Page 2', { exact: true })).toBeVisible();
+});
 
 test("reader page failures have a working retry instead of an empty document", async ({ page }) => {
   let failed = true;
@@ -1371,7 +1435,7 @@ test("standalone deck chat sends whole-deck scope and restores persisted history
     }
     if (url.pathname === "/api/ai/chat/") {
       const body = route.request().postDataJSON();
-      expect(body).toEqual({ deck_id: "chat-deck", message: "What is on page two?" });
+      expect(body).toEqual({ deck_id: "chat-deck", message: "What is on page two?", page_number: 1 });
       history = [
         { role: "user", content: body.message, created_at: new Date().toISOString() },
         { role: "assistant", content: "Page two covers the femoral nerve. [Page 2]", created_at: new Date().toISOString() },
@@ -1423,7 +1487,7 @@ test("standalone deck chat keeps failed questions retryable without saving them"
     if (url.pathname === "/api/ai/chat/") {
       attempts += 1;
       const body = route.request().postDataJSON();
-      expect(body).toEqual({ deck_id: "chat-deck", message: "What is on page two?" });
+      expect(body).toEqual({ deck_id: "chat-deck", message: "What is on page two?", page_number: 1 });
       if (attempts === 1) {
         await route.fulfill({
           status: 502,
@@ -1980,4 +2044,85 @@ test("standalone bank setup reserves assignment for uploaders while students kee
   await expect(page.getByLabel("Course", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Prepare saved questions" })).toHaveCount(0);
   await expect(page.getByAltText("Page 1", { exact: true })).toBeVisible();
+});
+
+test('production repair: class hub opens credit-funded library tutor and preserves failed question', async ({ page }) => {
+  test.setTimeout(120000);
+  let sends = 0;
+  await fixtures(page, async (route, url) => {
+    if (url.pathname === '/auth/class/my-class/') {
+      await route.fulfill({ json: { id: 1, set_name: 'Year 1', school_name: 'Test School', member_count: 5, class_heads: [], code: '123456' } }); return true;
+    }
+    if (url.pathname === '/api/ai/chat/history/') { await route.fulfill({ json: { messages: [] } }); return true; }
+    if (url.pathname === '/api/ai/chat/') {
+      expect(route.request().postDataJSON()).toEqual({ scope: 'library', message: 'Explain the femoral nerve' });
+      sends++;
+      await route.fulfill(sends === 1 ? { status: 502, json: { error: 'Provider unavailable. Please retry.' } }
+        : { json: { response: 'The femoral nerve is described in your lecture [1].', balance: 19, sources: [{ citation: 1, title: 'Anatomy lecture', page: 2 }] } }); return true;
+    }
+  });
+  await page.goto('/class');
+  await expect(page.getByRole('heading', { name: 'My class', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Class subjects/ })).toHaveAttribute('href', '/courses');
+  await page.getByRole('button', { name: 'Ask AI tutor', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Question for AI tutor' }).fill('Explain the femoral nerve');
+  await page.getByRole('button', { name: 'Send question' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Provider unavailable' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Question for AI tutor' })).toHaveValue('Explain the femoral nerve');
+  await page.getByRole('button', { name: 'Send question' }).click();
+  await expect(page.getByText('The femoral nerve is described in your lecture [1].')).toBeVisible();
+  await page.getByText('Slide sources', { exact: true }).click();
+  await expect(page.getByText('[1] Anatomy lecture · Page 2')).toBeVisible();
+});
+
+test('production repair: manual battle reaches lobby and recognizes user ID rather than profile ID', async ({ page }) => {
+  test.setTimeout(120000);
+  let payload: any;
+  await fixtures(page, async (route, url) => {
+    if (url.pathname === '/api/battles/' && route.request().method() === 'POST') {
+      payload = route.request().postDataJSON();
+      await route.fulfill({ status: 201, json: { id: 91 } }); return true;
+    }
+    if (url.pathname === '/api/battles/91/') {
+      await route.fulfill({ json: { id: 91, code: 'ABC234', host: 42, questions: payload.manual_questions } }); return true;
+    }
+  });
+  await page.routeWebSocket('ws://127.0.0.1:8600/ws/battle/91/**', socket => {
+    socket.send(JSON.stringify({ type: 'battle_state', state: {
+      status: 'scheduled', current_question_index: -1, total_questions: 1,
+    }, participants: [] }));
+  });
+  await page.goto('/battles/create');
+  await page.getByLabel('Battle title', { exact: true }).fill('Revision game');
+  await page.getByRole('textbox', { name: 'Question 1 text' }).fill('Which option is correct?');
+  for (let i = 1; i <= 4; i++) await page.getByRole('textbox', { name: `Question 1 option ${i}` }).fill(`Answer ${i}`);
+  await page.getByRole('radio', { name: 'Question 1 correct answer 2' }).check();
+  await page.getByRole('button', { name: 'Create lobby', exact: true }).click();
+  await expect(page).toHaveURL(/battles\/91$/);
+  await expect(page.getByText('ABC234', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start Battle', exact: true })).toBeVisible();
+  expect(payload.question_source).toBe('manual');
+  expect(payload.manual_questions[0].correct_index).toBe(1);
+  await page.getByText('Review questions before starting (1)').click();
+  await expect(page.getByText('Correct answer: Answer 2')).toBeVisible();
+});
+
+test('production repair: profile privacy controls save and survive reload', async ({ page }) => {
+  test.setTimeout(120000);
+  let privacy = { public_profile: true, public_rank: true };
+  await fixtures(page, async (route, url) => {
+    if (url.pathname === '/api/stats/me/') {
+      if (route.request().method() === 'PATCH') privacy = { ...privacy, ...route.request().postDataJSON() };
+      await route.fulfill({ json: { id: 9, points: 10, current_streak: 0, rank: 1, ...privacy } }); return true;
+    }
+  });
+  await page.goto('/profile');
+  await page.getByRole('checkbox', { name: 'Public profile', exact: true }).uncheck();
+  await expect.poll(() => privacy.public_profile).toBe(false);
+  await expect(page.getByRole('checkbox', { name: 'Public ranking', exact: true })).toBeEnabled();
+  await page.getByRole('checkbox', { name: 'Public ranking', exact: true }).uncheck();
+  await expect.poll(() => privacy.public_rank).toBe(false);
+  await page.reload();
+  await expect(page.getByRole('checkbox', { name: 'Public profile', exact: true })).not.toBeChecked();
+  await expect(page.getByRole('checkbox', { name: 'Public ranking', exact: true })).not.toBeChecked();
 });

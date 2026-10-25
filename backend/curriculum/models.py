@@ -81,7 +81,7 @@ class Topic(models.Model):
     id = models.CharField(max_length=50, primary_key=True)  # e.g., 'upper-limb'
     sub_block = models.ForeignKey(SubBlock, on_delete=models.CASCADE, related_name='topics', null=True, blank=True)
     block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='topics', null=True, blank=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -849,6 +849,27 @@ class SlideDeck(models.Model):
         return self.processing_status == 'failed'
 
 
+class DocumentIndexJob(models.Model):
+    """Resumable AI reading, independent of render success and student credit requests."""
+    slide = models.OneToOneField(Slide, null=True, blank=True, on_delete=models.CASCADE, related_name='index_job')
+    deck = models.OneToOneField(SlideDeck, null=True, blank=True, on_delete=models.CASCADE, related_name='index_job')
+    status = models.CharField(max_length=16, default='pending')
+    source_key = models.CharField(max_length=64)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    lease_token = models.UUIDField(null=True, editable=False)
+    lease_expires_at = models.DateTimeField(null=True)
+    next_attempt_at = models.DateTimeField(null=True)
+    error_code = models.CharField(max_length=40, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(
+            condition=(models.Q(slide__isnull=False, deck__isnull=True) |
+                       models.Q(slide__isnull=True, deck__isnull=False)), name='document_index_one_source')]
+        indexes = [models.Index(fields=['status', 'next_attempt_at'], name='document_index_due')]
+
+
 class DeckReadingProgress(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deck_reading_progress')
     deck = models.ForeignKey(SlideDeck, on_delete=models.CASCADE, related_name='reading_progress')
@@ -949,6 +970,9 @@ class SlideChatMessage(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='slide_chat_messages')
     slide = models.ForeignKey(Slide, on_delete=models.CASCADE, related_name='chat_messages', null=True, blank=True)
     deck = models.ForeignKey(SlideDeck, on_delete=models.CASCADE, related_name='chat_messages', null=True, blank=True)
+    library_class = models.ForeignKey('accounts.ClassGroup', on_delete=models.CASCADE,
+                                      null=True, blank=True, related_name='+')
+    sources = models.JSONField(default=list, blank=True)
 
     role = models.CharField(max_length=10, choices=ROLES)
     content = models.TextField()

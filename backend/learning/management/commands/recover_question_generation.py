@@ -8,3 +8,5 @@ class Command(BaseCommand):
         from learning.generation_dispatch import recover_generation_jobs
         result = recover_generation_jobs()
         self.stdout.write(f"Published {result['published']} saved generation request(s).")
+        from backend.task_dispatch import wait_for_local_tasks
+        wait_for_local_tasks()

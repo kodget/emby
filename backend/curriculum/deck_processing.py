@@ -73,7 +73,10 @@ def process(deck_id, token=None):
         heartbeat(deck)
         success, result = SlideConverter.convert_document(str(source), deck.file_type, deck.pk)
         if not success:
-            raise RuntimeError('Document rendering failed.')
+            owned(deck).update(processing_status='failed', processing_lease_until=None,
+                processing_error=result.get('error') or 'Document processing failed. Please retry processing.',
+                updated_at=timezone.now())
+            return False
         images, pages = result['slide_images'], result['pages']
         if not images or result['page_count'] != len(images) or len(pages) != len(images):
             raise RuntimeError('Incomplete document render.')
@@ -105,6 +108,8 @@ def process(deck_id, token=None):
             current.processing_lease_until = None
             current.save(update_fields=['page_count', 'text_extraction', 'processing_status',
                                        'processing_error', 'processing_lease_until', 'updated_at'])
+            from .document_index import request_index
+            request_index(current, force=True)
         published = True
         return True
     except Superseded:

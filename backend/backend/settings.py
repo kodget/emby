@@ -13,11 +13,15 @@ from datetime import timedelta
 
 from dotenv import load_dotenv
 from .database_config import database_config
+from .deployment_config import validate_deployment
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load .env from the project root (next to manage.py)
-load_dotenv(BASE_DIR / ".env")
+if os.getenv("RENDER", "").lower() != "true":
+    load_dotenv(BASE_DIR / ".env")
+
+validate_deployment(os.environ)
 
 
 def env_bool(name: str, default: bool = False) -> bool:
@@ -284,7 +288,9 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
-# When True, tasks run inline (useful for dev without a running worker/broker)
+# Eager mode needs no worker/broker. Document dispatch runs on bounded local
+# background threads so upload requests never wait for rendering/indexing/AI.
+# Other direct Celery calls retain Celery's normal inline eager behavior.
 CELERY_TASK_ALWAYS_EAGER = env_bool(
     "CELERY_TASK_ALWAYS_EAGER",
     False,

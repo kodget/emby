@@ -163,7 +163,8 @@ class SlideConversionPipeline:
             if status_obj:
                 status_obj.status = 'converting_to_jpg'
                 status_obj.save(update_fields=['status'])
-            rendered = render_document(original_path, ft, temp_dir, ocr=True)
+            # Publish the reader first; visual indexing runs as a separate durable job.
+            rendered = render_document(original_path, ft, temp_dir, ocr=False)
             jpg_paths = rendered['image_paths']
             result['image_paths'] = jpg_paths
             result['page_count'] = rendered['page_count']
@@ -176,8 +177,10 @@ class SlideConversionPipeline:
             return result
 
         except Exception as exc:
-            logger.error('Pipeline error (%s)', type(exc).__name__)
-            result['error'] = 'The document could not be processed. Check the original file and retry.'
+            from .document_rendering import rendering_failure
+            result['error_code'], result['error'] = rendering_failure(exc)
+            logger.error('Pipeline error slide=%s type=%s code=%s exception=%s',
+                         slide_id, original_file_type, result['error_code'], type(exc).__name__)
             # Clean up on failure — temp_dir is useless without images
             from .document_rendering import cleanup_render
             cleanup_render(result)

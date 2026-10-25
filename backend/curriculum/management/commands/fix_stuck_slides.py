@@ -23,3 +23,6 @@ class Command(BaseCommand):
             else:
                 count += int(request_generation(slide, force=options['force']))
         self.stdout.write(f'Saved {count} generation request(s). Active jobs were preserved.')
+        if not options['dry_run']:
+            from backend.task_dispatch import wait_for_local_tasks
+            wait_for_local_tasks()

@@ -11,7 +11,7 @@ type Message = {
   content: string;
 };
 
-export function DeckAiChat({ deckId, title }: { deckId: string; title: string }) {
+export function DeckAiChat({ deckId, title, pageNumber }: { deckId: string; title: string; pageNumber: number }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [value, setValue] = useState("");
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -52,7 +52,7 @@ export function DeckAiChat({ deckId, title }: { deckId: string; title: string })
     setSending(true);
     setError("");
     try {
-      const result = await aiApi.chatWithSlide({ deck_id: deckId, message });
+      const result = await aiApi.chatWithSlide({ deck_id: deckId, message, page_number: pageNumber });
       const timestamp = Date.now();
       setMessages(current => [
         ...current,

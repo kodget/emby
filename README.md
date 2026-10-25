@@ -285,7 +285,7 @@ emby/
 │   ├── sw.js                     # Service worker (cache-first for assets, network-first for API)
 │   └── manifest.json             # PWA manifest
 │
-├── render.yaml                   # Render Blueprint (web + celery worker + redis)
+├── render.yaml                   # Render Blueprint (web + worker + scheduler + redis)
 └── vercel.json                   # Vercel deployment config (frontend)
 ```
 
@@ -574,15 +574,16 @@ Visit `http://localhost:3000`.
 Deploy via Vercel CLI (`vercel`) or connect your GitHub repository in the Vercel dashboard. Set all `NEXT_PUBLIC_*` environment variables in the Vercel project settings.
 
 ### Backend → Render
-The `render.yaml` Blueprint defines three services:
+The `render.yaml` Blueprint defines four services. The app image includes Python 3.12, LibreOffice and OCR dependencies:
 
 | Service | Type | Runtime | Start Command |
 |---|---|---|---|
-| `emby-backend` | Web | Python 3.11 | `daphne -b 0.0.0.0 -p $PORT backend.asgi:application` |
-| `emby-celery-worker` | Worker | Python 3.11 | `celery -A backend worker --loglevel=info --concurrency=2` |
+| `emby-backend` | Web | Docker | `bash render_start.sh web` |
+| `emby-celery-worker` | Worker | Docker | `bash render_start.sh worker` |
+| `emby-scheduler` | Worker, one instance | Docker | `bash render_start.sh scheduler` |
 | `emby-redis` | Redis | Managed | — |
 
-Deploy by pushing `render.yaml` to your repo and connecting via Render's "New Blueprint" flow.
+Follow [PRODUCTION_RECOVERY.md](docs/PRODUCTION_RECOVERY.md) before applying the Blueprint. Link web, worker and scheduler to the existing persistent PostgreSQL database and shared integration configuration through the `emby-production` environment group. The web release hook runs guarded migrations; startup never seeds replacement accounts or content. SQLite is refused on Render. Review service plans and verify the container in staging before rollout.
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the full checklist including Google OAuth domain setup, CORS configuration, and post-deployment verification.
 

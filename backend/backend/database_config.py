@@ -13,6 +13,9 @@ def _env_value(environ, key, default=""):
 
 def database_config(environ, base_dir, *, debug):
     """Return one database configuration; never connect or log credentials."""
+    # DEBUG is a troubleshooting switch, not proof that a filesystem is durable.
+    # Render sets RENDER=true itself, including when a dashboard has DEBUG=True.
+    production = not debug or _env_value(environ, "RENDER").lower() == "true"
     use_sqlite = _env_value(environ, "USE_SQLITE").lower() in (
         "1", "true", "yes", "on",
     )
@@ -21,9 +24,9 @@ def database_config(environ, base_dir, *, debug):
     has_db_fields = any(_env_value(environ, key) for key in db_keys)
 
     if use_sqlite:
-        if not debug:
+        if production:
             raise ImproperlyConfigured(
-                "USE_SQLITE requires DEBUG=True. Production must use the existing "
+                "USE_SQLITE requires DEBUG=True outside Render. Production must use the existing "
                 "persistent PostgreSQL database; do not create a replacement database."
             )
         sqlite_name = _env_value(environ, "SQLITE_NAME") or str(base_dir / "db.sqlite3")
@@ -42,18 +45,18 @@ def database_config(environ, base_dir, *, debug):
             raise ImproperlyConfigured(
                 "DATABASE_URL is invalid. Check its scheme and encoded credentials."
             ) from None
-        if not debug and config["ENGINE"] != "django.db.backends.postgresql":
+        if production and config["ENGINE"] != "django.db.backends.postgresql":
             raise ImproperlyConfigured(
                 "Production DATABASE_URL must identify a persistent PostgreSQL database."
             )
-        if not debug and not all(config.get(key) for key in ("NAME", "HOST", "USER")):
+        if production and not all(config.get(key) for key in ("NAME", "HOST", "USER")):
             raise ImproperlyConfigured(
                 "Production DATABASE_URL must include a database name, host and user."
             )
         return config
 
     if has_db_fields:
-        required = db_keys if not debug else ("DB_NAME",)
+        required = db_keys if production else ("DB_NAME",)
         missing = [key for key in required if not _env_value(environ, key)]
         if missing:
             raise ImproperlyConfigured(
@@ -75,7 +78,7 @@ def database_config(environ, base_dir, *, debug):
             config["OPTIONS"] = {"sslmode": db_sslmode}
         return config
 
-    if not debug:
+    if production:
         raise ImproperlyConfigured(
             "No production database configured. Set DATABASE_URL or "
             "DB_NAME, DB_USER, DB_PASSWORD and DB_HOST for the existing persistent "

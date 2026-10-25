@@ -48,6 +48,16 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+  const savePrivacy = async (field: 'public_profile' | 'public_rank', value: boolean) => {
+    if (!stats || savingPrivacy) return;
+    const previous = stats;
+    setStats({ ...stats, [field]: value });
+    setSavingPrivacy(true);
+    try { setStats(await statsApi.updatePrivacy({ [field]: value })); }
+    catch { setStats(previous); toast({ title: 'Privacy setting could not be saved', description: 'Please try again.', variant: 'destructive' }); }
+    finally { setSavingPrivacy(false); }
+  };
   const [editForm, setEditForm] = useState({
     first_name: "",
     last_name: "",
@@ -274,6 +284,15 @@ export default function ProfilePage() {
     <AuthGuard>
       <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto space-y-6">
+          <Card><CardHeader><CardTitle>Profile privacy</CardTitle><CardDescription>Choose what classmates can see.</CardDescription></CardHeader>
+            <CardContent className="space-y-4">
+              {stats ? <>
+                <label className="flex items-center justify-between gap-4"><span>Public profile <span className="block text-sm text-muted-foreground">Let classmates view your profile. Turn off to keep it private.</span></span><input type="checkbox" aria-label="Public profile" checked={stats.public_profile} disabled={savingPrivacy} onChange={e => savePrivacy('public_profile', e.target.checked)} /></label>
+                <label className="flex items-center justify-between gap-4"><span>Show me on class leaderboards</span><input type="checkbox" aria-label="Public ranking" checked={stats.public_rank} disabled={savingPrivacy} onChange={e => savePrivacy('public_rank', e.target.checked)} /></label>
+                {savingPrivacy && <p role="status" className="text-sm text-muted-foreground">Saving privacy settings…</p>}
+              </> : <p>Privacy settings could not load. <button className="underline" onClick={loadProfile}>Try again</button></p>}
+            </CardContent>
+          </Card>
           {/* Header Card */}
           <Card>
             <CardContent className="pt-6">

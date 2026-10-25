@@ -20,6 +20,7 @@ import { Crown } from "lucide-react";
 import { canUploadMaterials } from "@/lib/guards";
 import { useState, useEffect } from "react";
 import { GlobalCreditBar } from "@/components/credits/global-credit-bar";
+import { LibraryTutor } from "@/components/app/library-tutor";
 
 export function AppTopbar() {
   const dispatch = useAppDispatch();
@@ -27,6 +28,7 @@ export function AppTopbar() {
   const user = useAppSelector((s) => s.user);
   const [canUpload, setCanUpload] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [tutorOpen, setTutorOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -52,9 +54,11 @@ export function AppTopbar() {
           )}
 
           {/* AI tutor */}
-          <Link
-            href="/read"
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+          <button
+            type="button"
+            aria-label="Ask AI tutor"
+            onClick={() => setTutorOpen(true)}
+            className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors focus-visible:outline-2 focus-visible:outline-primary"
           >
             <FontAwesomeIcon
               icon={faWandSparkles}
@@ -62,7 +66,7 @@ export function AppTopbar() {
               aria-hidden="true"
             />
             <span className="hidden md:inline">Ask AI tutor</span>
-          </Link>
+          </button>
 
           {/* Uploader — only visible to class heads and material uploaders */}
           {mounted && canUpload && (
@@ -110,6 +114,7 @@ export function AppTopbar() {
       </header>
 
       <SlideUploadModal />
+      <LibraryTutor open={tutorOpen} onOpenChange={setTutorOpen} />
     </>
   );
 }

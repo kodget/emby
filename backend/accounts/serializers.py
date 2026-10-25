@@ -230,7 +230,7 @@ class AnnouncementSerializer(serializers.ModelSerializer):
         model = Announcement
         fields = ['id', 'class_group', 'class_code', 'created_by', 'created_by_name',
                   'is_class_head', 'title', 'content', 'created_at', 'updated_at']
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
+        read_only_fields = ['class_group', 'created_by', 'created_at', 'updated_at']
     
     def get_is_class_head(self, obj):
         return obj.class_group.is_class_head(obj.created_by)
@@ -254,4 +254,4 @@ class ExamCountdownSerializer(serializers.ModelSerializer):
         fields = ['id', 'class_group', 'class_code', 'created_by', 'created_by_name',
                   'title', 'exam_date', 'exam_time', 'description', 'subject',
                   'days_remaining', 'created_at', 'updated_at']
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
+        read_only_fields = ['class_group', 'created_by', 'created_at', 'updated_at']

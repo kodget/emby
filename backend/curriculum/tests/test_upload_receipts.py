@@ -78,8 +78,8 @@ class UploadReceiptTests(UploadFixture, TestCase):
         storage.assert_called_once(); dispatch.assert_called_once()
 
     def test_repeated_standalone_upload_returns_saved_deck_without_rerender(self):
-        with patch('curriculum.views.upload_asset', side_effect=self.store) as storage, patch.object(
-            SlideDeckViewSet, '_process_deck_async') as render:
+        with patch('curriculum.views.upload_asset', side_effect=self.store) as storage, patch(
+            'curriculum.slide_uploads.dispatch_standalone_deck_processing') as render, self.captureOnCommitCallbacks(execute=True):
             first, second = self.upload('deck'), self.upload('deck')
         self.assertEqual((first.status_code, second.status_code), (201, 201))
         self.assertEqual(first.data['id'], second.data['id'])
@@ -123,13 +123,16 @@ class UploadReceiptTests(UploadFixture, TestCase):
             self.assertEqual(self.upload().status_code, 201)
         self.assertEqual(storage.call_count, 2); destroy.assert_called_once()
 
-    def test_record_is_replayable_when_conversion_response_fails(self):
-        with patch('curriculum.views.upload_asset', side_effect=self.store) as storage, patch.object(
-            SlideDeckViewSet, '_process_deck_async', side_effect=RuntimeError('response interrupted')) as render:
-            self.assertEqual(self.upload('deck').status_code, 502)
-            self.assertEqual(self.upload('deck').status_code, 201)
+    def test_record_is_replayable_when_background_dispatch_fails(self):
+        with patch('curriculum.views.upload_asset', side_effect=self.store) as storage, patch(
+            'curriculum.tasks.process_standalone_deck_task.delay', side_effect=RuntimeError('queue offline')) as render:
+            with self.captureOnCommitCallbacks(execute=True):
+                first = self.upload('deck')
+            second = self.upload('deck')
+            self.assertEqual((first.status_code, second.status_code), (201, 201))
+            self.assertEqual(first.data['id'], second.data['id'])
         storage.assert_called_once(); render.assert_called_once()
-        self.assertEqual(SlideDeck.objects.get().processing_status, 'pending')
+        self.assertEqual(SlideDeck.objects.get().processing_status, 'failed')
 
     def test_retry_still_requires_current_upload_permission(self):
         with patch('curriculum.views.upload_asset', side_effect=self.store) as storage:
@@ -161,7 +164,7 @@ class UploadReceiptConcurrencyTests(UploadFixture, TransactionTestCase):
             finally:
                 close_old_connections()
         with patch('curriculum.views.upload_asset', side_effect=self.store) as storage, patch(
-            'curriculum.slide_uploads.dispatch_slide_processing'), patch.object(SlideDeckViewSet, '_process_deck_async'):
+            'curriculum.slide_uploads.dispatch_slide_processing'), patch('curriculum.slide_uploads.dispatch_standalone_deck_processing'):
             with ThreadPoolExecutor(max_workers=2) as pool:
                 results = list(pool.map(run, range(2)))
         self.assertEqual([r[0] for r in results], [201, 201])

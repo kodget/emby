@@ -52,6 +52,25 @@ def make_document(directory, kind):
 
 
 class DocumentRenderingTests(SimpleTestCase):
+    def test_scanned_uploads_render_without_starting_ocr_in_either_pipeline(self):
+        from curriculum.tests.test_document_extraction import pdf_bytes
+        with tempfile.TemporaryDirectory(prefix='emby-fixture-') as directory:
+            source = Path(directory) / 'scanned.pdf'
+            source.write_bytes(pdf_bytes(scanned=(1, 2), count=2))
+            with patch.object(fitz.Page, 'get_textpage_ocr') as ocr:
+                course = SlideConversionPipeline.process_slide(str(source), 'fixture', 'pdf')
+                success, standalone = SlideConverter.convert_document(str(source), 'pdf', 'fixture')
+            try:
+                self.assertTrue(course['success'])
+                self.assertTrue(success)
+                self.assertEqual(course['text_extraction']['missing_pages'], [1, 2])
+                self.assertEqual(standalone['page_count'], 2)
+                self.assertTrue(all(Path(p).is_file() for p in course['image_paths']))
+                ocr.assert_not_called()
+            finally:
+                cleanup_render(course)
+                cleanup_render(standalone)
+
     def test_real_pdf_word_and_powerpoint_keep_every_page_in_order(self):
         for kind in ('pdf', 'docx', 'pptx', 'ppt'):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory(prefix='emby-fixture-') as directory:

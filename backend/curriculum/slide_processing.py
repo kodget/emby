@@ -97,11 +97,11 @@ class Progress:
             raise Superseded()
 
 
-def fail(state):
+def fail(state, detail=''):
     owned(state).filter(status__in=ACTIVE_STATES).update(status='failed', processing_lease_until=None,
         completed_at=timezone.now(), next_attempt_at=timezone.now()+timedelta(minutes=1)
         if state.processing_attempts < MAX_ATTEMPTS else None,
-        error_message=('Slide processing failed. Automatic recovery will retry, or an uploader can retry.'
+        error_message=detail or ('Slide processing failed. Automatic recovery will retry, or an uploader can retry.'
             if state.processing_attempts < MAX_ATTEMPTS else
             'Processing stopped after repeated failures. An uploader can retry.'))
 
@@ -120,7 +120,11 @@ def process(slide_id, *, token=None, local_file_path=None):
         result = SlideConversionPipeline.process_slide(cloudinary_url=local_file_path or content_file_url(slide),
             slide_id=slide_id, original_file_type=slide.file_type or 'pdf', status_obj=progress)
         if not result['success']:
-            raise RuntimeError('Conversion failed.')
+            # The pipeline returns predefined safe messages, never raw provider exceptions.
+            fail(state, result.get('error', ''))
+            return {'success': False, 'slide_id': slide_id,
+                    'error': result.get('error') or 'Slide processing failed. Please retry.',
+                    'error_code': result.get('error_code', 'render_failed')}
         if not result['image_paths'] or len(result['image_paths']) != result['page_count'] or len(result['pages']) != result['page_count']:
             raise RuntimeError('Incomplete render.')
         pages = []
@@ -146,18 +150,20 @@ def process(slide_id, *, token=None, local_file_path=None):
                 'text_extraction': extraction, 'pages': pages, 'total_pages': len(pages), 'page_count': len(pages)}
             complete = is_complete(content.content_data)
             content.is_extracted = True
-            content.extraction_error = '' if complete else ERRORS['incomplete']
+            content.extraction_error = ''
             content.extracted_at = timezone.now()
             content.save()
             current.page_count = len(pages)
-            current.generation_status = 'in_progress' if complete else 'failed'
+            current.generation_status = 'in_progress'
             current.save(update_fields=['page_count', 'generation_status'])
-            locked.status = 'generating_quizzes' if complete else 'failed'
+            locked.status = 'generating_quizzes' if complete else 'indexing'
             locked.content_extracted = complete
             locked.processing_lease_until = locked.next_attempt_at = None
             locked.completed_at = timezone.now()
-            locked.error_message = '' if complete else ERRORS['incomplete']
+            locked.error_message = ''
             locked.save()
+            from .document_index import request_index
+            request_index(current, force=True)
             if complete:
                 # Persist the durable generation request inside publication; its broker send is on_commit.
                 from learning.generation_dispatch import request_generation
@@ -176,9 +182,9 @@ def process(slide_id, *, token=None, local_file_path=None):
                         locked.error_message = '' if done else job.error
                         locked.save(update_fields=['status', 'error_message'])
         published = True
-        return {'success': complete, 'reading_ready': True, 'slide_id': slide_id, 'page_count': len(pages),
-                'image_urls': pages, 'text_extraction': extraction, 'page_errors': extraction.get('error_counts', {}),
-                **({} if complete else {'error': ERRORS['incomplete']})}
+        return {'success': True, 'reading_ready': True, 'ai_ready': complete,
+                'slide_id': slide_id, 'page_count': len(pages), 'image_urls': pages,
+                'text_extraction': extraction, 'page_errors': extraction.get('error_counts', {})}
     except Superseded:
         return {'success': False, 'skipped': True, 'slide_id': slide_id}
     except Exception as exc:

@@ -20,6 +20,14 @@ def debug_task(self):
     print(f"Request: {self.request!r}")
 
 app.conf.beat_schedule = {
+    "recover-document-indexes": {
+        "task": "curriculum.tasks.recover_document_indexes_task",
+        "schedule": crontab(minute="*/5"),
+    },
+    "dispatch-due-notifications": {
+        "task": "learning.tasks.dispatch_due_notifications_task",
+        "schedule": crontab(minute="*/5"),
+    },
     "recover-slide-processing": {
         "task": "curriculum.tasks.recover_slide_processing_task",
         "schedule": crontab(minute="*/5"),

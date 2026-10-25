@@ -25,11 +25,21 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     // Replace http:// or https:// with ws:// or wss://, taking care of the trailing slash
     const baseWsUrl = apiUrl.replace(/^http/, 'ws').replace(/\/$/, '');
     const wsUrl = `${baseWsUrl}/ws/notifications/`;
+    let stopped = false;
+    let reconnect: ReturnType<typeof setTimeout> | undefined;
+    let retryDelay = 1000;
+    const seen = new Set<string>();
+    // The durable inbox also catches up after a dropped socket or a sleeping tab.
+    const poll = setInterval(() => { if (document.visibilityState === 'visible') dispatch(fetchNotifications(false)); }, 60000);
 
     // Connect to WebSocket
+    const connect = () => {
+    if (stopped) return;
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {
+      retryDelay = 1000;
+      dispatch(fetchNotifications(false));
       // Send auth token to authenticate connection if needed
       const token = sessionStorage.getItem("token");
       ws.current?.send(JSON.stringify({ type: "auth", token }));
@@ -39,6 +49,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       try {
         const data = JSON.parse(event.data);
         if (data.type === "notification") {
+          if (stopped || seen.has(data.data.id)) return;
+          seen.add(data.data.id);
           dispatch(addNotification(data.data));
           
           const isGamification = data.data.type === "BADGE_EARNED" || data.data.type === "ACHIEVEMENT";
@@ -85,8 +97,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     ws.current.onerror = (error) => {
       console.error("Notification WebSocket error", error);
     };
+    ws.current.onclose = () => {
+      if (stopped) return;
+      reconnect = setTimeout(connect, retryDelay);
+      retryDelay = Math.min(30000, retryDelay * 2);
+    };
+    };
+    connect();
 
     return () => {
+      stopped = true;
+      clearTimeout(reconnect);
+      clearInterval(poll);
       if (ws.current) {
         ws.current.close();
       }

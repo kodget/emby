@@ -149,17 +149,18 @@ class PrivateMediaTests(TestCase):
         self.assertNotIn('foreign', upload.call_args.kwargs['folder'])
         self.assertIn('expires_at=', response.data['url'])
 
-    @patch.object(views.SlideDeckViewSet, '_process_deck_async')
+    @patch('curriculum.slide_uploads.dispatch_standalone_deck_processing')
     @patch('cloudinary.uploader.upload')
     def test_standalone_deck_uses_private_original(self, upload, process):
         upload.return_value = self.provider_result()
-        response = self.request(views.SlideDeckViewSet, action='create', method='post', multipart=True,
-            data={'file': SimpleUploadedFile('notes.pdf', b'%PDF-1.7\ncontent'), 'title': 'Deck'})
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.request(views.SlideDeckViewSet, action='create', method='post', multipart=True,
+                data={'file': SimpleUploadedFile('notes.pdf', b'%PDF-1.7\ncontent'), 'title': 'Deck'})
         self.assertEqual(response.status_code, 201, response.data)
         deck = SlideDeck.objects.get(pk=response.data['id'])
         self.assertTrue(deck.asset_id)
         self.assertFalse(deck.original_file)
-        process.assert_called_once()
+        process.assert_called_once_with(deck.pk)
 
     @patch.dict('sys.modules', {'curriculum.services.converter': Mock()})
     @patch('requests.get', side_effect=requests.RequestException('https://test/?signature=secret'))

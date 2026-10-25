@@ -305,15 +305,17 @@ class SlideConverter:
                   'page_count': 0, 'error': None, 'converted_pptx': None, 'converted_pdf': None,
                   'temp_dir': tempfile.mkdtemp(prefix='emby-render-')}
         try:
-            rendered = render_document(input_file_path, file_type, result['temp_dir'], ocr=True)
+            rendered = render_document(input_file_path, file_type, result['temp_dir'], ocr=False)
             result.update(success=True, slide_images=rendered['image_paths'],
                           pages=rendered['pages'], text_extraction=rendered['text_extraction'],
                           page_count=rendered['page_count'], converted_pdf=rendered['pdf_path'])
             return True, result
         except Exception as exc:
-            logger.warning('Document rendering failed (%s)', type(exc).__name__)
+            from .document_rendering import rendering_failure
+            code, message = rendering_failure(exc)
+            logger.warning('Document rendering failed: code=%s exception=%s', code, type(exc).__name__)
             cleanup_render(result)
-            result.update(temp_dir=None, error='Document conversion failed. Check the file and conversion service.')
+            result.update(temp_dir=None, error=message, error_code=code)
             return False, result
 
     @staticmethod

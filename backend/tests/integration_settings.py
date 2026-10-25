@@ -42,7 +42,9 @@ REST_FRAMEWORK = {"DEFAULT_AUTHENTICATION_CLASSES": [
 ]}
 CELERY_BROKER_URL = "memory://"
 CELERY_RESULT_BACKEND = "cache+memory://"
-CELERY_TASK_ALWAYS_EAGER = True
+# Model the production queue by default; eager dispatch has explicit threaded
+# regression tests. Unmocked sends stay in this isolated in-memory broker.
+CELERY_TASK_ALWAYS_EAGER = False
 CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 GOOGLE_CLIENT_ID = "isolated-test"
 LLM_API_KEY = ""
@@ -51,3 +53,8 @@ YOUTUBE_API_KEY = ""
 # URL-signing tests use inert credentials; no provider requests are allowed by fixtures.
 import cloudinary
 cloudinary.config(cloud_name='isolated-tests', api_key='test-key', api_secret='test-secret', secure=True)
+
+# Bind shared tasks to the real app before tests patch task proxies. Importing
+# dispatch during a request must not switch from Celery's default app mid-test.
+# The app reads these isolated settings, never backend.settings or dotenv.
+from backend.celery import app as celery_app

@@ -60,3 +60,5 @@ class Command(BaseCommand):
                 requeued += 1
 
         self.stdout.write(f'Requeued {requeued} stale standalone deck(s).')
+        from backend.task_dispatch import wait_for_local_tasks
+        wait_for_local_tasks()

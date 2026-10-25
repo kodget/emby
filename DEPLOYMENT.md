@@ -1,5 +1,7 @@
 # Vercel Deployment Instructions
 
+For the backend release, follow [the production recovery runbook](docs/PRODUCTION_RECOVERY.md). It covers the existing PostgreSQL database, backups, Docker conversion dependencies, ASGI WebSockets, Celery worker and scheduler, and checks that accounts and uploads survive deployment. Keep the same database target and stable shared secret across releases.
+
 ## Pre-Deployment Checklist
 
 ### 1. Update Environment Variables

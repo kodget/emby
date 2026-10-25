@@ -53,6 +53,9 @@ class BattleConsumer(AsyncWebsocketConsumer):
             'state': battle_state,
             'participants': participants
         }))
+        await self.channel_layer.group_send(self.room_group_name, {
+            'type': 'broadcast_participants', 'participants': participants, 'source_channel': self.channel_name,
+        })
 
     async def disconnect(self, close_code):
         if getattr(self, 'joined_group', False):
@@ -198,6 +201,12 @@ class BattleConsumer(AsyncWebsocketConsumer):
             }))
 
     # Broadcast handlers
+    async def broadcast_participants(self, event):
+        if event.get('source_channel') != self.channel_name and await self.authorize():
+            await self.send(text_data=json.dumps({
+                'type': 'participants_update', 'participants': event['participants'],
+            }))
+
     async def broadcast_question(self, event):
         if not await self.authorize():
             return
@@ -314,7 +323,7 @@ class BattleConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_leaderboard(self, battle_id):
-        participants = BattleParticipant.objects.filter(battle_id=battle_id).select_related('user__profile').order_by('-score', 'joined_at')[:5]
+        participants = BattleParticipant.objects.filter(battle_id=battle_id).select_related('user__profile').order_by('-score', 'joined_at')
         return [
             {
                 'id': p.user.id,

@@ -24,9 +24,14 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertEqual(owners[0]["type"], "web")
         self.assertEqual(owners[0]["preDeployCommand"], "bash render_release.sh")
         for service in services:
-            environment = {item["key"]: item.get("value") for item in service["envVars"]}
+            environment = {item["key"]: item.get("value") for item in service["envVars"] if "key" in item}
             self.assertEqual(environment["DEBUG"], "False")
             self.assertEqual(environment["USE_SQLITE"], "False")
+            self.assertEqual(environment["CELERY_TASK_ALWAYS_EAGER"], "False")
+            self.assertEqual(service['runtime'], 'docker')
+            self.assertIn({'fromGroup': 'emby-production'}, service['envVars'])
+        self.assertEqual([s['dockerCommand'] for s in services], [
+            'bash render_start.sh web', 'bash render_start.sh worker', 'bash render_start.sh scheduler'])
 
     @unittest.skipUnless(BASH, "Bash is required to exercise deployment shell behavior")
     def test_release_stops_before_migrating_when_preflight_fails(self):

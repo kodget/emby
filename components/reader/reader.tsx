@@ -48,7 +48,7 @@ import {
   type ChatMessage,
   type SlideData,
 } from "@/store/slide-store";
-import { imageUrlToBase64, prefetchSlideImages } from "@/lib/slide-image-utils";
+import { prefetchSlideImages } from "@/lib/slide-image-utils";
 import { AiChatPanel } from "./ai-chat-panel";
 import { ResourcePanel } from "./resource-panel";
 import { ExtractionNotice } from "./extraction-notice";
@@ -95,8 +95,6 @@ export function Reader({
   }, []);
 
   const dispatch = useAppDispatch();
-  const { hasAccess, isPremium, isTrial } = useFeatureAccess();
-  const usage = useAppSelector((s) => s.user.usage);
   const user = useAppSelector((s) => s.user);
   useEffect(() => {
     requestVersion.current++;
@@ -104,10 +102,6 @@ export function Reader({
     return () => { requestVersion.current++; useSlideStore.getState().reset(); };
   }, [slide.id, user.id, user.school, user.setName, user.isSignedIn]);
 
-  const isClassHead = user.role === "class-rep" || user.isVerifiedClassHead;
-  const hasPremiumAccess = isPremium || isTrial || isClassHead;
-  const hasUnlimitedAI =
-    hasAccess("unlimited_ai_explanations") || hasPremiumAccess;
 
   // ── Slide store ─────────────────────────────────────────────────────────
   const {
@@ -168,11 +162,6 @@ export function Reader({
     async (text: string) => {
       if (!text.trim()) return;
 
-      if (!hasUnlimitedAI && usage.aiQuestionsUsed >= 5) {
-        alert("Daily AI limit reached. Upgrade for unlimited access.");
-        return;
-      }
-
       const version = requestVersion.current;
       const session = sessionStorage.getItem('user');
       const active = () => version === requestVersion.current && session === sessionStorage.getItem('user');
@@ -190,12 +179,6 @@ export function Reader({
       setLoading("chat", true);
 
       try {
-        // Convert current slide image to base64 for vision API
-        // Guard: slides may not be populated yet on first render
-        const slideImageBase64 = currentSlide?.imageUrl
-          ? await imageUrlToBase64(currentSlide.imageUrl).catch(() => undefined)
-          : undefined;
-
         if (!active()) return;
         // Build conversation history for THIS slide only
         const history = getChatHistory(idx).map((m) => ({
@@ -207,7 +190,7 @@ export function Reader({
         const result = await aiApi.chatWithSlide({
           slide_id: slide.id,
           message: text,
-          slide_image_base64: slideImageBase64,
+          page_number: idx + 1,
           conversation_history: history,
         });
 
@@ -246,8 +229,6 @@ export function Reader({
       addChatMessage,
       getChatHistory,
       dispatch,
-      hasUnlimitedAI,
-      usage.aiQuestionsUsed,
       setLoading,
     ],
   );
@@ -276,7 +257,7 @@ export function Reader({
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col">
-      <ExtractionNotice key={slide.id} slideId={slide.id} summary={slideContent?.text_extraction} canReprocess={slideContent?.can_reprocess} />
+      <ExtractionNotice key={slide.id} slideId={slide.id} summary={slideContent?.text_extraction} aiIndex={slideContent?.ai_index} canReprocess={slideContent?.can_reprocess} />
       <QuestionBankNotice key={`${slide.id}:${user.id}:${user.school}:${user.setName}`} slideId={slide.id} canGenerate={!!slideContent?.can_reprocess} textReady={slideContent?.text_extraction?.status === "complete"} />
       {reading.loadError && <div role="status" className="p-2 text-center text-sm">
         Your saved reading position could not be loaded. Reading time is paused until you retry. <button className="underline" onClick={reading.retry}>Retry saved position</button>
@@ -363,25 +344,16 @@ export function Reader({
             <PanelTabs tab={tab} onChange={setTab} onClose={() => setPanelOpen(false)} />
             <div className="flex-1 min-h-0 overflow-y-auto">
               {/* AI Chat */}
-              {tab === "ai" &&
-                (hasUnlimitedAI ? (
+              {tab === "ai" && (
                   <AiChatPanel
                     slideIndex={currentSlideIndex}
                     isLoading={isLoading.chat}
                     onSend={sendMessage}
                   />
-                ) : (
-                  <div className="p-4">
-                    <UpgradePrompt
-                      feature="AI Tutor"
-                      description="Get unlimited AI explanations, guided quizzes, and video recommendations"
-                    />
-                  </div>
-                ))}
+                )}
 
               {/* Resources: textbook + videos + MCQs + Flashcards */}
-              {(tab === "textbook" || tab === "videos" || tab === "quiz" || tab === "flashcards") &&
-                (hasPremiumAccess || tab === "quiz" ? (
+              {(tab === "textbook" || tab === "videos" || tab === "quiz" || tab === "flashcards") && (
                   <ResourcePanel
                     slideId={slide.id}
                     slideIndex={currentSlideIndex}
@@ -389,14 +361,7 @@ export function Reader({
                     onTabChange={(t) => setTab(t as Tab)}
                     selection={selection?.text ?? null}
                   />
-                ) : (
-                  <div className="p-4">
-                    <UpgradePrompt
-                      feature="Study Resources"
-                      description="Get AI-curated videos, textbook chapters, and auto-generated MCQs"
-                    />
-                  </div>
-                ))}
+                )}
             </div>
           </aside>
         )}

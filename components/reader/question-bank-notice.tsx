@@ -53,7 +53,7 @@ export function QuestionBankNotice({ slideId, canGenerate, textReady, deckId }: 
     }
     void load();
     return () => { controller.abort(); if (timer) clearTimeout(timer); };
-  }, [statusUrl, revision]);
+  }, [statusUrl, revision, textReady]);
 
   async function generate() {
     const session = sessionStorage.getItem("user");
@@ -88,6 +88,6 @@ export function QuestionBankNotice({ slideId, canGenerate, textReady, deckId }: 
     {generationError && <p role="alert">Could not queue question generation ({generationError}).</p>}
     {bank && !pending && bank.status !== "completed" && (canGenerate && textReady
       ? <button disabled={busy} className="mt-1 underline disabled:opacity-60" onClick={generate}>{busy ? "Queuing questions…" : bank.status === "not_requested" ? "Prepare saved questions" : "Retry question generation"}</button>
-      : <p>{!textReady && "Complete text processing is required. "}The uploader or class head can prepare or retry these questions.</p>)}
+      : <p>{!textReady && "AI is still preparing the document. "}The uploader or class head can prepare or retry these questions.</p>)}
   </div>;
 }

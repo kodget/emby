@@ -5,10 +5,11 @@ export const metadata = {
   description: "Live Brain Battle Arena",
 };
 
-export default function BattleArenaPage({ params }: { params: { id: string } }) {
+export default async function BattleArenaPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-      <BattleArena battleId={params.id} />
+      <BattleArena battleId={id} />
     </div>
   );
 }

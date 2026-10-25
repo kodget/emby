@@ -397,13 +397,24 @@ class SlideDeckSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer
     uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
     pages = SlidePageSerializer(many=True, read_only=True)
     id = serializers.CharField(max_length=50, required=False)
+    ai_index = serializers.SerializerMethodField()
+    can_prepare_ai = serializers.SerializerMethodField()
+
+    def get_can_prepare_ai(self, obj):
+        from .content_permissions import can_reprocess_upload
+        request = self.context.get('request')
+        return bool(request and can_reprocess_upload(request.user, obj))
+
+    def get_ai_index(self, obj):
+        from .document_index import status_for
+        return status_for(obj)
     
     class Meta:
         model = SlideDeck
         fields = ['class_group',
             'id', 'title', 'file_type', 'file_size',
             'processing_status', 'processing_error',
-            'text_extraction',
+            'text_extraction', 'ai_index', 'can_prepare_ai',
             'page_count', 'uploaded_by', 'uploaded_by_name',
             'pages', 'created_at', 'updated_at'
         ]
@@ -822,10 +833,41 @@ class BattleParticipantSerializer(ClassScopedRelationsMixin, serializers.ModelSe
         fields = '__all__'
 
 
+class BattleQuestionSerializer(serializers.Serializer):
+    question = serializers.CharField(max_length=3000)
+    options = serializers.ListField(
+        child=serializers.CharField(max_length=1000), min_length=2, max_length=4,
+    )
+    correct_index = serializers.IntegerField(min_value=0, max_value=3)
+    explanation = serializers.CharField(required=False, allow_blank=True, max_length=5000)
+
+    def validate(self, attrs):
+        if attrs['correct_index'] >= len(attrs['options']):
+            raise serializers.ValidationError('The correct answer must be one of the options.')
+        if len({option.casefold() for option in attrs['options']}) != len(attrs['options']):
+            raise serializers.ValidationError('Answer options must be different.')
+        return attrs
+
+
 class BrainBattleSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer):
     host_name = serializers.CharField(source='host.first_name', read_only=True)
     participants_count = serializers.SerializerMethodField()
     question_count = serializers.IntegerField(read_only=True)
+    time_per_question = serializers.IntegerField(min_value=5, max_value=300, default=20)
+    question_source = serializers.ChoiceField(choices=['ai', 'manual'], default='ai', write_only=True)
+    num_questions = serializers.IntegerField(min_value=1, max_value=40, default=10, write_only=True)
+    manual_questions = serializers.ListField(
+        child=BattleQuestionSerializer(), min_length=1, max_length=40,
+        required=False, write_only=True,
+    )
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if attrs.get('question_source') == 'manual' and not attrs.get('manual_questions'):
+            raise serializers.ValidationError({'manual_questions': 'Add at least one question.'})
+        if attrs.get('question_source', 'ai') == 'ai' and attrs.get('manual_questions'):
+            raise serializers.ValidationError({'question_source': 'Choose manual to use your questions.'})
+        return attrs
 
     class Meta:
         model = BrainBattle

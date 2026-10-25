@@ -118,26 +118,42 @@ def _messages_used_today(user):
 
 
 def _rag_context(slide, query, fallback_text):
-    """
-    Try to retrieve the most relevant slide chunks for the query (RAG).
-    Falls back to the provided full text if RAG is unavailable or has no chunks.
-    """
-    try:
-        from .rag_service import rag_service
-        context = rag_service.get_context_for_query(slide, query, max_chunks=5)
-        if context and context.strip():
-            return context
-    except Exception as e:  # torch/sentence-transformers missing, no chunks, etc.
-        logger.info(f"RAG unavailable for slide {slide.id}, using raw text: {e}")
-    return fallback_text
+    """Search saved page readings; never start extraction/model downloads in chat."""
+    import heapq
+    import re
+    content = SlideContent.objects.filter(slide=slide).first()
+    data = content.content_data if content and isinstance(content.content_data, dict) else {}
+    terms = set(re.findall(r'[a-z0-9]{3,}', str(query).lower()))
+    requested_pages = {int(number) for number in re.findall(r'page\s+(\d+)', str(query).lower())}
+    candidates = []
+    serial = 0
+    for page in data.get('pages', []):
+        text = page.get('text') or page.get('extracted_text') or ''
+        for start in range(0, len(text), 1800):
+            excerpt = text[start:start + 2200]
+            score = len(terms & set(re.findall(r'[a-z0-9]{3,}', excerpt.lower())))
+            score += 20 if page.get('page_number') in requested_pages else 0
+            serial += 1
+            row = (score, -serial, f"[Page {page.get('page_number', '?')}]\n{excerpt}")
+            if len(candidates) < 10:
+                heapq.heappush(candidates, row)
+            elif row[:2] > candidates[0][:2]:
+                heapq.heapreplace(candidates, row)
+    if not candidates:
+        return fallback_text[:22000]
+    context = '\n\n'.join(row[2] for row in sorted(candidates, reverse=True))
+    return 'Selected saved page excerpts; unprocessed pages and omitted details may be unavailable.\n' + context
 
 
 def _slide_text(slide):
     """Return the extracted text for a slide, or empty string."""
     try:
         sc = SlideContent.objects.get(slide=slide)
-        if sc.content_data and 'text' in sc.content_data:
-            return sc.content_data['text']
+        data = sc.content_data if isinstance(sc.content_data, dict) else {}
+        if isinstance(data.get('text'), str) and data['text'].strip():
+            return data['text']
+        return '\n\n'.join(str(page.get('text') or page.get('extracted_text') or '')
+                           for page in data.get('pages', []) if isinstance(page, dict))
     except SlideContent.DoesNotExist:
         logger.warning(f"No content found for slide {slide.id}")
     return ""
@@ -184,6 +200,12 @@ def _deck_chat_context(deck):
     return header + '\n' + page_context, None
 
 
+class StudyResourceError(Exception):
+    def __init__(self, message, status_code=502):
+        self.status_code = status_code
+        super().__init__(message)
+
+
 def _get_or_generate_resources(slide, user, slide_image_base64=None, force_refresh=False):
     """
     Return generated study resources for a slide, caching them on SlideContent
@@ -195,34 +217,36 @@ def _get_or_generate_resources(slide, user, slide_image_base64=None, force_refre
     if cached and not force_refresh:
         return cached
 
+    text = _slide_text(slide)
+    if not text.strip():
+        raise StudyResourceError('No extracted slide text is available yet. Finish slide processing before generating resources.', 409)
+
     # Reserve credits since we need to generate
     reservation = CreditManager.reserve_credits(user, "GENERATE_RESOURCES")
 
     slide_context = {
         'title': slide.title,
-        'text': (sc.content_data or {}).get('text', '') if isinstance(sc.content_data, dict) else '',
+        'text': text,
         'course': slide.topic_name if hasattr(slide, 'topic_name') else 'General',
     }
-    resources = slide_ai.generate_resources(
-        slide_context=slide_context,
-        slide_image_base64=slide_image_base64,
-        return_usage=True
-    )
-
-    if resources and not resources.get('error'):
-        # Commit exact usage
-        CreditManager.commit_usage(user, reservation, resources.get('total_tokens', 0))
-        sc.refresh_from_db()
-        data = sc.content_data if isinstance(sc.content_data, dict) else {}
-        data['resources'] = resources
-        sc.content_data = data
-        sc.save(update_fields=['content_data', 'updated_at'])
-    else:
-        # Refund on error
+    try:
+        resources = slide_ai.generate_resources(
+            slide_context=slide_context, slide_image_base64=slide_image_base64, return_usage=True)
+        if not isinstance(resources, dict) or not resources or resources.get('error'):
+            raise StudyResourceError('The AI provider could not generate study resources. Please retry.')
+        with transaction.atomic():
+            sc = SlideContent.objects.select_for_update().get(pk=sc.pk)
+            CreditManager.commit_usage(user, reservation, resources.get('total_tokens', 0))
+            data = sc.content_data if isinstance(sc.content_data, dict) else {}
+            data['resources'] = resources
+            sc.content_data = data
+            sc.save(update_fields=['content_data', 'updated_at'])
+    except Exception:
         CreditManager.refund_credits(
             user, reservation['reserved_amount'], action="REFUND_RESOURCE_ERROR",
             reservation_id=reservation['reservation_id'],
         )
+        raise StudyResourceError('Study resources could not be generated or saved. Credits were refunded; please retry.') from None
 
     return resources
 
@@ -251,12 +275,7 @@ def textbook_suggestions(request):
         ]
     }
     """
-    # Check premium access
-    if not has_premium_access(request.user):
-        return Response(
-            {'error': 'Premium access required', 'premium_required': True},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    # Daily and purchased AI credits both fund generation; cached resources are free.
     
     try:
         slide_id = request.data.get('slide_id')
@@ -301,6 +320,8 @@ def textbook_suggestions(request):
             resources = _get_or_generate_resources(slide, request.user, slide_image_base64, force_refresh=force)
         except InsufficientCreditsError as e:
             return Response({'error': str(e), 'insufficient_credits': True}, status=status.HTTP_402_PAYMENT_REQUIRED)
+        except StudyResourceError as e:
+            return Response({'error': str(e)}, status=e.status_code)
 
         return Response({
             'textbooks': resources.get('textbooks', []),
@@ -338,12 +359,7 @@ def video_suggestions(request):
         ]
     }
     """
-    # Check premium access
-    if not has_premium_access(request.user):
-        return Response(
-            {'error': 'Premium access required', 'premium_required': True},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    # CreditManager enforces affordability when generation is needed.
     
     try:
         slide_id = request.data.get('slide_id')
@@ -389,6 +405,8 @@ def video_suggestions(request):
             )
         except InsufficientCreditsError as e:
             return Response({'error': str(e), 'insufficient_credits': True}, status=status.HTTP_402_PAYMENT_REQUIRED)
+        except StudyResourceError as e:
+            return Response({'error': str(e)}, status=e.status_code)
             
         ai_suggestions = resources.get('youtube', [])
 
@@ -454,12 +472,7 @@ def generate_mcqs(request):
         ]
     }
     """
-    # Check premium access
-    if not has_premium_access(request.user):
-        return Response(
-            {'error': 'Premium access required', 'premium_required': True},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    # CreditManager enforces affordability when generation is needed.
     
     try:
         slide_id = request.data.get('slide_id')
@@ -504,6 +517,8 @@ def generate_mcqs(request):
             resources = _get_or_generate_resources(slide, request.user, slide_image_base64, force_refresh=force)
         except InsufficientCreditsError as e:
             return Response({'error': str(e), 'insufficient_credits': True}, status=status.HTTP_402_PAYMENT_REQUIRED)
+        except StudyResourceError as e:
+            return Response({'error': str(e)}, status=e.status_code)
 
         return Response({
             'mcqs': resources.get('mcqs', []),
@@ -549,8 +564,12 @@ def chat_with_slide(request):
         message = request.data.get('message')
         slide_image_base64 = request.data.get('slide_image_base64')
         conversation_history = request.data.get('conversation_history')
+        page_number = request.data.get('page_number')
+        if page_number is not None and (type(page_number) is not int or page_number < 1):
+            return Response({'error': 'page_number must be a positive integer.'}, status=400)
+        library = request.data.get('scope') == 'library'
 
-        if bool(slide_id) == bool(deck_id):
+        if (library and (slide_id or deck_id)) or (not library and bool(slide_id) == bool(deck_id)):
             return Response(
                 {'error': 'Provide exactly one of slide_id or deck_id'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -564,18 +583,31 @@ def chat_with_slide(request):
 
         slide = None
         deck = None
-        if deck_id:
+        library_sources = []
+        if library:
+            from .library_tutor import library_context
+            from .class_access import member_class
+            history_scope = {'slide__isnull': True, 'deck__isnull': True,
+                             'library_class': member_class(request.user)}
+            recent_questions = SlideChatMessage.objects.filter(user=request.user, role='user',
+                **history_scope).order_by('-created_at').values_list('content', flat=True)[:2]
+            query = str(message) + '\n' + '\n'.join(recent_questions)
+            context_text, library_sources, document_count = library_context(request.user, query)
+            if not context_text:
+                return Response({'error': 'AI is still preparing your class library. Open a document to ask about the page on screen, or try again shortly.'}, status=409)
+            slide_context = {'context_scope': 'library', 'title': 'Your class slide library', 'text': context_text}
+        elif deck_id:
             deck = visible(SlideDeck, request.user).filter(pk=deck_id).first()
             if deck is None:
                 return Response({'error': f'Document {deck_id} not found'}, status=status.HTTP_404_NOT_FOUND)
             context_text, context_error = _deck_chat_context(deck)
-            if context_error:
+            if context_error and page_number is None:
                 return Response({'error': context_error}, status=status.HTTP_409_CONFLICT)
             history_scope = {'deck': deck}
             slide_context = {
                 'context_scope': 'deck',
                 'title': deck.title,
-                'text': context_text,
+                'text': context_text or '',
                 'total_slides': deck.page_count or deck.pages.count(),
             }
         else:
@@ -593,8 +625,28 @@ def chat_with_slide(request):
                 'course': slide.topic_name if hasattr(slide, 'topic_name') else 'General'
             }
 
+        if page_number is not None and not library:
+            slide_context['slide_index'] = page_number
+            from .document_index import source_data, page_image, IndexUnavailable
+            from . import llm
+            source = deck or slide
+            page = next((p for p in source_data(source).get('pages', [])
+                         if p.get('page_number') == page_number), None)
+            if page is None:
+                return Response({'error': 'This page is not ready to read yet.'}, status=409)
+            if llm.supports_vision():
+                try:
+                    slide_image_base64 = page_image(source, page)
+                except IndexUnavailable:
+                    return Response({'error': 'The slide image could not be loaded. Please retry.'}, status=503)
+                slide_context['image_page'] = page_number
+            elif not slide_context.get('text'):
+                return Response({'error': 'AI is preparing this document. Please try again shortly.'}, status=409)
+        if not library and not slide_context.get('text') and not slide_image_base64:
+            return Response({'error': 'AI is preparing this document. Please try again shortly.'}, status=409)
+
         # Deck chat always restores server-persisted history; it does not trust client-supplied context.
-        if deck or not conversation_history:
+        if library or deck or not conversation_history:
             history_qs = SlideChatMessage.objects.filter(
                 user=request.user, **history_scope
             ).order_by('-created_at')[:MAX_HISTORY_MESSAGES]
@@ -613,18 +665,19 @@ def chat_with_slide(request):
             )
 
         # Call AI service
-        logger.info("Processing %s chat for %s: %s",
-                    'deck' if deck else 'slide', deck_id or slide_id, str(message)[:50])
+        try:
+            result = slide_ai.chat(
+                user_message=message,
+                slide_context=slide_context,
+                slide_image_base64=slide_image_base64,
+                conversation_history=conversation_history,
+                return_usage=True
+            )
+        except Exception:
+            logger.exception('Chat provider failed')
+            result = {'error': 'provider_failed'}
 
-        result = slide_ai.chat(
-            user_message=message,
-            slide_context=slide_context,
-            slide_image_base64=slide_image_base64,
-            conversation_history=conversation_history,
-            return_usage=True
-        )
-
-        if ('error' in result or not isinstance(result.get('response'), str)
+        if (not isinstance(result, dict) or 'error' in result or not isinstance(result.get('response'), str)
                 or not result['response'].strip()):
             CreditManager.refund_credits(
                 request.user, reservation['reserved_amount'], action="REFUND_CHAT_ERROR",
@@ -636,13 +689,14 @@ def chat_with_slide(request):
             )
             
         try:
+            save_scope = {'library_class': history_scope['library_class']} if library else history_scope
             with transaction.atomic():
                 SlideChatMessage.objects.create(
-                    user=request.user, **history_scope, role='user', content=str(message)
+                    user=request.user, **save_scope, role='user', content=str(message)
                 )
                 SlideChatMessage.objects.create(
-                    user=request.user, **history_scope, role='assistant',
-                    content=result.get('response', '')
+                    user=request.user, **save_scope, role='assistant',
+                    content=result.get('response', ''), sources=library_sources
                 )
                 CreditManager.commit_usage(request.user, reservation, result.get('total_tokens', 0))
         except Exception:
@@ -661,6 +715,9 @@ def chat_with_slide(request):
 
         result['disclaimer'] = AI_DISCLAIMER
         result['balance'] = CreditManager.get_user_balance(request.user)
+        if library:
+            result['sources'] = library_sources
+            result['documents_searched'] = document_count
 
         return Response(result, status=status.HTTP_200_OK)
 
@@ -757,6 +814,8 @@ def generate_resources(request):
             resources = _get_or_generate_resources(slide, request.user, slide_image_base64, force_refresh=force)
         except InsufficientCreditsError as e:
             return Response({'error': str(e), 'insufficient_credits': True}, status=status.HTTP_402_PAYMENT_REQUIRED)
+        except StudyResourceError as e:
+            return Response({'error': str(e)}, status=e.status_code)
 
         if 'error' in resources:
             logger.error(f"Resource generation failed: {resources['error']}")
@@ -799,7 +858,8 @@ def chat_history(request):
     elif slide_id:
         qs = qs.filter(slide_id=slide_id)
     else:
-        qs = qs.filter(slide__isnull=True, deck__isnull=True)
+        from .class_access import member_class
+        qs = qs.filter(slide__isnull=True, deck__isnull=True, library_class=member_class(request.user))
 
     if request.method == 'DELETE':
         deleted, _ = qs.delete()
@@ -811,6 +871,7 @@ def chat_history(request):
             'role': m.role,
             'content': m.content,
             'created_at': m.created_at.isoformat(),
+            'sources': m.sources,
         }
         for m in reversed(list(messages))
     ]
