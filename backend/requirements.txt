@@ -46,6 +46,7 @@ googleapis-common-protos==1.75.0
 grpcio==1.81.0
 grpcio-status==1.71.2
 gunicorn==26.2.0
+gevent==26.0.0
 h11==0.16.0
 hf-xet==1.5.0
 httpcore==1.0.9

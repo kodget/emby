@@ -9,7 +9,16 @@ python manage.py migrate --check
 case "${1:-web}" in
   web)
     python manage.py collectstatic --noinput
-    exec daphne -b 0.0.0.0 -p "${PORT:-8000}" backend.asgi:application
+    # Use Gunicorn with 4 workers for better concurrency on free tier
+    # Gevent workers handle async I/O without blocking
+    exec gunicorn backend.wsgi:application \
+      --bind "0.0.0.0:${PORT:-8000}" \
+      --workers 4 \
+      --worker-class gevent \
+      --worker-connections 1000 \
+      --timeout 120 \
+      --keep-alive 5 \
+      --log-level info
     ;;
   worker)
     exec celery -A backend worker --loglevel=info --concurrency=2
