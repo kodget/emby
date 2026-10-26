@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -euxo pipefail
+
+cd -- "$(dirname -- "$0")"
+
+echo "render_start.sh called with argument: ${1:-NONE}"
+
+# Combined mode: run supervisor immediately (skip system checks - preflight handles them)
+if [ "${1:-web}" = "combined" ]; then
+  echo "Combined mode detected, starting supervisor"
+  exec python render_supervisor.py
+fi
+
+echo "Not combined mode, running system checks"
 
 # These must exist in the running image, not just a temporary build machine.
 command -v soffice >/dev/null || { echo "LibreOffice is missing; deploy backend/Dockerfile." >&2; exit 1; }
@@ -25,7 +37,8 @@ case "${1:-web}" in
     ;;
   scheduler)
     # Exactly one scheduler instance. Durable notification dedupe lives in Postgres.
-    exec celery -A backend beat --loglevel=info --schedule=/tmp/emby-celerybeat
+    exec celery -A backend beat --loglevel=info --schedule=/tmp/emby-celerybeat \
+      --scheduler=backend.singleton_beat:SingletonScheduler
     ;;
-  *) echo "Expected web, worker or scheduler." >&2; exit 2 ;;
+  *) echo "Expected combined, web, worker or scheduler." >&2; exit 2 ;;
 esac
