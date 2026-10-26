@@ -18,7 +18,7 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(set(specs), {'web', 'worker', 'beat'})
         self.assertIn('backend.wsgi:application', specs['web'])
         self.assertIn('0.0.0.0:10000', specs['web'])
-        self.assertEqual(specs['web'][specs['web'].index('--workers') + 1], '4')
+        self.assertEqual(specs['web'][specs['web'].index('--workers') + 1], '2')
         self.assertEqual(specs['web'][specs['web'].index('--worker-class') + 1], 'gevent')
         self.assertIn('--pool=solo', specs['worker'])
         self.assertIn('--concurrency=1', specs['worker'])
