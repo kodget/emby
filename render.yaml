@@ -2,6 +2,9 @@
 # Before applying: create the emby-production environment group with the EXISTING
 # Neon DATABASE_URL, stable SECRET_KEY, Cloudinary and other integration settings.
 # Do not create a replacement database. Review service costs before provisioning.
+#
+# COMBINED MODE: Runs Django web, Celery worker, and Celery Beat in a single free-tier
+# web service. See docs/COMBINED_MODE.md for limitations and migration instructions.
 services:
   - type: web
     name: emby-backend
@@ -9,62 +12,21 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     preDeployCommand: bash render_release.sh
-    dockerCommand: bash render_start.sh web
+    dockerCommand: bash render_start.sh combined
     healthCheckPath: /health/
     envVars:
       - fromGroup: emby-production
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: emby-redis
+          property: connectionString
       - key: DEBUG
         value: "False"
       - key: USE_SQLITE
         value: "False"
       - key: CELERY_TASK_ALWAYS_EAGER
         value: "False"
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: emby-redis
-          property: connectionString
-
-  - type: worker
-    name: emby-celery-worker
-    runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
-    dockerCommand: bash render_start.sh worker
-    envVars:
-      - fromGroup: emby-production
-      - key: DEBUG
-        value: "False"
-      - key: USE_SQLITE
-        value: "False"
-      - key: CELERY_TASK_ALWAYS_EAGER
-        value: "False"
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: emby-redis
-          property: connectionString
-
-  - type: worker
-    name: emby-scheduler
-    runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
-    numInstances: 1
-    dockerCommand: bash render_start.sh scheduler
-    envVars:
-      - fromGroup: emby-production
-      - key: DEBUG
-        value: "False"
-      - key: USE_SQLITE
-        value: "False"
-      - key: CELERY_TASK_ALWAYS_EAGER
-        value: "False"
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: emby-redis
-          property: connectionString
 
   - type: redis
     name: emby-redis

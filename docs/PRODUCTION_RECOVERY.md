@@ -25,56 +25,56 @@ After the new settings validation is deployed, the command requires the correcte
 
 ## Deploy the supplied runtime
 
-`backend/Dockerfile` installs LibreOffice, English OCR data, Poppler, fonts and Python requirements in the **running image**. The revised `render.yaml` defines web, worker, one scheduler and Redis. Docker is appropriate for OS dependencies that Render's native Python runtime does not provide ([Render documentation](https://render.com/docs/docker)).
+`backend/Dockerfile` installs LibreOffice, English OCR data, Poppler, fonts and Python requirements in the **running image**. The revised `render.yaml` defines a single web service running all three processes (web, worker, scheduler) in **combined mode** plus Redis. Docker is appropriate for OS dependencies that Render's native Python runtime does not provide ([Render documentation](https://render.com/docs/docker)).
 
-Review service plans before applying the Blueprint: workers and the scheduler require hosting resources. This session has not provisioned services or changed billing. Docker itself was not available in this workstation's PATH, so the container build still needs verification in staging/Render.
+**Combined mode eliminates the need for separate worker and scheduler services**, saving $14/mo on Render's free tier. See [COMBINED_MODE.md](COMBINED_MODE.md) for detailed documentation on resource constraints, monitoring, and migration instructions.
+
+Review service plans before applying the Blueprint. This session has not provisioned services or changed billing. Docker itself was not available in this workstation's PATH, so the container build still needs verification in staging/Render.
 
 Create one Render environment group named `emby-production` containing the existing integration configuration, then link all three app services to it:
 
-| Setting | Required value |
-| --- | --- |
-| `DATABASE_URL` | Existing Neon connection URL, with its SSL options, entered privately in Render |
-| `SECRET_KEY` | One stable secret of at least 32 bytes, shared by web, worker and scheduler |
-| `DEBUG` | `False` |
-| `USE_SQLITE` | `False` |
-| `CELERY_TASK_ALWAYS_EAGER` | `False` |
-| `REDIS_URL` | Same Redis connection on all three services; Blueprint supplies it |
-| `ALLOWED_HOSTS` | Actual backend hostname, without scheme |
-| `FRONTEND_URL` | Actual Vercel frontend origin |
-| `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` | Actual frontend HTTPS origin |
-| Cloudinary and LLM settings | Existing credentials and model configuration used by both web and worker |
-| Google, payment and email settings | Preserve the existing integration values |
-| VAPID settings | Backend private key/contact and matching frontend public key if browser push is enabled |
+| Setting                                        | Required value                                                                          |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                 | Existing Neon connection URL, with its SSL options, entered privately in Render         |
+| `SECRET_KEY`                                   | One stable secret of at least 32 bytes, shared by web, worker and scheduler             |
+| `DEBUG`                                        | `False`                                                                                 |
+| `USE_SQLITE`                                   | `False`                                                                                 |
+| `CELERY_TASK_ALWAYS_EAGER`                     | `False`                                                                                 |
+| `REDIS_URL`                                    | Same Redis connection on all three services; Blueprint supplies it                      |
+| `ALLOWED_HOSTS`                                | Actual backend hostname, without scheme                                                 |
+| `FRONTEND_URL`                                 | Actual Vercel frontend origin                                                           |
+| `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` | Actual frontend HTTPS origin                                                            |
+| Cloudinary and LLM settings                    | Existing credentials and model configuration used by both web and worker                |
+| Google, payment and email settings             | Preserve the existing integration values                                                |
+| VAPID settings                                 | Backend private key/contact and matching frontend public key if browser push is enabled |
 
 Remove conflicting per-service overrides after comparing them with the shared group. Preserve any deliberate dedicated broker configuration, but confirm it points at the same reachable queue the worker consumes. Do not generate a different secret on each deploy. The logged 13-byte secret needs replacement once; that replacement invalidates existing login tokens, so users will need to sign in again without recreating accounts.
 
-For the Docker configuration, paths are relative to the repository root:
+For the Docker configuration in combined mode, paths are relative to the repository root:
 
-| Service | Dockerfile | Context | Docker command |
-| --- | --- | --- | --- |
-| Web | `./backend/Dockerfile` | `./backend` | `bash render_start.sh web` |
-| Worker | `./backend/Dockerfile` | `./backend` | `bash render_start.sh worker` |
-| Scheduler (one instance) | `./backend/Dockerfile` | `./backend` | `bash render_start.sh scheduler` |
+| Service        | Dockerfile             | Context     | Docker command                  |
+| -------------- | ---------------------- | ----------- | ------------------------------- |
+| Web (combined) | `./backend/Dockerfile` | `./backend` | `bash render_start.sh combined` |
 
-Only the web service owns the release hook: `bash render_release.sh`. It checks the existing database and legacy migration safety, applies migrations, checks migration state, and verifies private media adoption. Render's pre-deploy hook requires a supported paid service; if the current service does not support it, follow the manual release procedure in the persistence runbook. Builds do not migrate, create admins, seed data, or reset profiles. Startup refuses unapplied migrations.
+The web service runs Django (Gunicorn), Celery worker, and Celery Beat scheduler in a single process managed by `render_supervisor.py`. Only the web service owns the release hook: `bash render_release.sh`. It checks the existing database and legacy migration safety, applies migrations, checks migration state, and verifies private media adoption. Render's pre-deploy hook requires a supported paid service; if the current service does not support it, follow the manual release procedure in the persistence runbook. Builds do not migrate, create admins, seed data, or reset profiles. Startup refuses unapplied migrations.
 
-The web command starts Daphne against `backend.asgi:application`; do not keep the WSGI override. If moving to a new backend URL, update the frontend's `NEXT_PUBLIC_API_URL`, backend host/CORS settings and integration callbacks deliberately. Check that the Vercel deployment uses the same repaired commit.
+The web command starts a process supervisor that manages Gunicorn (with 4 gevent workers), Celery worker, and Celery Beat. See [COMBINED_MODE.md](COMBINED_MODE.md) for resource constraints, monitoring, troubleshooting, and migration from separate services. If moving to a new backend URL, update the frontend's `NEXT_PUBLIC_API_URL`, backend host/CORS settings and integration callbacks deliberately. Check that the Vercel deployment uses the same repaired commit.
 
 ## Repairs in this changeset
 
-| Reported problem | Implemented repair | Remaining live verification |
-| --- | --- | --- |
-| Blank class page | Restored class hub, loading/error/empty states and working navigation | Sign in as a real class member/head |
-| Announcements/countdowns fail saving | Server assigns class; head-only create/update/delete; announcement notifications persist before delivery | Publish and edit a test notice in the intended class |
-| Brain Battles inactive | Next route fix, manual/AI authoring, validated answers/timers, correct host identity, join code, participant updates, question preview, connection error feedback and expired-session recovery | Two authenticated browsers through ASGI/Redis; AI requires a working provider |
-| PPTX upload/processing | Docker conversion dependencies; meaningful conversion failures; existing retry pipeline retained | Upload an actual production file, read every page and verify extracted text |
-| Duplicate topic/title inputs | One title creates/reuses the Learn topic inside the selected module/submodule, transactionally | Uploaded topic appears under the correct course |
-| Free users and purchased credits | Removed reader/resource subscription gates for credit-funded AI; AI battles now charge the same purchased/daily wallet; backend reservation/refund remains authoritative | Real free allocation and a credited purchase fund generation |
-| Tutor shortcut | Dialog searches processed class slides/decks, uses bounded relevant excerpts, cites sources and saves class-scoped history | Confirm source accuracy with actual slides and configured LLM |
-| Notifications | Single scheduler, delayed delivery/retry outbox, local quiet hours, exam countdowns, owner-scoped due/unreviewed flashcard prompts, reconnect/inbox catch-up; push retries only failed devices and removes expired subscriptions | Worker/Redis/scheduler running; browser push also needs consent and VAPID |
-| Profile privacy | Persistent public/private and ranking controls; class-scoped public profile endpoint | Private profile inaccessible to another student |
-| Subjects missing | Fixed class link and course loading/error feedback; class isolation retained | Resolve original database/class ownership if the actual response is empty |
-| Profiles seem reset | Hosted SQLite fallback closed; shared stable deployment settings; case-insensitive Google account reuse | Compare actual DB fingerprints/counts across a deployment; recover missing data separately if necessary |
+| Reported problem                     | Implemented repair                                                                                                                                                                                                               | Remaining live verification                                                                             |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Blank class page                     | Restored class hub, loading/error/empty states and working navigation                                                                                                                                                            | Sign in as a real class member/head                                                                     |
+| Announcements/countdowns fail saving | Server assigns class; head-only create/update/delete; announcement notifications persist before delivery                                                                                                                         | Publish and edit a test notice in the intended class                                                    |
+| Brain Battles inactive               | Next route fix, manual/AI authoring, validated answers/timers, correct host identity, join code, participant updates, question preview, connection error feedback and expired-session recovery                                   | Two authenticated browsers through ASGI/Redis; AI requires a working provider                           |
+| PPTX upload/processing               | Docker conversion dependencies; meaningful conversion failures; existing retry pipeline retained                                                                                                                                 | Upload an actual production file, read every page and verify extracted text                             |
+| Duplicate topic/title inputs         | One title creates/reuses the Learn topic inside the selected module/submodule, transactionally                                                                                                                                   | Uploaded topic appears under the correct course                                                         |
+| Free users and purchased credits     | Removed reader/resource subscription gates for credit-funded AI; AI battles now charge the same purchased/daily wallet; backend reservation/refund remains authoritative                                                         | Real free allocation and a credited purchase fund generation                                            |
+| Tutor shortcut                       | Dialog searches processed class slides/decks, uses bounded relevant excerpts, cites sources and saves class-scoped history                                                                                                       | Confirm source accuracy with actual slides and configured LLM                                           |
+| Notifications                        | Single scheduler, delayed delivery/retry outbox, local quiet hours, exam countdowns, owner-scoped due/unreviewed flashcard prompts, reconnect/inbox catch-up; push retries only failed devices and removes expired subscriptions | Worker/Redis/scheduler running; browser push also needs consent and VAPID                               |
+| Profile privacy                      | Persistent public/private and ranking controls; class-scoped public profile endpoint                                                                                                                                             | Private profile inaccessible to another student                                                         |
+| Subjects missing                     | Fixed class link and course loading/error feedback; class isolation retained                                                                                                                                                     | Resolve original database/class ownership if the actual response is empty                               |
+| Profiles seem reset                  | Hosted SQLite fallback closed; shared stable deployment settings; case-insensitive Google account reuse                                                                                                                          | Compare actual DB fingerprints/counts across a deployment; recover missing data separately if necessary |
 
 The tutor does not put every document into one model request. It searches the accessible extracted library and sends a bounded set of relevant excerpts. Unprocessed or unreadable text cannot support a grounded answer. Purchasing credits enables credit-funded AI; it does not confer class-management privileges or every subscription benefit.
 
