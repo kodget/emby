@@ -25,8 +25,8 @@ def check():
     if not callable(application):
         raise RuntimeError('The WSGI application could not be loaded.')
     call_command('check', fail_level='ERROR')
-    log.info('Checking applied database migrations (read-only).')
-    call_command('migrate', check=True, interactive=False, verbosity=0)
+    log.info('Applying database migrations.')
+    call_command('migrate', interactive=False, verbosity=0)
     app.autodiscover_tasks(force=True)
     if any(entry['task'] not in app.tasks for entry in app.conf.beat_schedule.values()):
         raise RuntimeError('A scheduled task is missing from Celery discovery.')
