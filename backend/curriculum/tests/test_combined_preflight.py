@@ -21,7 +21,7 @@ class CombinedPreflightTests(SimpleTestCase):
                 'backend.runtime_redis.broker_client', return_value=client), patch('shutil.which', return_value='/usr/bin/tool'):
             combined_preflight.check()
         self.assertEqual(command.call_args_list, [call('check', fail_level='ERROR'),
-                         call('migrate', check=True, interactive=False, verbosity=0)])
+                         call('migrate', interactive=False, verbosity=0)])
         client.ping.assert_called_once(); client.close.assert_called_once()
         from backend.wsgi import application
         self.assertTrue(callable(application))
@@ -35,10 +35,10 @@ class CombinedPreflightTests(SimpleTestCase):
         command.assert_not_called()
 
     @override_settings(DEBUG=False, CELERY_TASK_ALWAYS_EAGER=False)
-    def test_pending_migrations_stop_startup_without_running_migrations(self):
+    def test_migration_errors_stop_startup(self):
         from django.core.management.base import CommandError
         with patch('django.conf.settings.DATABASES', {'default': {'ENGINE': 'django.db.backends.postgresql'}}), patch(
-                'django.core.management.call_command', side_effect=[None, CommandError('Unapplied migrations')]), patch(
+                'django.core.management.call_command', side_effect=[None, CommandError('Migration failed')]), patch(
                 'backend.runtime_redis.broker_client') as client, self.assertRaises(CommandError):
             combined_preflight.check()
         client.assert_not_called()
