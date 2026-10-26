@@ -1,4 +1,5 @@
 FROM python:3.12-slim-bookworm
+# Force rebuild - LibreOffice required for PPTX/DOCX processing
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
