@@ -88,8 +88,8 @@ export function AppTopbar() {
 
           {/* Streak pill */}
           {mounted && (
-            <button
-              type="button"
+            <Link
+              href="/analytics"
               className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium hover:border-primary/50 transition-colors"
               aria-label="Current streak"
             >
@@ -99,11 +99,11 @@ export function AppTopbar() {
                 aria-hidden="true"
               />
               <span>{user.streak || 0}</span>
-            </button>
+            </Link>
           )}
 
           {/* Credit Bar */}
-          {mounted && <GlobalCreditBar />}
+          {mounted && <div className="hidden lg:block"><GlobalCreditBar /></div>}
 
           {/* Notifications */}
           {mounted && <NotificationsDropdown />}

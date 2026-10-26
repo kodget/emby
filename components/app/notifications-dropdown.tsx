@@ -49,7 +49,7 @@ export function NotificationsDropdown() {
         <motion.button
           type="button"
           whileTap={{ scale: 0.9 }}
-          className="relative flex size-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground transition-colors"
+          className="relative flex size-11 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Notifications"
         >
           <Bell className="size-4" aria-hidden="true" />

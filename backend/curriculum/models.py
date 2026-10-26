@@ -180,6 +180,16 @@ class SlideContent(models.Model):
         return f"Content for {self.slide.title}"
 
 
+class SlideSearchPage(models.Model):
+    """Plain saved page text for search; no embeddings, files or provider calls."""
+    slide = models.ForeignKey(Slide, on_delete=models.CASCADE, related_name='search_pages')
+    page_number = models.PositiveIntegerField()
+    text = models.TextField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['slide', 'page_number'], name='unique_slide_search_page')]
+
+
 class Material(models.Model):
     """Additional materials (videos, images, past questions, PDFs, etc.)"""
     MATERIAL_TYPES = [

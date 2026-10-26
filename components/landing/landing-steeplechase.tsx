@@ -7,15 +7,14 @@ export function LandingSteeplechase() {
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-widest text-accent">
-            Steeplechase — our obsession
+            Practice with purpose
           </p>
           <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight text-balance md:text-5xl">
-            The exam that breaks medical students,
-            <span className="italic"> finally practised properly.</span>
+            Get familiar with the format.<br />Build your confidence.
           </h2>
           <p className="mt-5 max-w-xl text-pretty text-primary-foreground/80">
-            Thirty seconds a station, then you move on. Real cadaveric photographs and histology slides from your
-            own department — not animated 3D models. Untimed for learning, timed for exam simulation.
+            Work through anatomy photographs and histology slides. Take your time
+            while learning, then try timed stations to practise exam pacing.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -68,17 +67,8 @@ export function LandingSteeplechase() {
                 Upper limb · brachial plexus
               </p>
               <h3 className="mt-2 font-serif text-2xl">Identify the structure marked with pin A.</h3>
-              <div className="mt-4 flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Type your answer…"
-                  className="h-11 flex-1 rounded-full border border-border bg-card px-4 text-sm outline-none focus:border-primary"
-                  readOnly
-                />
-                <button className="h-11 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground">
-                  Submit
-                </button>
-              </div>
+              <p className="mt-3 text-xs text-muted-foreground">Example practice station</p>
+              <Link href="/steeplechase" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground">Try a practice round <ArrowUpRight className="size-4" /></Link>
             </div>
           </div>
 

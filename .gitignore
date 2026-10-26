@@ -30,6 +30,7 @@ backend/.env
 backend/backend/.env
 
 # Python
+celerybeat-schedule*
 .venv/
 .test-postgres/
 test-results/
@@ -89,3 +90,6 @@ Thumbs.db
 /backend/media/
 .test-tessdata/
 .test-results-uploads/
+
+# Environment variable documentation with secrets
+RENDER_ENV_VARS.md

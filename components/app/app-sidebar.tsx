@@ -36,19 +36,23 @@ type NavItem = {
 const STUDY: NavItem[] = [
   { label: "Home", href: "/dashboard", icon: "dashboard", match: /^\/dashboard$/ },
   { label: "Learn", href: "/courses", icon: "read", match: /^\/(courses|read)/ },
+  { label: "Search", href: "/search", icon: "target", match: /^\/search/ },
+  { label: "Documents", href: "/decks", icon: "read", match: /^\/decks/ },
   { label: "Practice", href: "/quiz", icon: "quiz", match: /^\/quiz/ },
   { label: "Steeplechase", href: "/steeplechase", icon: "steeplechase", match: /^\/steeplechase/ },
   { label: "Histology", href: "/histology", icon: "histology", match: /^\/histology/ },
-  { label: "Review", href: "/flashcards", icon: "flashcards", match: /^\/(flashcards|decks)/ },
+  { label: "Flashcards", href: "/flashcards", icon: "flashcards", match: /^\/flashcards/ },
   { label: "Brain Battle", href: "/battles", icon: "battle", match: /^\/(battles|brainstorming)/ },
 ];
 
 const TOOLS: NavItem[] = [
+  { label: "My class", href: "/class", icon: "community", match: /^\/class(?:$|\/announcements|\/roster|\/exams)/ },
   { label: "Analytics", href: "/analytics", icon: "analytics", match: /^\/analytics/ },
   { label: "Study Plan", href: "/study-plan", icon: "planner", match: /^\/study-plan/ },
   { label: "Achievements", href: "/achievements", icon: "target", match: /^\/achievements/ },
   { label: "Community", href: "/community", icon: "community", match: /^\/community/ },
   { label: "Profile", href: "/profile", icon: "profile", match: /^\/profile$/ },
+  { label: "Settings", href: "/settings", icon: "profile", match: /^\/settings$/ },
   { label: "Premium", href: "/premium", icon: "premium", match: /^\/premium$/ },
 ];
 
@@ -56,7 +60,7 @@ const CLASS_ITEM: NavItem = {
   label: "Class Management",
   href: "/class/curriculum",
   icon: "community",
-  match: /^\/class\//,
+  match: /^\/class\/(curriculum|analytics)/,
 };
 
 /** Read the stored preference before first paint to avoid a width flash. */
@@ -145,7 +149,7 @@ export function AppSidebar() {
         <PanelLeftOpen className="size-4" />
       </button>
 
-      <nav className="scroll-pane flex-1 overflow-y-auto px-3 py-4">
+      <nav aria-label="Main navigation" className="scroll-pane flex-1 overflow-y-auto px-3 py-4">
         <NavGroup title="Study" items={STUDY} pathname={pathname} collapsed={collapsed} />
         <div className="mx-2 my-3 border-t border-sidebar-border" />
         <NavGroup title="Tools" items={items} pathname={pathname} collapsed={collapsed} />

@@ -30,7 +30,6 @@ export const metadata: Metadata = {
   title: "Emby, the study OS for medical students",
   description:
     "Course slides, an AI tutor that reads alongside you, past questions, timed quizzes, flashcards, and steeplechase practice. All in one place, made for BMS students.",
-  generator: "v0.app",
   icons: {
     icon: "/icon.svg",
     apple: "/apple-icon.png",
@@ -58,20 +57,6 @@ export default function RootLayout({
       className={`${inter.variable} ${sora.variable} ${geistMono.variable} bg-background`}
     >
       <head>
-        {/*
-          Type stack:
-            Lilita One   — UI and body. A chunky rounded display face used at small
-                           sizes; it is what gives the app its voice rather than
-                           reading as another neutral sans.
-            Anton        — headlines. Heavy condensed, for numbers and titles.
-            JetBrains Mono — data, codes, timers. Tabular by design.
-        */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Anton&family=JetBrains+Mono:wght@400;500;700&display=swap"
-          rel="stylesheet"
-        />
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
       <body className="font-sans antialiased">

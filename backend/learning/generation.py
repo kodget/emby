@@ -277,6 +277,8 @@ def generate_for_slide(slide, *, force=False):
     """Resume saved batches under an expiring lease; never publish from an old worker."""
     from curriculum.services.ai_question_generator import AIQuestionGenerator
     from curriculum.services.document_extraction import ExtractionError
+    from curriculum.models import QuizQuestion
+    from .bank_sources import evidence
     job = claim_job(slide, force=force)
     if job is None:
         return {'slide_id': slide.id, 'skipped': True, 'reason': 'not runnable'}
@@ -295,10 +297,23 @@ def generate_for_slide(slide, *, force=False):
                 ('theory', THEORY_TARGETS, THEORY_BATCH, AIQuestionGenerator.generate_theory_from_text)):
             for difficulty, target in targets.items():
                 have = existing_counts_by_difficulty(slide, kind).get(difficulty, 0)
+                repair_used = False
+                feedback = ''
                 while have < target:
                     heartbeat(job)
                     want = min(batch_size, target - have)
+                    existing_stems = list(QuizQuestion.objects.filter(source_slide=slide,
+                        question_type=kind, bank_key=job.bank_key).order_by('pk').values_list('question_text', flat=True))
+                    seen = {normalized_stem(stem) for stem in existing_stems}
+                    rejected = set()
                     def persist(rows):
+                        for row in rows if isinstance(rows, list) else []:
+                            if not valid_row(row, kind, difficulty):
+                                rejected.add('structure')
+                            elif not evidence(row, text):
+                                rejected.add('citation')
+                            elif normalized_stem(row['question_text']) in seen:
+                                rejected.add('duplicate')
                         save_batch(job, slide, rows, text, kind, difficulty, want)
 
                     try:
@@ -310,6 +325,8 @@ def generate_for_slide(slide, *, force=False):
                             difficulty=difficulty,
                             on_batch=persist,
                             on_request=lambda: heartbeat(job),
+                            exclude_questions=existing_stems,
+                            retry_feedback=feedback,
                         )
                     except LostLease:
                         raise
@@ -330,6 +347,22 @@ def generate_for_slide(slide, *, force=False):
                         persist(rows)
                     updated = existing_counts_by_difficulty(slide, kind).get(difficulty, 0)
                     if updated <= have:
+                        if rejected and not repair_used:
+                            repair_used = True
+                            instructions = {
+                                'citation': 'The source quotation did not match its cited page. Copy a short, contiguous '
+                                    '20-2000 character excerpt exactly, preserving case and punctuation, and cite the '
+                                    'correct [Page n]. The excerpt must support the answer. Do not paraphrase evidence; '
+                                    'return [] if the material cannot support a question.',
+                                'structure': 'Return the required JSON fields with the requested difficulty. Use positive '
+                                    'integer marks; theory rubric marks must sum exactly to maximum_marks. MCQs require '
+                                    'four distinct options and exactly one valid answer letter.',
+                                'duplicate': 'The question already exists in this bank. Ask about a different supported '
+                                    'detail and use a distinct stem.',
+                            }
+                            feedback = '\n'.join(instructions[reason] for reason in sorted(rejected))
+                            logger.info('Retrying rejected %s/%s batch (%s)', kind, difficulty, ','.join(sorted(rejected)))
+                            continue
                         break
                     have = updated
         incomplete = any(

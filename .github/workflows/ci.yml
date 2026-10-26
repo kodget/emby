@@ -53,7 +53,12 @@ jobs:
         run: python -m pip install -r backend/tests/requirements-integration.txt
 
       - name: Run persistence regression tests without external services
-        run: python -m unittest discover -s backend/tests -t backend -p "test_*.py" -v
+        working-directory: backend
+        run: python -m django test tests --top-level-directory . --settings=tests.integration_settings --noinput
+
+      - name: Verify combined startup checks and singleton scheduler without production services
+        working-directory: backend
+        run: python -m django test curriculum.tests.test_combined_preflight curriculum.tests.test_singleton_beat --settings=tests.integration_settings --noinput
 
       - name: Install local office renderer for real-format reader tests
         run: sudo apt-get update && sudo apt-get install -y libreoffice-impress libreoffice-writer tesseract-ocr-eng
@@ -71,6 +76,12 @@ jobs:
       - name: Check model and migration consistency
         working-directory: backend
         run: python -m django makemigrations --check --dry-run --settings=tests.integration_settings
+
+      - name: Verify authorized library search against disposable PostgreSQL
+        working-directory: backend
+        env:
+          EMBY_TEST_POSTGRES: "1"
+        run: python -m django test curriculum.tests.test_search --settings=tests.integration_settings --noinput
 
       - name: Install frontend dependencies
         run: npm ci

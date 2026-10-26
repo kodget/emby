@@ -1,165 +1,32 @@
-import Link from "next/link"
-import { ArrowRight, Flame, Sparkles } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import Link from 'next/link';
+import { ArrowRight, BookOpen, Check, FileText, Layers, Search, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function LandingHero() {
-  return (
-    <section className="relative overflow-hidden">
-      {/* Clinical blue glow + faint grid — focused, not warm */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(60% 45% at 15% 10%, color-mix(in oklab, var(--learning) 22%, transparent), transparent 70%), radial-gradient(45% 40% at 88% 20%, color-mix(in oklab, var(--mastery) 14%, transparent), transparent 70%)",
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 grid-surface opacity-40"
-      />
-
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-[1.1fr_0.9fr] md:py-24 lg:py-28">
-        <div className="flex flex-col justify-center">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-learning/30 bg-learning/10 px-3 py-1 text-xs text-learning">
-            <span className="size-1.5 rounded-full bg-learning" />
-            <span>Built for Basic Medical Science students</span>
-          </div>
-
-          <h1 className="mt-5 font-serif text-4xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl md:text-[56px]">
-            Study medicine
-            <br />
-            <span className="text-learning">with direction.</span>
-          </h1>
-
-          <p className="mt-5 max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground md:text-base">
-            Your slides, textbook, past questions, timed quizzes and steeplechase practice — in one focused workspace.
-            Highlight any line and the AI tutor explains it, quizzes you, and shows the dissection video. No tab
-            switching. No guessing what to study next.
-          </p>
-
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Button asChild size="lg" className="h-11 rounded-full px-5 text-sm">
-              <Link href="/signup">
-                Get started free
-                <ArrowRight className="ml-1 size-4" aria-hidden="true" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="h-11 rounded-full border-border bg-card/60 px-5 text-sm"
-            >
-              <Link href="#reader">See the AI reader</Link>
-            </Button>
-          </div>
-
-          <dl className="mt-10 grid max-w-md grid-cols-3 gap-6 border-t border-border pt-6 text-sm">
-            <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Students
-              </dt>
-              <dd className="mt-1 font-serif text-xl font-semibold">1,200+</dd>
-            </div>
-            <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Past questions
-              </dt>
-              <dd className="mt-1 font-serif text-xl font-semibold">4,800</dd>
-            </div>
-            <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Pass boost
-              </dt>
-              <dd className="mt-1 font-serif text-xl font-semibold text-mastery">+18%</dd>
-            </div>
-          </dl>
-        </div>
-
-        <HeroVisual />
+  return <section className="relative overflow-hidden">
+    <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-24">
+      <div>
+        <p className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-2 text-xs font-medium text-primary"><BookOpen className="size-4" />Made for medical students</p>
+        <h1 className="mt-6 text-4xl font-semibold leading-[1.12] tracking-tight text-balance sm:text-5xl lg:text-6xl">Your next<br />study breakthrough<br /><span className="text-primary">starts here.</span></h1>
+        <p className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">Bring your class slides, revision and practice into one place. Find the concept you need, ask your AI tutor, and turn understanding into progress.</p>
+        <div className="mt-8 flex flex-wrap gap-3"><Button asChild size="lg" className="rounded-xl"><Link href="/signup">Start studying free <ArrowRight className="size-4" /></Link></Button><Button asChild size="lg" variant="outline" className="rounded-xl"><Link href="#how-it-works">See how it works</Link></Button></div>
+        <p className="mt-4 text-sm text-muted-foreground">Already part of a class? <Link href="/signin" className="font-medium text-primary underline underline-offset-4">Sign in</Link></p>
+        <div className="mt-9 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">{['Class-organised materials', 'Study at your pace', 'Start with a free account'].map(text => <span key={text} className="inline-flex items-center gap-1.5"><Check className="size-3.5 text-mastery" />{text}</span>)}</div>
       </div>
-    </section>
-  )
-}
-
-function HeroVisual() {
-  return (
-    <div className="relative mx-auto w-full max-w-md md:max-w-none">
-      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-border bg-card shadow-2xl shadow-learning/10 study-glow">
-        {/* Mock browser chrome */}
-        <div className="flex items-center gap-1.5 border-b border-border bg-background/60 px-4 py-3">
-          <span className="size-2.5 rounded-full bg-weakness/70" />
-          <span className="size-2.5 rounded-full bg-review/70" />
-          <span className="size-2.5 rounded-full bg-mastery/70" />
-          <span className="ml-3 truncate rounded-md bg-background/80 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
-            studybuddy.app/read/axilla
-          </span>
-        </div>
-
-        {/* Reader preview */}
-        <div className="grid h-full grid-cols-[1fr_200px] gap-0">
-          <article className="space-y-3 p-5 text-[13px] leading-relaxed">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-learning">
-              ANAT 201 · Module 1
-            </p>
-            <h3 className="font-serif text-xl font-semibold leading-tight tracking-tight">
-              The Axilla — Boundaries and Contents
-            </h3>
-            <p className="text-muted-foreground">
-              The axilla is a pyramidal space between the upper part of the thoracic wall and the arm. It serves as a
-              passageway for{" "}
-              <mark className="ai-highlight">
-                neurovascular structures travelling between the neck and the upper limb
-              </mark>
-              . Clinically it is examined in breast cancer staging and brachial plexus injury.
-            </p>
-            <div className="rounded-xl border border-review/30 bg-review/10 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-review">
-                High yield
-              </p>
-              <p className="mt-1 text-[12px] text-foreground">
-                Know the apex, base and four walls. The medial wall (serratus anterior + long thoracic nerve) is a
-                favourite.
-              </p>
-            </div>
-          </article>
-
-          {/* AI sidebar */}
-          <aside className="flex flex-col gap-3 border-l border-border bg-background/60 p-4 text-[12px]">
-            <div className="flex items-center gap-2 text-learning">
-              <Sparkles className="size-3.5" aria-hidden="true" />
-              <span className="text-[11px] font-semibold uppercase tracking-wider">AI tutor</span>
-            </div>
-            <div className="rounded-lg border border-border bg-card p-3 leading-snug">
-              <p className="text-[11px] text-muted-foreground">You highlighted</p>
-              <p className="mt-1 text-foreground">
-                &ldquo;neurovascular structures travelling between the neck and the upper limb&rdquo;
-              </p>
-            </div>
-            <div className="rounded-lg border border-learning/30 bg-learning/10 p-3 leading-snug text-foreground">
-              These are the axillary artery &amp; vein, cords of the brachial plexus, and lymphatics. Want me to quiz
-              you on their spatial relationship?
-            </div>
-            <button className="mt-auto rounded-md bg-primary px-3 py-2 text-[12px] font-medium text-primary-foreground hover:opacity-90">
-              Quiz me
-            </button>
-          </aside>
-        </div>
-      </div>
-
-      {/* Floating streak card */}
-      <div className="absolute -left-4 bottom-10 hidden items-center gap-3 rounded-xl border border-review/30 bg-card px-4 py-3 shadow-xl shadow-review/10 sm:flex">
-        <span className="flex size-9 items-center justify-center rounded-full bg-review/15 text-review">
-          <Flame className="size-4" aria-hidden="true" />
-        </span>
-        <div className="leading-tight">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Streak
-          </p>
-          <p className="font-serif text-base font-semibold">12 days in a row</p>
+      <div className="rounded-3xl border border-primary/15 bg-secondary/60 p-4 sm:p-6" aria-label="Illustrative preview of the Emby study workspace">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+          <div className="flex items-center justify-between gap-2"><p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your study space</p><span className="rounded-full bg-muted px-2 py-1 text-[10px] text-muted-foreground">Example</span></div>
+          <h2 className="mt-4 text-2xl">A little clearer.<br />A little closer.</h2>
+          <div className="mt-5 flex items-center gap-2 rounded-xl border border-input bg-background px-3 py-3 text-sm text-muted-foreground"><Search className="size-4" />Search “brachial plexus”</div>
+          <div className="mt-4 rounded-xl border border-border p-4"><div className="flex gap-3"><FileText className="mt-1 size-5 text-primary" /><div><p className="text-xs text-muted-foreground">Anatomy · Upper limb</p><h3 className="mt-1 text-sm font-semibold">Brachial plexus</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Roots, trunks, divisions, cords and terminal branches.</p></div></div><div className="mt-4 border-t border-border pt-3 text-xs font-medium text-primary">Find it in your class slides <ArrowRight className="ml-1 inline size-3" /></div></div>
+          <div className="mt-3 grid grid-cols-2 gap-3"><div className="rounded-xl bg-primary/5 p-4"><Sparkles className="mb-2 size-5 text-primary" /><p className="text-sm font-semibold">Understand it</p><p className="mt-1 text-xs text-muted-foreground">Ask your AI tutor</p></div><div className="rounded-xl bg-mastery/5 p-4"><Layers className="mb-2 size-5 text-mastery" /><p className="text-sm font-semibold">Remember it</p><p className="mt-1 text-xs text-muted-foreground">Review with flashcards</p></div></div>
         </div>
       </div>
     </div>
-  )
+    <div id="how-it-works" className="border-y border-border bg-card/60"><ol className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-3 sm:px-6">{[
+      ['Join your class', 'Use your class code to find the materials your class shares.'],
+      ['Find your focus', 'Search a topic or open a slide and ask questions as you read.'],
+      ['Make it stick', 'Revise with flashcards, practice questions and a study plan.'],
+    ].map(([title, body], index) => <li key={title} className="flex gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/8 text-sm font-semibold text-primary">{index + 1}</span><div><h2 className="text-sm font-semibold">{title}</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p></div></li>)}</ol></div>
+  </section>;
 }

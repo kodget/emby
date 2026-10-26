@@ -140,7 +140,7 @@ export default function AnnouncementsPage() {
           ) : (
             <div className="space-y-4">
               {announcements.map((announcement) => (
-                <div key={announcement.id} className="bg-white rounded-xl shadow-lg p-6">
+                <div key={announcement.id} id={`announcement-${announcement.id}`} className="bg-card border border-border rounded-xl p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-900 mb-2">{announcement.title}</h3>

@@ -4,6 +4,7 @@ import { useReadingProgress } from './use-reading-progress';
 
 export function useDeckReading({ deckId, ...options }: {
   deckId: string; ready: boolean; page: number; maxPage: number; loaded: boolean;
+  initialPage?: number;
   setPage: (page: number) => void; denied: () => void; authorized: () => boolean;
 }) {
   return useReadingProgress({ ...options, sourceId: deckId, namespace: 'deck-reading',

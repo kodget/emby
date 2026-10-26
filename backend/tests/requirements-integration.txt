@@ -4,6 +4,7 @@ djangorestframework_simplejwt==5.5.1
 google-auth==2.49.2
 requests==2.33.1
 celery==5.4.0
+redis==5.0.1
 channels==4.3.2
 python-dotenv==1.2.2
 psycopg2-binary==2.9.12

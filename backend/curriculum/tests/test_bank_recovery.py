@@ -475,6 +475,19 @@ class BankConcurrencyTests(BankFixture, TransactionTestCase):
 
 
 class ProviderValidationTests(SimpleTestCase):
+    @patch('curriculum.services.ai_question_generator._generate')
+    def test_theory_retry_includes_citation_feedback_and_existing_stems(self, provider):
+        import json
+        from types import SimpleNamespace
+        provider.return_value = json.dumps([theory(99, 'hard')])
+        AIQuestionGenerator.generate_theory_from_text(TEXT, SimpleNamespace(subject=None), None, 1, 'hard',
+            exclude_questions=['Explain the existing arrangement.'],
+            retry_feedback='Copy an exact quotation from its cited page.')
+        prompt = provider.call_args.args[0][0]
+        self.assertIn('Explain the existing arrangement.', prompt)
+        self.assertIn('Copy an exact quotation from its cited page.', prompt)
+        self.assertIn(TEXT, prompt)
+
     def test_source_windows_include_last_page_and_preserve_long_page_labels(self):
         text = '\n\n'.join(f'[Page {i}]\n' + (f'Source page {i}. ' * 2000) for i in range(1, 11))
         chunks = AIQuestionGenerator._chunk_text(text, max_chars=1000)
@@ -529,3 +542,39 @@ class ProviderValidationTests(SimpleTestCase):
         with self.assertRaises(RateLimitExceeded):
             AIQuestionGenerator.generate_mcqs_from_text(TEXT * 40, SimpleNamespace(subject=None), None, 10, 'easy')
         provider.assert_called_once()
+
+
+class QuestionRepairTests(BankFixture, TestCase):
+    def prepare_shortfall(self):
+        with patch.object(AIQuestionGenerator, 'generate_mcqs_from_text', side_effect=self.rows('mcq')), patch.object(
+                AIQuestionGenerator, 'generate_theory_from_text', side_effect=self.rows('theory')):
+            self.assertTrue(gen.generate_for_slide(self.slide)['success'])
+        QuizQuestion.objects.filter(source_slide=self.slide, question_type='theory', difficulty='hard').first().delete()
+        return set(QuizQuestion.objects.values_list('pk', flat=True))
+
+    def test_missing_theory_question_gets_one_citation_repair_and_keeps_saved_bank(self):
+        saved = self.prepare_shortfall()
+        invalid = dict(theory(999, 'hard'), source_quote='An assertion absent from the uploaded document.')
+        with patch.object(AIQuestionGenerator, 'generate_mcqs_from_text') as mcqs, patch.object(
+                AIQuestionGenerator, 'generate_theory_from_text', side_effect=[[invalid], [theory(999, 'hard')]]) as provider:
+            result = gen.generate_for_slide(self.slide, force=True)
+        self.assertTrue(result['success'], result)
+        self.assertEqual((result['mcq_generated'], result['theory_generated']), (15, 10))
+        self.assertEqual(provider.call_count, 2)
+        self.assertTrue(all(call.kwargs['count'] == 1 and call.kwargs['difficulty'] == 'hard'
+                            for call in provider.call_args_list))
+        self.assertIn('did not match', provider.call_args.kwargs['retry_feedback'])
+        self.assertEqual(len(provider.call_args.kwargs['exclude_questions']), 9)
+        self.assertTrue(saved <= set(QuizQuestion.objects.values_list('pk', flat=True)))
+        self.assertFalse(QuizQuestion.objects.filter(source_text=invalid['source_quote']).exists())
+        mcqs.assert_not_called()
+
+    def test_repeated_bad_evidence_stops_after_one_repair_without_marking_bank_complete(self):
+        saved = self.prepare_shortfall()
+        with patch.object(AIQuestionGenerator, 'generate_theory_from_text', return_value=[
+                dict(theory(999, 'hard'), source_page=99)]) as provider:
+            result = gen.generate_for_slide(self.slide, force=True)
+        self.assertFalse(result['success'])
+        self.assertEqual(result['theory_generated'], 9)
+        self.assertEqual(provider.call_count, 2)
+        self.assertEqual(saved, set(QuizQuestion.objects.values_list('pk', flat=True)))

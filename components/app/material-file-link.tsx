@@ -8,7 +8,7 @@ export function MaterialFileLink({ id, className, children }: { id: string; clas
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   return <>
-    <button type="button" className={`w-full text-left ${className ?? ''}`} disabled={busy} onClick={async () => {
+    <button id={`material-${id}`} type="button" className={`w-full text-left ${className ?? ''}`} disabled={busy} onClick={async () => {
       setBusy(true); setError("");
       const session = sessionStorage.getItem("user");
       const tab = window.open("about:blank", "_blank");

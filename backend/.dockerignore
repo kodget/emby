@@ -11,4 +11,5 @@ venv
 media
 staticfiles
 *.log
+celerybeat-schedule*
 *persistence*.json

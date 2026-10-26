@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 export function LandingNav() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/70 bg-background/80 backdrop-blur-md">
-      <nav className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+      <nav aria-label="Main navigation" className="mx-auto flex h-18 w-full max-w-6xl items-center justify-between gap-2 px-4 sm:px-6">
         <Link
           href="/"
           className="flex items-center gap-2"
@@ -69,7 +69,7 @@ export function LandingNav() {
             variant="ghost"
             size="sm"
             asChild
-            className="hidden sm:inline-flex"
+            className="inline-flex"
           >
             <Link href="/signin">Sign in</Link>
           </Button>
@@ -77,6 +77,12 @@ export function LandingNav() {
             <Link href="/signup">Get started</Link>
           </Button>
         </div>
+      </nav>
+      <nav aria-label="Explore Emby" className="flex gap-5 overflow-x-auto border-t border-border px-4 text-xs text-muted-foreground md:hidden">
+        <a href="#how-it-works" className="flex min-h-11 shrink-0 items-center">How it works</a>
+        <a href="#features" className="flex min-h-11 shrink-0 items-center">Features</a>
+        <a href="#reader" className="flex min-h-11 shrink-0 items-center">AI reader</a>
+        <a href="#pricing" className="flex min-h-11 shrink-0 items-center">Pricing</a>
       </nav>
     </header>
   );

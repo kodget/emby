@@ -55,7 +55,10 @@ function ManageFlashcardsContent() {
     setLoading(true);
     setError("");
     try {
-      const data = await flashcardApi.getAll({ search: q || undefined });
+      const cardId = params.get('card');
+      const data = cardId && !q
+        ? { results: [await flashcardApi.getOne(Number(cardId))], count: 1 }
+        : await flashcardApi.getAll({ search: q || undefined });
       setCards(data.results);
       setCount(data.count);
     } catch (e: any) {
@@ -63,7 +66,7 @@ function ManageFlashcardsContent() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [params]);
 
   useEffect(() => { load(); }, [load]);
 

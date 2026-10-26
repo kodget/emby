@@ -71,3 +71,56 @@ Standalone document uploaders can use the reader's Retry AI preparation button
 - AI provider responses and private storage were mocked. Live provider access,
   rate limits, production workers and production uploads still need validation
   after deployment. No existing production data was changed by this work.
+
+## Upload timeout follow-up — 26 October 2026
+
+The supplied log showed a successful 15-page render followed by cancellation of
+the upload HTTP request. Local `CELERY_TASK_ALWAYS_EAGER=True` made `.delay()`
+run the remaining pipeline inline, including question generation. Standalone
+uploads also invoked conversion directly before responding.
+
+Course and standalone uploads now dispatch after the original and upload receipt
+commit. Production still uses Celery; local eager mode uses two background
+threads with a bounded queue and separate database connections. Indexing and bank
+generation use the same dispatcher, so chained eager tasks cannot hold the HTTP
+response. Local recovery commands wait for their queued work before exiting.
+These threads are for local development; the database records and recovery
+commands remain necessary if that server stops during processing.
+
+Opening an upload before its pages are published returns a preparation response
+instead of starting a second conversion inside the reader request. The reader
+polls and opens the saved pages automatically. Upload retries reuse the original
+receipt and document rather than creating another original.
+
+Verification: 230 backend tests ran, with 217 passing and 13 database-specific
+concurrency tests skipped. Five browser journeys passed, including automatic
+opening after preparation and current-page chat before indexing. TypeScript
+passed. The eight dispatch regression tests were rerun successfully on 26 October.
+Provider and storage failures are simulated in these tests; they do not establish
+that every external service or production deployment is healthy.
+
+Question-generation retries now include existing stems and validation feedback.
+When a batch makes no progress because of an invalid citation, duplicate stem or
+invalid answer structure, it gets one corrective request for that difficulty.
+The exact source-quotation checks still apply. Repeatedly unsupported questions
+stay rejected, and questions awaiting review are not automatically approved.
+An empty response or provider outage does not trigger this extra correction.
+
+The obsolete `test_generate_questions_task.py` module still imports the removed
+`generate_questions_task` symbol and cannot run. It was not changed or silently
+skipped; verification targets the supported durable question-bank workflow.
+
+### Live recovery
+
+On 26 October, the specific slide from the supplied logs
+(`slide_49232b2de5b542e890915a3eb5f09cac`) was checked and its partial question bank
+retried. The final saved bank is complete: 15 MCQs and 10 theory questions.
+The private original, all 15 rendered pages, and every previously saved question
+were verified preserved. The document's text index was already complete.
+One diagnostic retry identified an unsupported source quotation; strict evidence
+validation remained enabled throughout recovery.
+
+This live check covers that saved document and its question-bank recovery.
+It does not verify live flashcard, chat, textbook or video services. No application
+deployment was performed in this follow-up; the new retry logic needs the usual
+backend restart or deployment to serve subsequent requests.

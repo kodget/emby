@@ -14,7 +14,7 @@
     Rose    -> Weakness   (wrong, weak topics, urgent timer)
     Amber   -> Review     (needs-review, spaced-repetition due)
 
-  Display: Clash Display (characterful, geometric).  Body: Satoshi (clean).
+  Display: Sora. Body: Inter. Data: Geist Mono.
 */
 
 :root {
@@ -81,13 +81,11 @@
 }
 
 @theme inline {
-  /* Lilita One carries the interface, Anton the headlines, JetBrains Mono the data.
-     `--font-serif` stays aliased to the display face because dozens of components
-     already use `font-serif`; retargeting the token changes them all at once. */
-  --font-sans: 'Lilita One', ui-rounded, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
-  --font-serif: 'Anton', 'Lilita One', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Anton', 'Lilita One', ui-sans-serif, system-ui, sans-serif;
+  /* Keep long study sessions readable; all pages share the same type system. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -148,7 +146,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     /* Comfortable body rhythm */
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.6;
     /* Atmospheric mesh: faint indigo + warm amber washes fixed behind all */
     background-image:
@@ -157,24 +155,29 @@
     background-attachment: fixed;
     background-repeat: no-repeat;
   }
-  /* Anton is condensed and heavy: it needs a little tracking to breathe, and it has
-     only one weight, so hierarchy comes from size rather than weight. */
   h1, h2, h3 {
     font-family: var(--font-display);
-    font-weight: 400;
-    letter-spacing: 0.005em;
-    line-height: 1.08;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
   }
-
-  /* Lilita One sits large on its em box, so default line-height crowds body copy. */
-  body {
-    line-height: 1.5;
-    letter-spacing: 0.004em;
+  :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
   }
-
-  /* It also has no bold cut — asking for one triggers a synthetic smear. */
-  strong, b, .font-semibold, .font-bold, .font-medium {
-    font-weight: 400;
+  :where(button, [role='button']):not(:disabled) { cursor: pointer; }
+  :where([id]) { scroll-margin-top: 6rem; }
+  :where([id]):target { outline: 2px solid var(--ring); outline-offset: 4px; }
+  @media (max-width: 767px) {
+    input, select, textarea { font-size: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
   /* Tabular figures everywhere numbers matter feel intentional */
   .font-mono {

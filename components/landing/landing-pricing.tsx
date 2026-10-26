@@ -33,11 +33,11 @@ export function LandingPricing() {
             Pricing
           </p>
           <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight text-balance md:text-5xl">
-            Cheaper than <span className="italic">your data subscription.</span>
+            Start free. Choose more when you need it.
           </h2>
           <p className="mt-4 text-pretty text-muted-foreground">
-            We priced Emby for Nigerian medical students, not for Silicon
-            Valley. Pay monthly, or save with yearly.
+            Explore your class materials with a free account. Compare the plans
+            below, then choose monthly or yearly billing.
           </p>
         </div>
 
@@ -52,7 +52,7 @@ export function LandingPricing() {
                 <span className="text-base text-muted-foreground">/ month</span>
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Enough to decide you can&apos;t live without Pro.
+                Build a study routine with your class materials.
               </p>
             </header>
             <ul className="mt-6 space-y-2.5 text-sm">

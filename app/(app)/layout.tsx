@@ -20,13 +20,14 @@ import { ProgressSync } from "@/components/app/progress-sync";
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-[100dvh] bg-background">
+      <a href="#main-content" className="sr-only z-[100] rounded-lg bg-primary px-4 py-3 text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Skip to content</a>
       <ProgressSync />
       <AppSidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <AppTopbar />
 
-        <main className="scroll-pane flex-1 pb-tabbar md:pb-0">
+        <main id="main-content" tabIndex={-1} className="scroll-pane min-w-0 flex-1 pb-tabbar md:pb-0">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

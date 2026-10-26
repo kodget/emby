@@ -11,11 +11,12 @@ function identity() {
   } catch { return null; }
 }
 
-export function useReadingProgress({ sourceId, namespace, load, save, ready, page, maxPage, loaded, setPage, denied, authorized }: {
+export function useReadingProgress({ sourceId, namespace, load, save, ready, page, maxPage, loaded, setPage, denied, authorized, initialPage }: {
   sourceId: string; namespace: 'course-reading' | 'deck-reading'; load: () => Promise<{ current_page: number }>;
   save: (data: ReadingCheckpoint) => Promise<unknown>; ready: boolean; page: number; maxPage: number; loaded: boolean;
   setPage: (page: number) => void; denied: () => void;
   authorized: () => boolean;
+  initialPage?: number;
 }) {
   const recorder = useRef<ReadingRecorder | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -85,7 +86,10 @@ export function useReadingProgress({ sourceId, namespace, load, save, ready, pag
       });
       recorder.current = tracker;
       if (navigated.current) tracker.turn(latest.current.page);
-      else latest.current.setPage(tracker.page);
+      else {
+        if (initialPage && Number.isInteger(initialPage) && initialPage > 0) tracker.turn(Math.min(initialPage, maxPage));
+        latest.current.setPage(tracker.page);
+      }
       tracker.visible(tracker.page === latest.current.page && visible());
       tracker.retry();
       let ticks = 0;
@@ -110,7 +114,7 @@ export function useReadingProgress({ sourceId, namespace, load, save, ready, pag
       window.removeEventListener('pagehide', onExit);
       window.removeEventListener('online', onOnline);
     };
-  }, [sourceId, namespace, ready, maxPage, attempt]);
+  }, [sourceId, namespace, ready, maxPage, attempt, initialPage]);
 
   useEffect(() => { recorder.current?.visible(document.visibilityState === 'visible' && loaded); }, [loaded]);
   return { changePage, loadError, saveError, unavailableSave,

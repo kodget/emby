@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from 'next/navigation';
 import {
   ChevronLeft,
   ChevronRight,
@@ -32,6 +33,7 @@ export function DeckReader({
   title: string;
 }) {
   const [deck, setDeck] = useState<SlideDeck | null>(null);
+  const searchParams = useSearchParams();
   const [pages, setPages] = useState<SlidePage[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [aiRetryError, setAiRetryError] = useState('');
@@ -85,6 +87,7 @@ export function DeckReader({
       setPages(freshPages); setCurrentPage(page => Math.min(page, Math.max(1, freshPages.length)));
     } }, denyAccess);
   const reading = useDeckReading({ deckId,
+    initialPage: Number(searchParams.get('page')) || undefined,
     ready: !!deck && pages.length > 0 && !loading && !processing && !error,
     page: currentPage, maxPage: pages.length, loaded: loadedPage === currentPage && !imageError,
     setPage: value => setCurrentPage(Math.max(1, Math.min(value, pages.length))),

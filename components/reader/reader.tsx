@@ -141,6 +141,7 @@ export function Reader({
 
   const pageKey = `${currentSlideIndex}:${slideContent?.pages?.[currentSlideIndex]?.image_url ?? ''}`;
   const reading = useReadingProgress({ sourceId: slide.id, namespace: 'course-reading',
+    initialPage: Number(searchParams.get('page')) || undefined,
     ready: slides.length > 0, page: currentSlideIndex + 1, maxPage: slides.length, loaded: loadedPage === pageKey,
     setPage: page => {
       const index = Math.max(0, Math.min(slides.length - 1, page - 1));

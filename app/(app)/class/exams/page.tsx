@@ -1,244 +1,59 @@
 "use client";
-
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { authApi, classApi, ExamCountdown } from "@/lib/api";
-import { UserProfile } from "@/lib/api";
-import AuthGuard from "@/components/auth/auth-guard";
-import { Calendar, Plus, Edit2, Trash2, ArrowLeft, Clock } from "lucide-react";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { CalendarDays, ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react';
+import { authApi, classApi, type ExamCountdown, type UserProfile } from '@/lib/api';
+import AuthGuard from '@/components/auth/auth-guard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export default function ExamCountdownsPage() {
-  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [countdowns, setCountdowns] = useState<ExamCountdown[]>([]);
+  const [exams, setExams] = useState<ExamCountdown[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ title: "", exam_date: "" });
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const profileData = await authApi.getProfile();
-      setProfile(profileData);
-
-      if (profileData.class_role !== "class_head" || !profileData.class_head_verified) {
-        router.push("/class");
-        return;
-      }
-
-      // Load countdowns from backend
-      const countdownsData = await classApi.getExamCountdowns();
-      setCountdowns(countdownsData);
-    } catch (error) {
-      console.error("Failed to load data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreate = () => {
-    setEditingId(null);
-    setFormData({ title: "", exam_date: "" });
-    setShowModal(true);
-  };
-
-  const handleEdit = (countdown: ExamCountdown) => {
-    setEditingId(countdown.id);
-    setFormData({ title: countdown.title, exam_date: countdown.exam_date });
-    setShowModal(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      if (editingId) {
-        await classApi.updateExamCountdown(editingId, formData);
-      } else {
-        await classApi.createExamCountdown(formData);
-      }
-      await loadData();
-      setShowModal(false);
-      setFormData({ title: "", exam_date: "" });
-    } catch (error) {
-      console.error("Failed to save countdown:", error);
-      alert("Failed to save countdown");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this countdown?")) return;
-    try {
-      await classApi.deleteExamCountdown(id);
-      await loadData();
-    } catch (error) {
-      console.error("Failed to delete countdown:", error);
-      alert("Failed to delete countdown");
-    }
-  };
-
-  if (loading) {
-    return (
-      <AuthGuard>
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
-          </div>
-        </div>
-      </AuthGuard>
-    );
+  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState('');
+  const [saving, setSaving] = useState(false);
+  const canManage = profile?.class_role === 'class_head' && profile.class_head_verified;
+  async function load() {
+    setLoading(true); setError('');
+    try { const [user, rows] = await Promise.all([authApi.getProfile(), classApi.getExamCountdowns()]); setProfile(user); setExams(rows); }
+    catch { setError('Your exam dates could not be loaded. Please try again.'); }
+    finally { setLoading(false); }
   }
-
-  return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 py-12 px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.push("/class")}
-                className="p-2 hover:bg-white rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-6 h-6 text-gray-600" />
-              </button>
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900">Exam Countdowns</h1>
-                <p className="text-gray-600">Manage exam dates for your class</p>
-              </div>
-            </div>
-            <button
-              onClick={handleCreate}
-              className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Add Countdown
-            </button>
-          </div>
-
-          {/* Info Banner */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Exam countdowns will be visible to all students and material uploaders in your class on their dashboards.
-            </p>
-          </div>
-
-          {/* Countdowns List */}
-          {countdowns.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-              <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">No Exam Countdowns</h2>
-              <p className="text-gray-600 mb-6">Add exam dates to keep your class motivated and prepared</p>
-              <button
-                onClick={handleCreate}
-                className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors"
-              >
-                Add First Countdown
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {countdowns.map((countdown) => (
-                <div key={countdown.id} className="bg-white rounded-xl shadow-lg p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">{countdown.title}</h3>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>{new Date(countdown.exam_date).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          <span className={`font-semibold ${
-                            countdown.days_remaining <= 7 ? "text-red-600" :
-                            countdown.days_remaining <= 14 ? "text-orange-600" :
-                            "text-green-600"
-                          }`}>
-                            {countdown.days_remaining} days remaining
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEdit(countdown)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit2 className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(countdown.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              {editingId ? "Edit Countdown" : "Add Countdown"}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Exam Title</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  required
-                  placeholder="e.g., MBBS Professional Exam, Physiology In-Course"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Exam Date</label>
-                <input
-                  type="date"
-                  value={formData.exam_date}
-                  onChange={(e) => setFormData({ ...formData, exam_date: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50"
-                >
-                  {submitting ? "Saving..." : editingId ? "Update" : "Create"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-6 py-3 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </AuthGuard>
-  );
+  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    if (!loading && window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: 'center' });
+  }, [loading]);
+  function edit(exam?: ExamCountdown) { setEditing(exam?.id ?? null); setTitle(exam?.title ?? ''); setDate(exam?.exam_date ?? ''); setFormError(''); setOpen(true); }
+  async function save(event: React.FormEvent) {
+    event.preventDefault(); setSaving(true); setFormError('');
+    try {
+      const values = { title: title.trim(), exam_date: date };
+      if (editing) await classApi.updateExamCountdown(editing, values); else await classApi.createExamCountdown(values);
+      setOpen(false); await load();
+    } catch { setFormError('This exam date was not saved. Please try again.'); }
+    finally { setSaving(false); }
+  }
+  async function remove(exam: ExamCountdown) {
+    if (!window.confirm(`Delete “${exam.title}” from your class exam dates?`)) return;
+    try { await classApi.deleteExamCountdown(exam.id); await load(); }
+    catch { setError('This exam date could not be deleted. Please try again.'); }
+  }
+  return <AuthGuard><div className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
+    <Link href="/class" className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-primary"><ArrowLeft className="size-4" />My class</Link>
+    <header className="flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-3xl">Exam countdowns</h1><p className="mt-2 text-muted-foreground">See what’s coming up and give your revision a clear target.</p></div>{canManage && <Button onClick={() => edit()}><Plus className="size-4" />Add exam</Button>}</header>
+    {error && <div role="alert" className="rounded-xl border border-destructive/25 bg-card p-5"><p>{error}</p><Button variant="outline" onClick={load} className="mt-3">Try again</Button></div>}
+    {loading ? <p role="status" className="py-12 text-center text-muted-foreground">Loading exam dates…</p> : !error && exams.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center"><CalendarDays className="mx-auto mb-4 size-8 text-primary" /><h2 className="text-xl">No exam dates yet</h2><p className="mt-2 text-sm text-muted-foreground">{canManage ? 'Add the next exam so everyone can plan their revision.' : 'Exam dates will appear here when your class head adds them.'}</p></div> : <div className="space-y-4">{exams.map(exam => <article id={`exam-${exam.id}`} key={exam.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card p-6">
+      <div className="min-w-0"><h2 className="break-words text-lg">{exam.title}</h2><p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays className="size-4" />{new Date(exam.exam_date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
+      <div className="flex items-center gap-2"><span className="rounded-lg bg-primary/7 px-3 py-2 text-sm font-medium text-primary">{exam.days_remaining < 0 ? 'Past exam' : exam.days_remaining === 0 ? 'Today' : `${exam.days_remaining} days to go`}</span>{canManage && <><Button size="icon" variant="ghost" aria-label={`Edit ${exam.title}`} onClick={() => edit(exam)}><Pencil className="size-4" /></Button><Button size="icon" variant="ghost" aria-label={`Delete ${exam.title}`} onClick={() => remove(exam)}><Trash2 className="size-4" /></Button></>}</div>
+    </article>)}</div>}
+    <Dialog open={open} onOpenChange={value => { if (!saving) setOpen(value); }}><DialogContent><DialogTitle>{editing ? 'Edit exam date' : 'Add an exam date'}</DialogTitle><DialogDescription>This date will be visible to your class.</DialogDescription><form onSubmit={save} className="space-y-4"><div className="space-y-2"><Label htmlFor="exam-title">Exam title</Label><Input id="exam-title" required maxLength={200} value={title} onChange={e => setTitle(e.target.value)} /></div><div className="space-y-2"><Label htmlFor="exam-date">Exam date</Label><Input id="exam-date" type="date" required value={date} onChange={e => setDate(e.target.value)} /></div>{formError && <p role="alert" className="text-sm text-destructive">{formError}</p>}<div className="flex gap-3"><Button type="submit" disabled={saving || !title.trim()}>{saving ? 'Saving…' : 'Save exam'}</Button><Button type="button" variant="outline" disabled={saving} onClick={() => setOpen(false)}>Cancel</Button></div></form></DialogContent></Dialog>
+  </div></AuthGuard>;
 }

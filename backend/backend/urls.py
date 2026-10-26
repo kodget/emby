@@ -12,6 +12,7 @@ Route map (matches the frontend's API client in lib/api.ts):
 from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
+from curriculum.search_views import search
 
 
 def health(_request):
@@ -20,6 +21,7 @@ def health(_request):
 
 
 urlpatterns = [
+    path('api/search/', search, name='global-search'),
     path("admin/", admin.site.urls),
     path("health/", health, name="health"),
     path("api/health/", health, name="api-health"),

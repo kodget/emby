@@ -12,18 +12,16 @@ export function LandingReaderDemo() {
     <section id="reader" className="border-t border-border">
       <div className="mx-auto grid w-full max-w-6xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="flex flex-col justify-center gap-5">
-          <p className="text-[11px] font-medium uppercase tracking-widest text-accent">
-            The hero feature
+          <p className="text-xs font-medium uppercase tracking-widest text-primary">
+            Learn alongside your slides
           </p>
           <h2 className="font-serif text-4xl leading-tight tracking-tight text-balance md:text-5xl">
-            Highlight anything.
-            <br />
-            <span className="italic">Understand it in seconds.</span>
+            A clearer explanation,<br />right where you study.
           </h2>
           <p className="text-pretty text-muted-foreground">
-            Open a slide. Highlight the sentence you don&apos;t understand. The
-            AI tutor explains it using your recommended textbook and suggests a
-            real dissection video — without you leaving the page.
+            Open your class slides and ask about what you’re reading. Use the
+            AI tutor to explore concepts and find suggested textbooks and
+            videos alongside your material.
           </p>
 
           <ul className="mt-2 space-y-4 text-sm">
@@ -34,7 +32,7 @@ export function LandingReaderDemo() {
               <span>
                 <strong className="font-medium">Select to explain.</strong>{" "}
                 <span className="text-muted-foreground">
-                  Works on any paragraph, figure caption, or past question.
+                  Ask about a passage or the slide you’re reading.
                 </span>
               </span>
             </li>
@@ -43,9 +41,9 @@ export function LandingReaderDemo() {
                 <BookOpenText className="size-3.5" aria-hidden="true" />
               </span>
               <span>
-                <strong className="font-medium">Textbook, attached.</strong>{" "}
+                <strong className="font-medium">Read a little further.</strong>{" "}
                 <span className="text-muted-foreground">
-                  Every class ships with its recommended textbook side-by-side.
+                  Explore textbook suggestions related to your slide.
                 </span>
               </span>
             </li>
@@ -54,19 +52,19 @@ export function LandingReaderDemo() {
                 <Play className="size-3.5" aria-hidden="true" />
               </span>
               <span>
-                <strong className="font-medium">Real dissection videos.</strong>{" "}
+                <strong className="font-medium">Learn another way.</strong>{" "}
                 <span className="text-muted-foreground">
-                  We find the actual human-cadaver video, not a 3D animation.
+                  Discover video suggestions for the topic you’re studying.
                 </span>
               </span>
             </li>
           </ul>
 
           <Link
-            href="/read"
+            href="/signup"
             className="group mt-2 inline-flex w-fit items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
-            Try the reader with real content
+            Open your study workspace
             <ArrowUpRight
               className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
               aria-hidden="true"

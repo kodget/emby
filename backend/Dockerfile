@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
+RUN ls -la /app/ && echo "=== Checking for render_start.sh ===" && ls -la /app/render_start.sh || echo "FILE NOT FOUND"
 RUN useradd --create-home emby && chown -R emby:emby /app
 USER emby
 CMD ["bash", "render_start.sh", "combined"]

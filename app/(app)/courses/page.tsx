@@ -413,10 +413,9 @@ function getBlockIcon(blockName: string) {
 }
 
 // Randomly select a theme.
-function getRandomTheme(): CourseTheme {
-  const randomIndex = Math.floor(Math.random() * availableThemes.length);
-
-  return availableThemes[randomIndex];
+function getSubjectTheme(id: string): CourseTheme {
+  const index = Array.from(id).reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 0);
+  return availableThemes[index % availableThemes.length];
 }
 
 export default function CoursesPage() {
@@ -434,6 +433,7 @@ export default function CoursesPage() {
   >({});
 
   useEffect(() => {
+    setSelectedSubject(new URLSearchParams(window.location.search).get('subject') || 'all');
     loadData();
   }, []);
 
@@ -463,7 +463,7 @@ export default function CoursesPage() {
       const generatedThemes: Record<string, CourseTheme> = {};
 
       subjectsData.forEach((subject) => {
-        generatedThemes[subject.id] = getRandomTheme();
+        generatedThemes[subject.id] = getSubjectTheme(subject.id);
       });
 
       setSubjectThemes(generatedThemes);
