@@ -1530,6 +1530,7 @@ test("header streak refreshes after activity and ignores a superseded response",
     return readerResponse(route, url);
   });
   await page.goto("/read/anatomy/reader-a");
+  await page.waitForLoadState("networkidle");
   await expect(
     page.getByRole("button", { name: "Current streak", exact: true }),
   ).toHaveText("1");
@@ -1675,6 +1676,10 @@ test("upload progress refreshes expired login, shows page counts and survives au
     }
   });
   await page.goto("/courses/anatomy/upper/hand/opaque-topic-42");
+  await page.waitForLoadState("domcontentloaded");
+  await expect(
+    page.getByRole("button", { name: "Upload slides", exact: true }),
+  ).toBeVisible({ timeout: 30000 });
   await page
     .getByRole("button", { name: "Upload slides", exact: true })
     .click();
