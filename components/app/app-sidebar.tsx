@@ -22,7 +22,6 @@ import { Icon3D } from "@/components/brand/icon-3d";
 import { LOGO_MARK, type IconName } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { useAppSelector } from "@/store/hooks";
-import { UploadProgressStrip } from "./upload-progress-strip";
 
 const STORAGE_KEY = "emby.sidebar.collapsed";
 
@@ -155,7 +154,6 @@ export function AppSidebar() {
         <NavGroup title="Tools" items={items} pathname={pathname} collapsed={collapsed} />
       </nav>
 
-      <UploadProgressStrip />
 
       {/* Streak — a compact badge when collapsed, a card when open */}
       <div className="flex flex-col items-center gap-1 pb-4 group-data-[collapsed=false]:hidden" title={`${streak}-day streak`}>

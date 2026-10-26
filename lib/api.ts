@@ -362,6 +362,9 @@ export type SlideDeck = {
   ai_index?: { status: string; error_code?: string };
   can_prepare_ai?: boolean;
   processing_error?: string;
+  processing_progress?: { phase: string; completed: number; total: number };
+  processing_attempts?: number;
+  next_attempt_at?: string | null;
   text_extraction?: {
     status?: string;
     missing_pages?: number[];

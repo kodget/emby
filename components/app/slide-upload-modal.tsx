@@ -140,20 +140,22 @@ export function SlideUploadModal() {
       ]));
       formData.append("request_id", intentRef.current.requestId);
 
-      dispatch(
-        updateProgress({ id: uploadId, progress: 30, status: "uploading" }),
-      );
-
       const { data: slideData } = await api.post("/api/slides/upload_and_process/", formData, {
         headers: { "Content-Type": undefined },
-        timeout: 120000,
+        timeout: 300000,
+        onUploadProgress: event => {
+          const percent = event.total ? Math.min(100, Math.round(event.loaded / event.total * 100)) : 0;
+          dispatch(updateProgress({ id: uploadId, progress: percent * 0.4, status: 'uploading',
+            detail: percent === 100 ? 'Transfer complete. Saving your original…' : `Uploading ${percent}%` }));
+        },
       });
 
       dispatch(
         updateProgress({
           id: uploadId,
-          progress: 50,
-          status: "downloading",
+          progress: 45,
+          status: "processing",
+          detail: "Original saved. Waiting for the worker…",
           slideId: slideData.id,
           pages: slideData.page_count || 0,
         }),
@@ -167,7 +169,9 @@ export function SlideUploadModal() {
       const message = typeof details?.error === "string" ? details.error
         : typeof details?.detail === "string" ? details.detail
         : details && typeof details === "object" ? Object.values(details).flat().join(" ")
-        : "Upload failed. Please try again.";
+        : err.code === 'ECONNABORTED' || !err.response
+          ? "The connection was interrupted. Retry this upload to check whether it was saved; the same request will not create a duplicate."
+          : "Upload failed. Please try again.";
       dispatch(updateProgress({ id: uploadId, progress: 0, status: "error", error: message }));
       setErrorMsg(message);
     } finally {

@@ -1,117 +1,85 @@
-"use client"
+"use client";
 
-import { AnimatePresence, motion } from "framer-motion"
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faCircleCheck, faSpinner, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons"
-import { useAppSelector, useAppDispatch } from "@/store/hooks"
-import { updateProgress, type UploadStatus } from "@/store/uploads-slice"
-import { useEffect, useMemo } from "react"
+import { useEffect } from 'react';
+import Link from 'next/link';
+import { CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
+import { api } from '@/lib/api';
+import { useAppSelector, useAppDispatch, useContentSessionKey } from '@/store/hooks';
+import { updateProgress, type UploadStatus } from '@/store/uploads-slice';
 
 export function UploadProgressStrip() {
-  const dispatch = useAppDispatch()
-  const items = useAppSelector((s) => s.uploads.items)
-  const uploads = useMemo(() => items.filter((u) => u.status !== "done" && u.status !== "error"), [items])
-  const recent = useMemo(() => items.filter((u) => u.status === "done" || u.status === "error").slice(0, 1), [items])
-  const visible = [...uploads, ...recent].slice(0, 1)
-
+  const dispatch = useAppDispatch();
+  const items = useAppSelector(s => s.uploads.items);
+  const sessionKey = useContentSessionKey();
+  const activeKey = JSON.stringify(items.filter(u => u.slideId && !['uploading', 'done', 'error'].includes(u.status))
+    .map(u => ({ id: u.id, slideId: u.slideId })));
   useEffect(() => {
-    const activeUploads = uploads.filter((u) => u.slideId && u.status !== "uploading" && u.status !== "done" && u.status !== "error");
-    if (activeUploads.length === 0) return;
-
-    const interval = setInterval(() => {
-      activeUploads.forEach(async (u) => {
+    const active: { id: string; slideId: string }[] = JSON.parse(activeKey);
+    if (!active.length) return;
+    const controller = new AbortController();
+    const owner = sessionStorage.getItem('user');
+    let timer: ReturnType<typeof setTimeout>;
+    let failures = 0;
+    const current = () => !controller.signal.aborted && owner === sessionStorage.getItem('user');
+    async function poll() {
+      for (const upload of active) {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api/slides/${u.slideId}/status/`, {
-            headers: {
-              Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-            },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            let progress = u.progress;
-            let status: UploadStatus = "processing";
-            if (data.reading_ready) {
-              progress = 100;
-              status = "done";
-            } else if (data.status === "downloading") {
-              progress = 60;
-              status = "downloading";
-            } else if (data.status === "extracting_text") {
-              progress = 70;
-              status = "extracting_text";
-            } else if (data.status === "converting_to_jpg") {
-              progress = 80;
-              status = "converting_to_jpg";
-            } else if (data.status === "generating_quizzes") {
-              progress = 90;
-              status = "generating_quizzes";
-            } else if (data.status === "completed") {
-              progress = 100;
-              status = "done";
-            } else if (data.status === "failed") {
-              progress = 0;
-              status = "error";
-            }
-
-            if (status !== u.status || progress !== u.progress) {
-              dispatch(updateProgress({ id: u.id, progress, status, error: data.error_message || undefined }));
-            }
+          // The shared client refreshes expired tokens. Sequential polling avoids
+          // overlapping requests when the host is waking up or the network is slow.
+          const { data } = await api.get(`/api/slides/${upload.slideId}/status/`, { signal: controller.signal, timeout: 30000 });
+          if (!current()) return;
+          failures = 0;
+          let status: UploadStatus = 'processing', progress = 45, detail = 'Original saved. Waiting for processing…';
+          const report = data.progress;
+          if (data.reading_ready) {
+            status = 'done'; progress = 100; detail = 'Ready to read. AI study tools prepare separately.';
+          } else if (data.status === 'failed') {
+            status = data.next_attempt_at ? 'retrying' : 'error';
+            detail = data.next_attempt_at ? `Original saved. Automatic retry scheduled (attempt ${data.attempts || 1} of 4).` : '';
+          } else if (report?.total > 0) {
+            const storing = report.phase === 'storing_pages';
+            const fraction = Math.max(0, Math.min(1, report.completed / report.total));
+            progress = storing ? 75 + fraction * 23 : 50 + fraction * 25;
+            detail = `${storing ? 'Saving' : 'Rendering'} pages ${report.completed} of ${report.total}`;
+          } else if (data.status === 'downloading') {
+            status = 'downloading'; detail = 'Loading your saved original…';
+          } else if (data.status === 'converting_to_jpg') {
+            status = 'converting_to_jpg'; progress = 50; detail = 'Preparing readable pages…';
           }
-        } catch (e) {
-          // Ignore polling errors
+          dispatch(updateProgress({ id: upload.id, status, progress, detail,
+            error: status === 'error' ? data.error_message || 'Processing stopped. Open the document to retry.' : undefined }));
+        } catch (error: any) {
+          if (!current()) return;
+          const code = error.response?.status;
+          if ([401, 403, 404].includes(code)) {
+            dispatch(updateProgress({ id: upload.id, progress: 0, status: 'error', error:
+              code === 401 ? 'Sign in again to check this upload.' : 'This document is no longer available to your account.' }));
+          } else {
+            failures += 1;
+            dispatch(updateProgress({ id: upload.id, progress: 45, status: 'processing',
+              detail: 'Connection interrupted. Your saved upload keeps processing; reconnecting…' }));
+          }
         }
-      });
-    }, 3000);
+      }
+      if (current()) timer = setTimeout(poll, Math.min(30000, 3000 * 2 ** Math.min(failures, 4)));
+    }
+    void poll();
+    return () => { controller.abort(); clearTimeout(timer); };
+  }, [activeKey, dispatch, sessionKey]);
 
-    return () => clearInterval(interval);
-  }, [uploads, dispatch]);
-
-  const getStatusText = (status: UploadStatus, progress: number) => {
-    if (status === "done") return "Ready to read"
-    if (status === "error") return "Failed"
-    if (status === "uploading") return "Uploading..."
-    if (status === "downloading") return "Downloading..."
-    if (status === "extracting_text") return "Extracting text..."
-    if (status === "converting_to_jpg") return "Converting pages..."
-    if (status === "generating_quizzes") return "Generating quizzes..."
-    return "Processing..."
-  }
-
-  return (
-    <AnimatePresence>
-      {visible.map((u) => (
-        <motion.div
-          key={u.id}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 8 }}
-          className="mx-3 mb-3 rounded-xl border border-border bg-background px-3 py-2.5"
-        >
-          <div className="flex items-center gap-2 text-[12px]">
-            {u.status === "done" ? (
-              <FontAwesomeIcon icon={faCircleCheck} className="size-3.5 text-primary shrink-0" />
-            ) : u.status === "error" ? (
-              <FontAwesomeIcon icon={faTriangleExclamation} className="size-3.5 text-destructive shrink-0" />
-            ) : (
-              <FontAwesomeIcon icon={faSpinner} className="size-3.5 text-muted-foreground shrink-0 animate-spin" />
-            )}
-            <span className="truncate text-muted-foreground">{u.title}</span>
-            <span className="ml-auto shrink-0 font-medium text-foreground">
-              {getStatusText(u.status, u.progress)}
-            </span>
-          </div>
-          {u.status === "error" && u.error && <p role="alert" className="mt-2 text-xs text-destructive">{u.error}</p>}
-          {u.status !== "done" && u.status !== "error" && (
-            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
-              <motion.div
-                className="h-full rounded-full bg-primary"
-                animate={{ width: `${u.progress}%` }}
-                transition={{ ease: "easeOut", duration: 0.2 }}
-              />
-            </div>
-          )}
-        </motion.div>
-      ))}
-    </AnimatePresence>
-  )
+  const visible = [...items.filter(u => !['done', 'error'].includes(u.status)),
+    ...items.filter(u => ['done', 'error'].includes(u.status)).slice(0, 1)].slice(0, 3);
+  if (!visible.length) return null;
+  return <section aria-label="Upload progress" className="space-y-2 border-b bg-card px-4 py-3">
+    {visible.map(upload => <div key={upload.id} className="mx-auto max-w-5xl">
+      <div className="flex items-center gap-2 text-sm">
+        {upload.status === 'done' ? <CheckCircle2 className="size-4 shrink-0 text-primary" /> : upload.status === 'error'
+          ? <AlertTriangle className="size-4 shrink-0 text-destructive" /> : <Loader2 className="size-4 shrink-0 animate-spin motion-reduce:animate-none" />}
+        <span className="min-w-0 flex-1 truncate font-medium">{upload.title}</span>
+        {upload.slideId && <Link className="shrink-0 px-2 py-2 text-sm font-medium text-primary underline" href={`/read/${upload.moduleId}/${upload.slideId}`}>Open document</Link>}
+      </div>
+      <p role={upload.status === 'error' ? 'alert' : 'status'} className="text-xs text-muted-foreground">{upload.error || upload.detail || 'Uploading…'}</p>
+      {!['done', 'error'].includes(upload.status) && <div role="progressbar" aria-label={`Processing ${upload.title}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(upload.progress)} className="mt-2 h-1 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-[width] motion-reduce:transition-none" style={{ width: `${upload.progress}%` }} /></div>}
+    </div>)}
+  </section>;
 }

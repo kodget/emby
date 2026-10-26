@@ -298,14 +298,15 @@ class SlideConverter:
             logger.info(f"Media directory ready: {dir_path}")
     
     @staticmethod
-    def convert_document(input_file_path: str, file_type: str, deck_id: str) -> Tuple[bool, dict]:
+    def convert_document(input_file_path: str, file_type: str, deck_id: str, *, progress=None) -> Tuple[bool, dict]:
         """Keep rendered files alive until the caller has stored all pages."""
-        from .document_rendering import render_document, cleanup_render
+        from .document_rendering import cleanup_render
+        from .isolated_rendering import render_document_isolated
         result = {'success': False, 'file_type': file_type, 'slide_images': [],
                   'page_count': 0, 'error': None, 'converted_pptx': None, 'converted_pdf': None,
                   'temp_dir': tempfile.mkdtemp(prefix='emby-render-')}
         try:
-            rendered = render_document(input_file_path, file_type, result['temp_dir'], ocr=False)
+            rendered = render_document_isolated(input_file_path, file_type, result['temp_dir'], progress=progress)
             result.update(success=True, slide_images=rendered['image_paths'],
                           pages=rendered['pages'], text_extraction=rendered['text_extraction'],
                           page_count=rendered['page_count'], converted_pdf=rendered['pdf_path'])

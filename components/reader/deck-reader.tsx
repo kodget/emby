@@ -110,13 +110,14 @@ export function DeckReader({
       try {
         const updated = await deckApi.checkStatus(deckId);
         if (!active()) return;
+        setDeck(updated);
         if (updated.processing_status === "completed") {
           const pageData = await deckApi.getPages(deckId);
           if (!active()) return;
           setDeck(updated); setPages(pageData); setProcessing(false);
           return;
         }
-        if (updated.processing_status === "failed") {
+        if (updated.processing_status === "failed" && !updated.next_attempt_at) {
           setError(updated.processing_error || "Processing failed");
           setProcessing(false);
           return;
@@ -139,7 +140,7 @@ export function DeckReader({
         setDeck(deckData);
 
         // If still processing, show spinner
-        if (["pending", "processing"].includes(deckData.processing_status)) {
+        if (["pending", "processing"].includes(deckData.processing_status) || deckData.next_attempt_at) {
           setProcessing(true);
           timer = setTimeout(poll, 2000);
           return;
@@ -236,9 +237,11 @@ export function DeckReader({
       <div className="flex h-screen items-center justify-center bg-gray-100">
         <div role="status" className="rounded-lg bg-white p-8 text-center shadow-lg">
           <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-blue-600" />
-          <h3 className="mb-2 text-lg font-semibold">Converting Document</h3>
+          <h3 className="mb-2 text-lg font-semibold">{deck?.next_attempt_at ? 'Retry scheduled' : 'Preparing your document'}</h3>
           <p className="text-gray-600">
-            Processing {deck?.file_type || "file"}... This may take a moment
+            {deck?.next_attempt_at ? `Your original is saved. Processing will retry automatically (attempt ${deck.processing_attempts || 1} of 4).`
+              : deck?.processing_progress?.total ? `${deck.processing_progress.phase === 'storing_pages' ? 'Saving' : 'Rendering'} pages ${deck.processing_progress.completed} of ${deck.processing_progress.total}`
+              : 'Your original is saved. Waiting for readable pages…'}
           </p>
           {deck && (
             <p className="mt-4 text-sm text-gray-500">
@@ -257,7 +260,12 @@ export function DeckReader({
           <X className="mx-auto mb-4 h-8 w-8 text-red-600" />
           <h3 className="mb-2 text-lg font-semibold text-red-600">Error</h3>
           <p className="text-gray-600">{error}</p>
-          <button className="mt-4 underline" onClick={() => setAttempt(value => value + 1)}>Try again</button>
+          {deck?.processing_status === 'failed' && deck.can_prepare_ai ? <button className="mt-4 min-h-11 underline" onClick={async () => {
+            try {
+              await api.post(`/api/decks/${deckId}/retry-processing/`);
+              if (!accessRevoked.current) setAttempt(value => value + 1);
+            } catch { if (!accessRevoked.current) setError('Could not queue processing. Please try again.'); }
+          }}>Retry processing</button> : <button className="mt-4 min-h-11 underline" onClick={() => setAttempt(value => value + 1)}>Try again</button>}
           <a className="m-4 underline" href="/decks">Back to documents</a>
           {deck?.processing_error && (
             <p className="mt-2 text-sm text-gray-500">

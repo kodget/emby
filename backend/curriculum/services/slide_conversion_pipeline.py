@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _download_from_cloudinary(cloudinary_url: str, timeout: int = 60) -> bytes:
+def _download_from_cloudinary(cloudinary_url: str, timeout: int = 60, *, destination=None, progress=None):
     """
     Download file bytes from Cloudinary.
     
@@ -41,12 +41,32 @@ def _download_from_cloudinary(cloudinary_url: str, timeout: int = 60) -> bytes:
 
     def _try_get(url: str) -> bytes | None:
         try:
-            resp = requests.get(url, timeout=timeout)
+            resp = requests.get(url, timeout=(10, timeout), stream=destination is not None)
         except requests.RequestException:
             raise IOError('File storage is temporarily unavailable.') from None
-        if resp.status_code == 200:
-            return resp.content
-        return None
+        try:
+            if resp.status_code != 200:
+                return None
+            if destination is None:
+                return resp.content
+            # Do not retain a second in-memory copy while rendering a large file.
+            import time
+            size, heartbeat = 0, time.monotonic()
+            started = heartbeat
+            with open(destination, 'wb') as stream:
+                for chunk in resp.iter_content(chunk_size=256 * 1024):
+                    if time.monotonic() - started > 180:
+                        raise IOError('Source download exceeded the time limit.')
+                    size += len(chunk)
+                    if size > 100 * 1024 * 1024:
+                        raise IOError('Document exceeds the 100 MB upload limit.')
+                    stream.write(chunk)
+                    if progress and time.monotonic() - heartbeat >= 5:
+                        progress()
+                        heartbeat = time.monotonic()
+            return size or None
+        finally:
+            resp.close()
 
     # ── Attempt 1: plain URL ─────────────────────────────────────────────────
     data = _try_get(cloudinary_url)
@@ -104,6 +124,23 @@ def _download_from_cloudinary(cloudinary_url: str, timeout: int = 60) -> bytes:
 # Public API
 # ─────────────────────────────────────────────────────────────────────────────
 
+def download_source(source, destination, *, progress=None):
+    """Stream originals to disk; preserve signed/private delivery rules."""
+    from pathlib import Path
+    import shutil
+    from .document_extraction import ExtractionError
+    try:
+        if str(source).lower().startswith(('https://', 'http://')):
+            _download_from_cloudinary(str(source), destination=destination, progress=progress)
+        else:
+            with Path(source).open('rb') as original, open(destination, 'wb') as target:
+                shutil.copyfileobj(original, target, length=256 * 1024)
+        if not Path(destination).stat().st_size:
+            raise ValueError('Empty document')
+    except (OSError, ValueError):
+        raise ExtractionError('source_unavailable') from None
+
+
 class SlideConversionPipeline:
     """
     Convert an uploaded slide file into per-page JPG images.
@@ -149,22 +186,20 @@ class SlideConversionPipeline:
                 status_obj.status = 'downloading'
                 status_obj.save(update_fields=['status'])
             logger.info('Downloading source file for slide %s', slide_id)
-            from .document_extraction import source_bytes, content_text
-            file_bytes = source_bytes(cloudinary_url)
-            logger.info(f"Downloaded {len(file_bytes):,} bytes")
-
+            from .document_extraction import content_text
             ft = original_file_type.lower().lstrip(".")
             ext = f".{ft}"
             original_path = os.path.join(temp_dir, f"original{ext}")
-            with open(original_path, "wb") as fh:
-                fh.write(file_bytes)
+            download_source(cloudinary_url, original_path, progress=status_obj.save if status_obj else None)
+            logger.info('Downloaded %s bytes', os.path.getsize(original_path))
 
-            from .document_rendering import render_document
+            from .isolated_rendering import render_document_isolated
             if status_obj:
                 status_obj.status = 'converting_to_jpg'
                 status_obj.save(update_fields=['status'])
             # Publish the reader first; visual indexing runs as a separate durable job.
-            rendered = render_document(original_path, ft, temp_dir, ocr=False)
+            rendered = render_document_isolated(original_path, ft, temp_dir,
+                progress=getattr(status_obj, 'report', None))
             jpg_paths = rendered['image_paths']
             result['image_paths'] = jpg_paths
             result['page_count'] = rendered['page_count']

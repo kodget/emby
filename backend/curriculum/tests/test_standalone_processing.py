@@ -38,7 +38,7 @@ class ProcessingFixture(BankFixture):
             Image.new('RGB', (20, 30), 'white').save(image); images.append(str(image))
         self.result = {'slide_images': images, 'page_count': 2, 'pages': [{'text': 'One'}, {'text': 'Two'}],
                        'text_extraction': {'status': 'complete'}}
-        stack.enter_context(patch('requests.get', return_value=Mock(status_code=200, content=b'%PDF-source')))
+        stack.enter_context(patch('requests.get', return_value=Mock(status_code=200, iter_content=Mock(return_value=[b'%PDF-source']))))
         self.convert = stack.enter_context(patch('curriculum.services.converter.SlideConverter.convert_document',
                                                 return_value=(True, self.result)))
         self.destroy = stack.enter_context(patch('cloudinary.uploader.destroy', return_value={'result': 'ok'}))
@@ -117,7 +117,7 @@ class StandaloneProcessingTests(ProcessingFixture, TestCase):
 
     def test_duplicate_delivery_cannot_enter_an_active_render(self):
         self.mocks()
-        def convert(*args):
+        def convert(*args, **kwargs):
             self.assertFalse(worker.process(self.deck.pk))
             return True, self.result
         self.convert.side_effect = convert

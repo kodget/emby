@@ -15,7 +15,7 @@ class Command(BaseCommand):
     help = 'Preview stale standalone deck conversions, or requeue them with --apply.'
 
     def add_arguments(self, parser):
-        parser.add_argument('--older-than-minutes', type=int, default=120)
+        parser.add_argument('--older-than-minutes', type=int, default=10)
         parser.add_argument('--apply', action='store_true')
         parser.add_argument('--retry-failed', action='store_true',
                             help='Include failed conversions in this explicit recovery run.')
@@ -29,10 +29,20 @@ class Command(BaseCommand):
         states = ['pending', 'processing']
         if options['retry_failed']:
             states.append('failed')
+        from curriculum.deck_processing import MAX_ATTEMPTS
         eligible = SlideDeck.objects.filter(
-            processing_status__in=states, updated_at__lte=cutoff,
             class_group__is_active=True, asset__class_group_id=F('class_group_id'),
-        ).filter(Q(processing_lease_until__isnull=True) | Q(processing_lease_until__lte=timezone.now()))
+        ).filter(Q(processing_status__in=states, updated_at__lte=cutoff)
+                 | Q(processing_status='failed', next_attempt_at__lte=timezone.now()))
+        if not options['retry_failed']:
+            # Mark exhausted crashed workers terminal; never leave them spinning.
+            exhausted = eligible.filter(processing_attempts__gte=MAX_ATTEMPTS).filter(
+                Q(processing_lease_until__isnull=True) | Q(processing_lease_until__lte=timezone.now()))
+            if options['apply']:
+                exhausted.update(processing_status='failed', next_attempt_at=None, processing_lease_until=None,
+                    processing_error='Processing stopped after repeated failures. An uploader can retry.')
+            eligible = eligible.filter(processing_attempts__lt=MAX_ATTEMPTS)
+        eligible = eligible.filter(Q(processing_lease_until__isnull=True) | Q(processing_lease_until__lte=timezone.now()))
         candidates = list(eligible.order_by('pk').values_list('pk', flat=True))
 
         if not options['apply']:
@@ -51,8 +61,13 @@ class Command(BaseCommand):
                 deck.processing_error = ''
                 deck.processing_token = uuid.uuid4()
                 deck.processing_lease_until = None
+                deck.next_attempt_at = None
+                deck.processing_progress = {}
+                if options['retry_failed']:
+                    deck.processing_attempts = 0
                 deck.save(update_fields=('processing_status', 'processing_error', 'processing_token',
-                                         'processing_lease_until', 'updated_at'))
+                                         'processing_lease_until', 'next_attempt_at', 'processing_attempts',
+                                         'processing_progress', 'updated_at'))
                 transaction.on_commit(
                     lambda identifier=deck_id, token=deck.processing_token: dispatch_standalone_deck_processing(identifier, token),
                     robust=True,

@@ -624,10 +624,11 @@ def get_slide_content(request, slide_id):
     from .slide_processing import ACTIVE_STATES
     processing = SlideProcessingStatus.objects.filter(slide=slide).first()
     if processing and processing.status in (*ACTIVE_STATES, 'failed'):
-        failed = processing.status == 'failed'
+        failed = processing.status == 'failed' and not processing.next_attempt_at
         return Response({
             'slide_id': slide.id, 'title': slide.title, 'pages': [], 'total_pages': 0,
             'processing': not failed, 'processing_status': processing.status,
+            'progress': processing.processing_progress, 'next_attempt_at': processing.next_attempt_at,
             **extraction_info,
             **({'error': 'Document preparation failed. Please retry processing.'} if failed else {}),
         }, status=409 if failed else 202, headers={'Cache-Control': 'private, no-store', 'Retry-After': '2'})
@@ -1043,6 +1044,33 @@ class SlideDeckViewSet(PrivateMediaResponseMixin, viewsets.ModelViewSet):
         from .deck_processing import process
         process(deck.pk, token=token)
         deck.refresh_from_db()
+
+    @action(detail=True, methods=['post'], url_path='retry-processing')
+    def retry_processing(self, request, id=None):
+        from .deck_processing import LEASE
+        from .slide_uploads import dispatch_standalone_deck_processing
+        from .content_permissions import can_reprocess_upload
+        import uuid
+        deck = self.get_object()
+        if not can_reprocess_upload(request.user, deck):
+            return Response({'error': 'You cannot reprocess this upload.'}, status=403)
+        with transaction.atomic():
+            deck = SlideDeck.objects.select_for_update().get(pk=deck.pk)
+            now = timezone.now()
+            if (deck.processing_status == 'completed'
+                    or (deck.processing_lease_until and deck.processing_lease_until > now)
+                    or (deck.processing_status in ('pending', 'processing') and deck.updated_at > now-LEASE)):
+                return Response({'queued': False, 'processing_status': deck.processing_status}, status=202)
+            deck.processing_status = 'processing'
+            deck.processing_attempts = 0
+            deck.next_attempt_at = deck.processing_lease_until = None
+            deck.processing_token = uuid.uuid4()
+            deck.processing_error = ''
+            deck.processing_progress = {}
+            deck.save(update_fields=['processing_status', 'processing_attempts', 'next_attempt_at',
+                'processing_lease_until', 'processing_token', 'processing_error', 'processing_progress', 'updated_at'])
+            transaction.on_commit(lambda: dispatch_standalone_deck_processing(deck.pk, deck.processing_token), robust=True)
+        return Response({'queued': True, 'processing_status': 'processing'}, status=202)
 
     @action(detail=True, methods=['get'])
     def pages(self, request, id=None):
@@ -1582,6 +1610,9 @@ def slide_processing_status(request, slide_id):
                 'chunk_count': status_obj.chunk_count,
                 'started_at': status_obj.started_at,
                 'completed_at': status_obj.completed_at,
+                'progress': status_obj.processing_progress,
+                'attempts': status_obj.processing_attempts,
+                'next_attempt_at': status_obj.next_attempt_at,
                 'error_message': status_obj.error_message
             })
         except SlideProcessingStatus.DoesNotExist:

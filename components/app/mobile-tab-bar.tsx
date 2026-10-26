@@ -1,7 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BarChart3, BookOpen, CalendarDays, Coins, Crown, FileText, GraduationCap, Home, Layers, ListChecks, Menu, Microscope, Search, Settings, Sparkles, Trophy, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAppSelector } from '@/store/hooks';
@@ -25,14 +25,15 @@ const links = [
 export function MobileTabBar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const moreButton = useRef<HTMLButtonElement>(null);
   const head = useAppSelector(state => state.user.isVerifiedClassHead);
   useEffect(() => setOpen(false), [pathname]);
   return <>
     <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 pb-safe backdrop-blur-xl md:hidden"><ul className="grid grid-cols-5">
       {tabs.map(({ label, href, icon: Icon, match }) => <li key={href}><Link href={href} aria-current={match.test(pathname) ? 'page' : undefined} className={cn('flex min-h-16 flex-col items-center justify-center gap-1.5 px-1 text-[10px] font-medium', match.test(pathname) ? 'bg-primary/5 text-primary' : 'text-muted-foreground')}><Icon className="size-5" aria-hidden="true" />{label}</Link></li>)}
-      <li><button type="button" onClick={() => setOpen(true)} aria-expanded={open} aria-haspopup="dialog" className="flex min-h-16 w-full flex-col items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground"><Menu className="size-5" aria-hidden="true" />More</button></li>
+      <li><button ref={moreButton} type="button" onClick={() => setOpen(true)} aria-expanded={open} aria-haspopup="dialog" className="flex min-h-16 w-full flex-col items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground"><Menu className="size-5" aria-hidden="true" />More</button></li>
     </ul></nav>
-    <Dialog open={open} onOpenChange={setOpen}><DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
+    <Dialog open={open} onOpenChange={setOpen}><DialogContent onCloseAutoFocus={event => { event.preventDefault(); moreButton.current?.focus(); }} className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
       <DialogTitle>Your workspace</DialogTitle><DialogDescription>Find your tools, class and account.</DialogDescription>
       <div className="grid grid-cols-3 gap-2">{[...links, ...(head ? [{ label: 'Manage class', href: '/class/curriculum', icon: GraduationCap }] : [])].map(({ label, href, icon: Icon }) => <Link href={href} key={href} onClick={() => setOpen(false)} className={cn('flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border px-2 py-3 text-center text-xs', pathname === href ? 'border-primary/30 bg-primary/5 text-primary' : 'border-border bg-muted/30 hover:bg-accent')}><Icon className="size-5" aria-hidden="true" />{label}</Link>)}</div>
     </DialogContent></Dialog>

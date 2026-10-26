@@ -14,7 +14,7 @@ class Command(BaseCommand):
     help = 'Preview stale slide jobs, or explicitly requeue them with --apply.'
 
     def add_arguments(self, parser):
-        parser.add_argument('--older-than-minutes', type=int, default=60)
+        parser.add_argument('--older-than-minutes', type=int, default=10)
         parser.add_argument('--apply', action='store_true')
 
     def handle(self, *args, **options):

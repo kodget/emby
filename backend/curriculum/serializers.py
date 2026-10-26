@@ -414,6 +414,7 @@ class SlideDeckSerializer(ClassScopedRelationsMixin, serializers.ModelSerializer
         fields = ['class_group',
             'id', 'title', 'file_type', 'file_size',
             'processing_status', 'processing_error',
+            'processing_progress', 'processing_attempts', 'next_attempt_at',
             'text_extraction', 'ai_index', 'can_prepare_ai',
             'page_count', 'uploaded_by', 'uploaded_by_name',
             'pages', 'created_at', 'updated_at'

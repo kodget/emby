@@ -10,7 +10,7 @@ from .models import Slide, SlideContent, SlideProcessingStatus
 from .services.document_extraction import source_key, is_complete, ERRORS
 
 logger = logging.getLogger(__name__)
-LEASE = timedelta(hours=1)
+LEASE = timedelta(minutes=10)
 MAX_ATTEMPTS = 4
 ACTIVE_STATES = ('pending', 'processing', 'downloading', 'converting_to_jpg')
 
@@ -52,6 +52,7 @@ def reserve(slide_id, *, manual=False, cutoff=None):
     state.status = 'processing'
     state.started_at = now
     state.error_message = ''
+    state.processing_progress = {}
     state.save()
     return state.processing_token
 
@@ -96,6 +97,12 @@ class Progress:
                 processing_lease_until=timezone.now()+LEASE):
             raise Superseded()
 
+    def report(self, phase, completed, total):
+        if not owned(self.state).filter(status__in=ACTIVE_STATES).update(
+                processing_progress={'phase': phase, 'completed': completed, 'total': total},
+                processing_lease_until=timezone.now()+LEASE):
+            raise Superseded()
+
 
 def fail(state, detail=''):
     owned(state).filter(status__in=ACTIVE_STATES).update(status='failed', processing_lease_until=None,
@@ -129,7 +136,7 @@ def process(slide_id, *, token=None, local_file_path=None):
             raise RuntimeError('Incomplete render.')
         pages = []
         for number, path in enumerate(result['image_paths'], 1):
-            progress.save()
+            progress.report('storing_pages', number-1, result['page_count'])
             with Image.open(path) as image:
                 width, height = image.size
             asset = upload_asset(path, class_group=slide.class_group, uploaded_by=slide.uploaded_by,

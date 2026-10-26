@@ -14,6 +14,7 @@ from curriculum.services.document_extraction import (
 from curriculum.rag_service import RAGService
 from curriculum.tasks import process_slide_task, generate_question_bank_task, _extract_text_from_content
 from curriculum.tests.test_document_extraction import pdf_bytes
+from curriculum.tests.test_document_rendering import downloaded_bytes
 from learning.generation import slide_text, generate_for_slide
 from learning.models import QuestionGenerationJob
 
@@ -35,6 +36,7 @@ class ExtractionIntegrationTests(TestCase):
         self.raw = pdf_bytes()
         download = patch('curriculum.services.slide_conversion_pipeline._download_from_cloudinary', return_value=self.raw)
         self.download = download.start()
+        self.download.side_effect = lambda url, **kwargs: downloaded_bytes(self.download.return_value)(url, **kwargs)
         self.addCleanup(download.stop)
         self.factory = APIRequestFactory()
 
@@ -224,10 +226,9 @@ class ExtractionIntegrationTests(TestCase):
             with self.subTest(scanned=scanned):
                 deck = SlideDeck.objects.create(id=f'deck-{len(scanned)}', title='Standalone',
                     uploaded_by=self.user, class_group=self.group, file_type='pdf', asset=self.asset())
-                with patch('curriculum.deck_processing.upload_asset', side_effect=self.asset), patch('requests.get') as get, patch.dict(
+                with patch('curriculum.deck_processing.upload_asset', side_effect=self.asset), patch.dict(
                         os.environ, {'TESSDATA_PREFIX': '/missing-data'}):
-                    get.return_value.status_code = 200
-                    get.return_value.content = pdf_bytes(scanned=scanned, count=2)
+                    self.download.return_value = pdf_bytes(scanned=scanned, count=2)
                     views.SlideDeckViewSet()._process_deck_async(deck)
                 deck.refresh_from_db()
                 self.assertEqual(deck.processing_status, 'completed', deck.processing_error)

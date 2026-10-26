@@ -36,20 +36,19 @@ def render_slide_pages(file_url, file_type, slide_id):
     import tempfile
     from pathlib import Path
     from .models import Slide
-    from .services.document_rendering import render_document
+    from .services.isolated_rendering import render_document_isolated
     from .services.document_extraction import source_key, content_text
-    from .services.slide_conversion_pipeline import _download_from_cloudinary
+    from .services.slide_conversion_pipeline import download_source
     slide = Slide.objects.filter(pk=slide_id, class_group__isnull=False).first()
     if not slide:
         raise ValueError('Assign this slide to a class before rendering.')
     kind = file_type.lower().lstrip('.')
     if kind not in {'pdf', 'ppt', 'pptx', 'docx'}:
         raise ValueError('Unsupported document format.')
-    source_bytes = _download_from_cloudinary(file_url)
     with tempfile.TemporaryDirectory(prefix='emby-render-') as directory:
         source = Path(directory) / f'original.{kind}'
-        source.write_bytes(source_bytes)
-        rendered = render_document(source, kind, directory)
+        download_source(file_url, source)
+        rendered = render_document_isolated(source, kind, directory)
         pages = []
         for number, image_path in enumerate(rendered['image_paths'], 1):
             asset_id = _upload_page_image(Path(image_path).read_bytes(), slide_id, number)

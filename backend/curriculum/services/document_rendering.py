@@ -6,6 +6,8 @@ import subprocess
 import tempfile
 import hashlib
 import logging
+import math
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,8 @@ RENDER_ERRORS = {
     'office_timeout': 'The document took too long to convert. Try exporting it as a PDF and uploading that file.',
     'office_failed': 'The document could not be converted. Check that it opens correctly, or export it as a PDF and upload that file.',
     'render_failed': 'The document could not be rendered. Check the original file and retry.',
+    'render_memory': 'The server has insufficient memory to render this document safely. Your original is saved. Processing will retry; if this repeats, the server needs more memory.',
+    'render_timeout': 'Rendering exceeded the time limit. Your original is saved. Retry processing or upload a PDF exported from the original.',
 }
 
 
@@ -67,7 +71,7 @@ def office_to_pdf(source, output):
     return str(pdf)
 
 
-def render_document(source, file_type, output, *, ocr=False):
+def render_document(source, file_type, output, *, ocr=False, progress=None, memory_mb=None):
     """Return ordered page images and text. Never substitute text-only fake slides."""
     import fitz
     from .document_extraction import extract_page, extraction_summary
@@ -77,6 +81,15 @@ def render_document(source, file_type, output, *, ocr=False):
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     pdf = str(source) if kind == 'pdf' else office_to_pdf(source, output / 'pdf')
+    if memory_mb is not None and sys.platform.startswith('linux'):
+        # Limit additional native allocations after imports and Office conversion.
+        # RSS is also monitored by the parent, including converter descendants.
+        import resource
+        stat = Path('/proc/self/statm').read_text().split()
+        page_size = os.sysconf('SC_PAGE_SIZE')
+        virtual, resident = (int(value) * page_size for value in stat[:2])
+        ceiling = virtual + max(16 * 1024**2, memory_mb * 1024**2 - resident)
+        resource.setrlimit(resource.RLIMIT_AS, (ceiling, ceiling))
     images, texts, pages = [], [], []
     with fitz.open(pdf) as document:
         if document.needs_pass:
@@ -85,13 +98,25 @@ def render_document(source, file_type, output, *, ocr=False):
             raise ValueError('The document has no readable pages.')
         for index, page in enumerate(document, 1):
             path = output / f'page_{index:04d}.jpg'
-            page.get_pixmap(matrix=fitz.Matrix(150 / 72, 150 / 72), alpha=False).save(str(path))
+            # Compressed file size says little about raster memory. A giant page
+            # must never allocate a giant bitmap, even when the PDF is only 1 MB.
+            width, height = page.rect.width, page.rect.height
+            scale = min(150 / 72, 1920 / max(width, height), math.sqrt(2_000_000 / (width * height)))
+            pixmap = page.get_pixmap(matrix=fitz.Matrix(scale, scale), colorspace=fitz.csRGB, alpha=False)
+            pixmap.save(str(path), jpg_quality=85)
+            del pixmap
             images.append(str(path))
             extracted = extract_page(page, ocr=ocr)
             pages.append(extracted)
             texts.append(extracted['text'])
+            # MuPDF otherwise retains decoded images across pages (up to 256 MB).
+            fitz.TOOLS.store_shrink(100)
+            if progress:
+                progress('rendering', index, len(document))
+    with Path(source).open('rb') as stream:
+        fingerprint = hashlib.file_digest(stream, 'sha256').hexdigest()
     return {'pdf_path': pdf, 'image_paths': images, 'page_texts': texts, 'page_count': len(images),
-            'pages': pages, 'text_extraction': extraction_summary(pages, hashlib.sha256(Path(source).read_bytes()).hexdigest())}
+            'pages': pages, 'text_extraction': extraction_summary(pages, fingerprint)}
 
 
 def cleanup_render(result):

@@ -1,5 +1,7 @@
 """Upload validation and dispatch, independent of AI provider availability."""
 import logging
+from datetime import timedelta
+from django.utils import timezone
 from zipfile import BadZipFile, ZipFile
 
 from rest_framework.exceptions import APIException, ValidationError
@@ -83,7 +85,8 @@ def dispatch_slide_processing(slide_id, token=None):
             status__in=('pending', 'processing')
         ).update(
             status='failed',
-            error_message='Original file saved, but processing could not be queued. Contact an administrator to retry processing.',
+            next_attempt_at=timezone.now()+timedelta(minutes=1),
+            error_message='Original file saved. Processing could not be queued; automatic recovery will retry.',
         )
         logger.warning('Slide dispatch failed (%s)', type(exc).__name__)
         return None
@@ -99,6 +102,7 @@ def dispatch_standalone_deck_processing(deck_id, token=None):
         SlideDeck.objects.filter(pk=deck_id, processing_token=token,
             processing_lease_until__isnull=True, processing_status__in=('pending', 'processing')).update(
             processing_status='failed',
-            processing_error='Document processing could not be queued. An administrator can retry processing.',
+            next_attempt_at=timezone.now()+timedelta(minutes=1),
+            processing_error='Original file saved. Processing could not be queued; automatic recovery will retry.',
         )
         logger.warning('Standalone deck dispatch failed (%s)', type(exc).__name__)

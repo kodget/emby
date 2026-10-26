@@ -11,7 +11,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 from accounts.models import School, ClassGroup
 from curriculum.models import Subject, Slide, SlideContent, SlideDeck, MediaAsset, UserProgress, UserStats, DailyStudySession
 from curriculum import views
-from curriculum.tests.test_document_rendering import make_document
+from curriculum.tests.test_document_rendering import make_document, downloaded_bytes
 from learning.models import ActivityType, LearningEvent, XPAward
 from learning.analytics_evidence import Evidence
 
@@ -156,7 +156,7 @@ class ReadingTests(TestCase):
     def test_on_demand_reader_stores_all_real_pages_and_then_uses_cache(self):
         with tempfile.TemporaryDirectory(prefix='emby-fixture-') as directory:
             raw = make_document(directory, 'pdf').read_bytes()
-        with patch('curriculum.services.slide_conversion_pipeline._download_from_cloudinary', return_value=raw) as download, patch(
+        with patch('curriculum.services.slide_conversion_pipeline._download_from_cloudinary', side_effect=downloaded_bytes(raw)) as download, patch(
                 'curriculum.private_media.upload_asset', side_effect=lambda *a, **kw: self.asset()) as upload:
             first = self.request(views.get_slide_content, slide_id=self.slide.pk)
             second = self.request(views.get_slide_content, slide_id=self.slide.pk)
@@ -171,7 +171,7 @@ class ReadingTests(TestCase):
     def test_partial_page_storage_never_creates_a_successful_reader_cache(self):
         with tempfile.TemporaryDirectory(prefix='emby-fixture-') as directory:
             raw = make_document(directory, 'pdf').read_bytes()
-        with patch('curriculum.services.slide_conversion_pipeline._download_from_cloudinary', return_value=raw), patch(
+        with patch('curriculum.services.slide_conversion_pipeline._download_from_cloudinary', side_effect=downloaded_bytes(raw)), patch(
                 'curriculum.slide_renderer._upload_page_image', side_effect=['asset-first', None]):
             response = self.request(views.get_slide_content, slide_id=self.slide.pk)
         self.assertEqual(response.status_code, 500)
@@ -187,7 +187,7 @@ class ReadingTests(TestCase):
             self.assertTrue(Path(path).is_file())
             paths.append(path)
             return self.asset()
-        with patch('requests.get', return_value=Mock(status_code=200, content=raw)), patch('curriculum.deck_processing.upload_asset', side_effect=store):
+        with patch('requests.get', return_value=Mock(status_code=200, iter_content=Mock(return_value=[raw]))), patch('curriculum.deck_processing.upload_asset', side_effect=store):
             views.SlideDeckViewSet()._process_deck_async(deck)
         deck.refresh_from_db()
         self.assertEqual(deck.processing_status, 'completed')

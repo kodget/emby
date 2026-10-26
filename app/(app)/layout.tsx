@@ -5,6 +5,7 @@ import { AppTopbar } from "@/components/app/app-topbar";
 import { MobileTabBar } from "@/components/app/mobile-tab-bar";
 import { PageTransition } from "@/components/app/page-transition";
 import { ProgressSync } from "@/components/app/progress-sync";
+import { UploadProgressStrip } from "@/components/app/upload-progress-strip";
 
 /**
  * The authenticated app shell.
@@ -26,6 +27,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <AppTopbar />
+        <UploadProgressStrip />
 
         <main id="main-content" tabIndex={-1} className="scroll-pane min-w-0 flex-1 pb-tabbar md:pb-0">
           <PageTransition>{children}</PageTransition>

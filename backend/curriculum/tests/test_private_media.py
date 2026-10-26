@@ -175,7 +175,7 @@ class PrivateMediaTests(TestCase):
         self.assertNotIn('secret', str(captured.output))
 
     @patch('curriculum.deck_processing.upload_asset', side_effect=RuntimeError('storage unavailable'))
-    @patch('requests.get', return_value=Mock(status_code=200, content=b'%PDF-test'))
+    @patch('requests.get', return_value=Mock(status_code=200, iter_content=Mock(return_value=[b'%PDF-test'])))
     def test_failed_page_storage_cannot_mark_a_deck_complete(self, get, upload):
         converter = Mock()
         converter.SlideConverter.convert_document.return_value = (True, {

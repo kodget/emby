@@ -828,6 +828,9 @@ class SlideDeck(models.Model):
     processing_error = models.TextField(blank=True)
     processing_token = models.UUIDField(null=True, blank=True, editable=False)
     processing_lease_until = models.DateTimeField(null=True, blank=True, editable=False)
+    processing_attempts = models.PositiveSmallIntegerField(default=0, editable=False)
+    next_attempt_at = models.DateTimeField(null=True, blank=True, editable=False)
+    processing_progress = models.JSONField(default=dict, blank=True, editable=False)
     text_extraction = models.JSONField(default=dict, blank=True)
     curriculum_slide = models.OneToOneField(
         Slide, on_delete=models.SET_NULL, null=True, blank=True,
@@ -1054,6 +1057,7 @@ class SlideProcessingStatus(models.Model):
     processing_lease_until = models.DateTimeField(null=True, blank=True, editable=False)
     processing_attempts = models.PositiveSmallIntegerField(default=0, editable=False)
     next_attempt_at = models.DateTimeField(null=True, blank=True, editable=False)
+    processing_progress = models.JSONField(default=dict, blank=True, editable=False)
     
     def __str__(self):
         return f"{self.slide.title} - Status: {self.status}, Chunked: {self.is_chunked}, Embedded: {self.is_embedded}"

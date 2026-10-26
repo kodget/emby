@@ -12,7 +12,8 @@ from .models import SlideDeck, SlidePage
 from .private_media import content_file_url, upload_asset, discard_new_asset
 
 logger = logging.getLogger(__name__)
-LEASE = timedelta(hours=2)
+LEASE = timedelta(minutes=10)
+MAX_ATTEMPTS = 4
 
 
 class Superseded(Exception):
@@ -34,11 +35,17 @@ def claim(deck_id, token=None):
         return None
     if not deck.class_group.is_active or deck.asset.class_group_id != deck.class_group_id:
         return None
+    if deck.processing_attempts >= MAX_ATTEMPTS:
+        return None
+    deck.processing_attempts += 1
+    deck.next_attempt_at = None
+    deck.processing_progress = {}
     deck.processing_status = 'processing'
     deck.processing_error = ''
     deck.processing_lease_until = timezone.now() + LEASE
     deck.save(update_fields=['processing_token', 'processing_status', 'processing_error',
-                             'processing_lease_until', 'updated_at'])
+                             'processing_lease_until', 'processing_attempts', 'next_attempt_at',
+                             'processing_progress', 'updated_at'])
     return deck
 
 
@@ -48,9 +55,18 @@ def owned(deck):
         class_group__is_active=True)
 
 
-def heartbeat(deck):
-    if not owned(deck).update(processing_lease_until=timezone.now() + LEASE, updated_at=timezone.now()):
+def heartbeat(deck, phase=None, completed=0, total=0):
+    fields = {'processing_lease_until': timezone.now() + LEASE, 'updated_at': timezone.now()}
+    if phase:
+        fields['processing_progress'] = {'phase': phase, 'completed': completed, 'total': total}
+    if not owned(deck).update(**fields):
         raise Superseded()
+
+
+def fail(deck, message='Document processing failed. Your original is saved. Please retry processing.'):
+    owned(deck).update(processing_status='failed', processing_lease_until=None,
+        processing_error=message, updated_at=timezone.now(),
+        next_attempt_at=timezone.now()+timedelta(minutes=1) if deck.processing_attempts < MAX_ATTEMPTS else None)
 
 
 def process(deck_id, token=None):
@@ -61,28 +77,24 @@ def process(deck_id, token=None):
     staged = []
     published = False
     try:
-        import requests
         from PIL import Image
         from .services.converter import SlideConverter
-        response = requests.get(content_file_url(deck), timeout=60)
-        if response.status_code != 200:
-            raise RuntimeError('Source download failed.')
+        from .services.slide_conversion_pipeline import download_source
         with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{deck.file_type}') as stream:
             source = Path(stream.name)
-            stream.write(response.content)
+        download_source(content_file_url(deck), source, progress=lambda: heartbeat(deck))
         heartbeat(deck)
-        success, result = SlideConverter.convert_document(str(source), deck.file_type, deck.pk)
+        success, result = SlideConverter.convert_document(str(source), deck.file_type, deck.pk,
+            progress=lambda phase, completed, total: heartbeat(deck, phase, completed, total))
         if not success:
-            owned(deck).update(processing_status='failed', processing_lease_until=None,
-                processing_error=result.get('error') or 'Document processing failed. Please retry processing.',
-                updated_at=timezone.now())
+            fail(deck, result.get('error') or 'Document processing failed. Please retry processing.')
             return False
         images, pages = result['slide_images'], result['pages']
         if not images or result['page_count'] != len(images) or len(pages) != len(images):
             raise RuntimeError('Incomplete document render.')
         rows = []
         for number, image_path in enumerate(images, 1):
-            heartbeat(deck)
+            heartbeat(deck, 'storing_pages', number-1, len(images))
             with Image.open(image_path) as image:
                 width, height = image.size
             asset = upload_asset(image_path, class_group=deck.class_group, uploaded_by=deck.uploaded_by,
@@ -106,8 +118,9 @@ def process(deck_id, token=None):
             current.processing_status = 'completed'
             current.processing_error = ''
             current.processing_lease_until = None
+            current.next_attempt_at = None
             current.save(update_fields=['page_count', 'text_extraction', 'processing_status',
-                                       'processing_error', 'processing_lease_until', 'updated_at'])
+                                       'processing_error', 'processing_lease_until', 'next_attempt_at', 'updated_at'])
             from .document_index import request_index
             request_index(current, force=True)
         published = True
@@ -116,8 +129,7 @@ def process(deck_id, token=None):
         return False
     except Exception as exc:
         logger.error('Deck processing failed (%s)', type(exc).__name__)
-        owned(deck).update(processing_status='failed', processing_lease_until=None,
-            processing_error='Document processing failed. Please retry processing.', updated_at=timezone.now())
+        fail(deck)
         return False
     finally:
         if not published:

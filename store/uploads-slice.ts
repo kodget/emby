@@ -1,11 +1,12 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-export type UploadStatus = "uploading" | "downloading" | "extracting_text" | "converting_to_jpg" | "generating_quizzes" | "processing" | "completed" | "done" | "error";
+export type UploadStatus = "uploading" | "downloading" | "extracting_text" | "converting_to_jpg" | "generating_quizzes" | "processing" | "retrying" | "completed" | "done" | "error";
 
 export type SlideUpload = {
   id: string;
   slideId?: string;
   error?: string;
+  detail?: string;
   courseId: string;
   moduleId: string;
   // materialId this upload populates (generated on submit)
@@ -64,6 +65,7 @@ export const uploadsSlice = createSlice({
         slideId?: string;
         pages?: number;
         error?: string;
+        detail?: string;
       }>,
     ) {
       const item = state.items.find((u) => u.id === action.payload.id);
@@ -71,11 +73,15 @@ export const uploadsSlice = createSlice({
         item.progress = action.payload.progress;
         item.status = action.payload.status;
         item.error = action.payload.error;
+        item.detail = action.payload.detail;
         if (action.payload.slideId) item.slideId = action.payload.slideId;
         if (action.payload.pages !== undefined)
           item.pages = action.payload.pages;
       }
     },
+  },
+  extraReducers: builder => {
+    builder.addCase('user/logout', () => initialState);
   },
 });
 

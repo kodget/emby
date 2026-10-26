@@ -98,9 +98,9 @@ def upload_file(request):
             status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
         )
 
-    # Read content once for empty + magic-byte checks
+    # Inspect only the signature; never copy a large upload into worker memory.
     file.seek(0)
-    file_content = file.read()
+    file_content = file.read(16)
     file.seek(0)
 
     if len(file_content) == 0:

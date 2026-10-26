@@ -39,6 +39,7 @@ test('keyboard search is lazy, searches saved text and opens the matching page',
     if (url.pathname === '/api/search/') { searches.push(url.searchParams.get('q')!); await route.fulfill({ json: response(url.searchParams.get('q')!) }); return true; }
   });
   await page.goto('/search');
+  await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
   expect(searches).toEqual([]);
   await page.keyboard.press('Control+k');
   const dialog = page.getByRole('dialog');

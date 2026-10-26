@@ -14,6 +14,17 @@ from PIL import Image
 from curriculum.services.document_rendering import render_document, cleanup_render, office_executable
 from curriculum.services.converter import SlideConverter
 from curriculum.services.slide_conversion_pipeline import SlideConversionPipeline
+from curriculum.services.document_rendering import DocumentRenderingError
+
+
+def downloaded_bytes(data):
+    """Fake storage with the same streamed contract as the real downloader."""
+    def download(url, *args, destination=None, **kwargs):
+        if destination is None:
+            return data
+        Path(destination).write_bytes(data)
+        return len(data)
+    return download
 
 
 def make_document(directory, kind):
@@ -102,7 +113,7 @@ class DocumentRenderingTests(SimpleTestCase):
     def test_worker_accepts_office_document_instead_of_rejecting_non_pdf(self):
         with tempfile.TemporaryDirectory(prefix='emby-fixture-') as directory:
             source = make_document(directory, 'pptx')
-            with patch('curriculum.services.slide_conversion_pipeline._download_from_cloudinary', return_value=source.read_bytes()):
+            with patch('curriculum.services.slide_conversion_pipeline._download_from_cloudinary', side_effect=downloaded_bytes(source.read_bytes())):
                 result = SlideConversionPipeline.process_slide('https://storage.invalid/source', 'fixture', 'pptx')
             try:
                 self.assertTrue(result['success'], result)
@@ -124,7 +135,7 @@ class DocumentRenderingTests(SimpleTestCase):
     def test_missing_office_converter_has_an_explicit_failure(self):
         with tempfile.TemporaryDirectory(prefix='emby-fixture-') as directory:
             source = make_document(directory, 'pptx')
-            with patch('curriculum.services.document_rendering.office_executable', side_effect=RuntimeError('unavailable')):
+            with patch('curriculum.services.isolated_rendering.render_document_isolated', side_effect=DocumentRenderingError('office_unavailable')):
                 success, result = SlideConverter.convert_document(str(source), 'pptx', 'unavailable')
             self.assertFalse(success)
             self.assertEqual(result['page_count'], 0)

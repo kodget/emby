@@ -653,6 +653,50 @@ test("upload validation leaves the form usable and a failed upload can be retrie
   expect(requestIds[0]).toBe(requestIds[1]);
 });
 
+test('upload progress refreshes expired login, shows page counts and survives automatic retry on mobile', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  let polls = 0, refreshes = 0;
+  let phase = 'rendering';
+  await fixtures(page, async (route, url) => {
+    if (url.pathname === '/api/slides/upload_and_process/') {
+      await route.fulfill({ status: 201, json: { id: 'saved-slide', page_count: 0 } }); return true;
+    }
+    if (url.pathname === '/auth/token/refresh/') {
+      refreshes++;
+      await route.fulfill({ json: { access: 'refreshed-upload-access' } }); return true;
+    }
+    if (url.pathname === '/api/slides/saved-slide/status/') {
+      polls++;
+      if (polls === 1) await route.fulfill({ status: 401, json: { detail: 'Token expired' } });
+      else {
+        expect(route.request().headers().authorization).toBe('Bearer refreshed-upload-access');
+        await route.fulfill({ json: phase === 'rendering'
+          ? { status: 'converting_to_jpg', reading_ready: false, progress: { phase: 'rendering', completed: 4, total: 16 } }
+          : phase === 'retry' ? { status: 'failed', next_attempt_at: new Date(Date.now()+60000).toISOString(), attempts: 1 }
+          : { status: 'indexing', reading_ready: true } });
+      }
+      return true;
+    }
+  });
+  await page.goto('/courses/anatomy/upper/hand/opaque-topic-42');
+  await page.getByRole('button', { name: 'Upload slides', exact: true }).click();
+  await page.getByRole('button', { name: 'Anatomy', exact: true }).click();
+  await page.getByRole('button', { name: 'Upper limb', exact: true }).click();
+  await page.locator('input[type="file"]').setInputFiles({ name: 'lecture.pdf', mimeType: 'application/pdf',
+    buffer: Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(2*1024*1024, 32)]) });
+  await page.locator('form button[type="submit"]').click();
+  const progress = page.getByRole('region', { name: 'Upload progress' });
+  await expect(progress).toContainText('Rendering pages 4 of 16');
+  expect(refreshes).toBe(1);
+  phase = 'retry';
+  await expect(progress).toContainText('Automatic retry scheduled');
+  phase = 'ready';
+  await expect(progress).toContainText('Ready to read. AI study tools prepare separately.');
+  await expect(progress.getByRole('link', { name: 'Open document' })).toHaveAttribute('href', '/read/upper/saved-slide');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test("standalone upload preserves its request after response loss and creates a new intent for edits", async ({ page }) => {
   test.setTimeout(120000);
   const requestIds: string[] = [];
