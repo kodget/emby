@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
-set -euxo pipefail
+set -euo pipefail
 
 cd -- "$(dirname -- "$0")"
 
-echo "render_start.sh called with argument: ${1:-NONE}"
-
 # Combined mode: run supervisor immediately (skip system checks - preflight handles them)
 if [ "${1:-web}" = "combined" ]; then
-  echo "Combined mode detected, starting supervisor"
   exec python render_supervisor.py
 fi
-
-echo "Not combined mode, running system checks"
 
 # These must exist in the running image, not just a temporary build machine.
 command -v soffice >/dev/null || { echo "LibreOffice is missing; deploy backend/Dockerfile." >&2; exit 1; }

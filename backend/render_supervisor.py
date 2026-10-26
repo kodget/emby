@@ -191,6 +191,13 @@ def main():
     if os.name != 'posix':
         log.error('Combined startup requires Linux/POSIX process groups.')
         return 1
+    
+    # Ensure backend module is importable (native runtime has different PYTHONPATH)
+    import sys
+    backend_dir = ROOT.parent if (ROOT.parent / 'backend').exists() else ROOT
+    if str(backend_dir) not in sys.path:
+        sys.path.insert(0, str(backend_dir))
+    
     try:
         enable_subreaper()
         # Each deployment has its own transient schedule file. The Redis lease,
