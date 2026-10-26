@@ -17,21 +17,23 @@ BASH = str(GIT_BASH) if GIT_BASH.is_file() else shutil.which("bash")
 
 class ReleaseConfigurationTests(unittest.TestCase):
     def test_only_web_owns_release_and_services_disable_sqlite(self):
+        """Combined mode: single web service runs web + worker + beat together."""
         blueprint = yaml.safe_load((ROOT / "render.yaml").read_text(encoding="utf-8"))
         services = [service for service in blueprint["services"] if service["type"] in ("web", "worker")]
-        owners = [service for service in services if "preDeployCommand" in service]
-        self.assertEqual(len(owners), 1)
-        self.assertEqual(owners[0]["type"], "web")
-        self.assertEqual(owners[0]["preDeployCommand"], "bash render_release.sh")
-        for service in services:
-            environment = {item["key"]: item.get("value") for item in service["envVars"] if "key" in item}
-            self.assertEqual(environment["DEBUG"], "False")
-            self.assertEqual(environment["USE_SQLITE"], "False")
-            self.assertEqual(environment["CELERY_TASK_ALWAYS_EAGER"], "False")
-            self.assertEqual(service['runtime'], 'docker')
-            self.assertIn({'fromGroup': 'emby-production'}, service['envVars'])
-        self.assertEqual([s['dockerCommand'] for s in services], [
-            'bash render_start.sh web', 'bash render_start.sh worker', 'bash render_start.sh scheduler'])
+        # Combined mode: only one web service exists
+        self.assertEqual(len(services), 1)
+        web_service = services[0]
+        self.assertEqual(web_service["type"], "web")
+        self.assertEqual(web_service["preDeployCommand"], "bash render_release.sh")
+        self.assertEqual(web_service["dockerCommand"], "bash render_start.sh combined")
+        
+        # Verify environment configuration
+        environment = {item["key"]: item.get("value") for item in web_service["envVars"] if "key" in item}
+        self.assertEqual(environment["DEBUG"], "False")
+        self.assertEqual(environment["USE_SQLITE"], "False")
+        self.assertEqual(environment["CELERY_TASK_ALWAYS_EAGER"], "False")
+        self.assertEqual(web_service['runtime'], 'docker')
+        self.assertIn({'fromGroup': 'emby-production'}, web_service['envVars'])
 
     @unittest.skipUnless(BASH, "Bash is required to exercise deployment shell behavior")
     def test_release_stops_before_migrating_when_preflight_fails(self):
