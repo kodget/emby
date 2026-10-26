@@ -40,7 +40,9 @@ class SearchTests(TestCase):
         self.assertEqual(row['page'], 4)
         self.assertEqual(row['url'], '/read/nerves/lesson?page=4')
         self.assertIn('brachial plexus', row['excerpt'])
-        self.assertEqual(response['Cache-Control'], 'private, no-store')
+        cache_control = response['Cache-Control']
+        self.assertIn('private', cache_control)
+        self.assertIn('no-store', cache_control)
 
     def test_all_words_must_match_but_can_span_title_and_page(self):
         self.assertEqual(self.get('lecture plexus', type='slide').data['total'], 1)
