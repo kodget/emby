@@ -32,3 +32,4 @@ services:
     name: emby-redis
     plan: free
     maxmemoryPolicy: noeviction
+    ipAllowList: [] # Allow all IPs (empty list = no restrictions on free tier)
