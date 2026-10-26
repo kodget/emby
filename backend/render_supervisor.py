@@ -39,7 +39,7 @@ def commands(port, schedule_file):
         raise ValueError('PORT must be an integer between 1 and 65535.') from None
     return [
         ('web', [sys.executable, '-m', 'gunicorn', 'backend.wsgi:application',
-                 '--bind', f'0.0.0.0:{port}', '--workers', '4', '--worker-class', 'gevent',
+                 '--bind', f'0.0.0.0:{port}', '--workers', '2', '--worker-class', 'gevent',
                  '--worker-connections', '1000', '--timeout', '120', '--graceful-timeout', '20',
                  '--keep-alive', '5', '--error-logfile', '-', '--log-level', 'info']),
         ('worker', [sys.executable, '-m', 'celery', '-A', 'backend', 'worker',
