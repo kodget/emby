@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchNotifications, markRead } from "@/store/notifications-slice";
@@ -39,29 +40,14 @@ export default function NotificationsPage() {
     <AuthGuard>
       <div className="min-h-screen px-4 py-6 sm:px-6">
         <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-            <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
-              <Bell className="w-8 h-8 text-primary" />
-              Notifications
-            </h1>
-            {unreadCount > 0 && (
-              <Button
-                variant="outline"
-                className="shrink-0"
-                onClick={handleMarkAllRead}
-              >
-                <Check className="mr-2 size-4" />
-                Mark all as read
-              </Button>
-            )}
-          </div>
+          <WorkspaceHeader className="mb-6" tone="peach" eyebrow="Stay in the loop" title="Notifications" description={unreadCount ? `You have ${unreadCount} unread update${unreadCount === 1 ? "" : "s"}.` : "Class updates, reminders and moments worth returning to."} action={unreadCount > 0 && <Button variant="outline" onClick={handleMarkAllRead}><Check className="size-4" />Mark all as read</Button>} />
 
           <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
             {status === "loading" && items.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
                 Loading notifications...
               </div>
-            ) : items.length === 0 ? (
+            ) : status === "failed" && items.length === 0 ? (<div role="alert" className="p-6"><p>Notifications couldn’t load.</p><Button className="mt-4" variant="outline" onClick={() => dispatch(fetchNotifications())}>Try again</Button></div>) : items.length === 0 ? (
               <div className="p-16 text-center flex flex-col items-center justify-center space-y-4">
                 <div className="flex size-16 items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
                   <Bell className="size-8 opacity-50" />
@@ -78,10 +64,12 @@ export default function NotificationsPage() {
             ) : (
               <div className="divide-y divide-border">
                 {items.map((n) => (
-                  <div
+                  <button
+                    type="button"
+                    aria-label={`${n.read ? "" : "Unread: "}${n.title}`}
                     key={n.id}
                     onClick={() => handleNotificationClick(n)}
-                    className={`flex cursor-pointer items-start gap-4 p-4 sm:p-6 transition-colors hover:bg-muted/50 ${
+                    className={`flex w-full text-left cursor-pointer items-start gap-4 p-4 sm:p-6 transition-colors hover:bg-muted/50 ${
                       !n.read ? "bg-primary/5" : ""
                     }`}
                   >
@@ -119,7 +107,7 @@ export default function NotificationsPage() {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

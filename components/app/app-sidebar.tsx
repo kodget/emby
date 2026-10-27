@@ -16,7 +16,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Home, BookOpen, Search, FileText, ListChecks, Timer, Microscope, Layers, Swords, Users, ChartNoAxesCombined, CalendarDays, Trophy, UserRound, Settings, Crown, Flame, type LucideIcon } from "lucide-react";
 
 import { Icon3D } from "@/components/brand/icon-3d";
 import { LOGO_MARK, type IconName } from "@/lib/brand";
@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { useAppSelector } from "@/store/hooks";
 
 const STORAGE_KEY = "emby.sidebar.collapsed";
+const NAV_ICONS: Record<string, LucideIcon> = { '/dashboard': Home, '/courses': BookOpen, '/search': Search, '/decks': FileText, '/quiz': ListChecks, '/steeplechase': Timer, '/histology': Microscope, '/flashcards': Layers, '/battles': Swords, '/class': Users, '/analytics': ChartNoAxesCombined, '/study-plan': CalendarDays, '/achievements': Trophy, '/community': Users, '/profile': UserRound, '/settings': Settings, '/premium': Crown, '/class/curriculum': Users };
 
 type NavItem = {
   label: string;
@@ -100,9 +101,9 @@ export function AppSidebar() {
       suppressHydrationWarning
       data-collapsed={collapsed}
       className={cn(
-        "group sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex",
+        "studio-sidebar group sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-sidebar-border text-sidebar-foreground md:flex",
         "transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-        collapsed ? "w-[74px]" : "w-64",
+        collapsed ? "w-[74px]" : "w-[232px]",
       )}
     >
       {/* Brand + collapse control */}
@@ -124,7 +125,7 @@ export function AppSidebar() {
           <span className="flex min-w-0 flex-col leading-none group-data-[collapsed=true]:hidden">
             <span className="font-display text-lg font-semibold tracking-tight">Emby</span>
             <span className="truncate text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              BMS Edition
+              Study studio
             </span>
           </span>
         </Link>
@@ -149,9 +150,9 @@ export function AppSidebar() {
       </button>
 
       <nav aria-label="Main navigation" className="scroll-pane flex-1 overflow-y-auto px-3 py-4">
-        <NavGroup title="Study" items={STUDY} pathname={pathname} collapsed={collapsed} />
+        <NavGroup title="Your study desk" items={STUDY} pathname={pathname} collapsed={collapsed} />
         <div className="mx-2 my-3 border-t border-sidebar-border" />
-        <NavGroup title="Tools" items={items} pathname={pathname} collapsed={collapsed} />
+        <NavGroup title="Beyond the notes" items={items} pathname={pathname} collapsed={collapsed} />
       </nav>
 
 
@@ -161,9 +162,9 @@ export function AppSidebar() {
         <span className="tabular text-xs font-semibold">{streak}</span>
       </div>
 
-      <div className="card-3d m-3 rounded-2xl p-3.5 group-data-[collapsed=true]:hidden">
+      <div className="studio-streak m-3 rounded-2xl p-3.5 group-data-[collapsed=true]:hidden">
         <div className="flex items-center gap-2.5">
-          <Icon3D name="streak" size="md" />
+          <span className="flex size-10 items-center justify-center rounded-xl bg-white/50"><Flame className="size-5" /></span>
           <div className="leading-tight">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
               Streak
@@ -222,6 +223,7 @@ function NavLink({
   active: boolean;
   collapsed: boolean;
 }) {
+  const Icon = NAV_ICONS[item.href] || BookOpen;
   return (
     <Link
       suppressHydrationWarning
@@ -230,7 +232,7 @@ function NavLink({
       title={collapsed ? item.label : undefined}
       aria-label={collapsed ? item.label : undefined}
       className={cn(
-        "press relative flex items-center rounded-xl text-sm transition-colors",
+        "studio-nav-link press relative flex min-h-11 items-center rounded-xl text-[13px] transition-colors",
         collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2",
         active
           ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
@@ -245,7 +247,7 @@ function NavLink({
         />
       )}
       <span className={cn("shrink-0 transition-opacity", !active && "opacity-70 saturate-[0.6] group-hover:opacity-100 group-hover:saturate-100")}>
-        <Icon3D name={item.icon} size="sm" />
+        <Icon className="size-[18px]" strokeWidth={active ? 2 : 1.6} aria-hidden="true" />
       </span>
       <span className="truncate group-data-[collapsed=true]:hidden">{item.label}</span>
     </Link>

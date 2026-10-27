@@ -293,6 +293,7 @@
 
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -566,13 +567,8 @@ export default function CoursesPage() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       {loadError && <div role="alert" className="mb-4 rounded-xl border border-destructive p-4"><p>{loadError}</p><button onClick={loadData} className="mt-2 underline">Try again</button></div>}
-      {!loadError && subjects.length === 0 && <p className="mb-4 rounded-xl border p-4 text-sm">No subjects are assigned to your current class yet. Your class head can add them in Manage curriculum. If your class previously had subjects, ask the class head to check the class and database connection before recreating them.</p>}
-      <header className="mb-4">
-        <h1 className="font-display text-2xl tracking-tight sm:text-3xl">My courses</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {courseCards.length} course{courseCards.length === 1 ? "" : "s"} available to read.
-        </p>
-      </header>
+      {!loadError && subjects.length === 0 && <p className="mb-4 rounded-xl border p-4 text-sm">Your class library is waiting for its first subject. Your class head can add subjects and share the materials here.</p>}
+      <WorkspaceHeader className="mb-6" eyebrow="Your class library" title="My courses" description={<>Make connections across your subjects. {courseCards.length} course{courseCards.length === 1 ? "" : "s"} ready to explore.</>} />
 
       {/* Filters. The per-subject pills used to carry their own saturated gradient
           (orange, fuchsia, violet), so the page never matched the rest of the app. */}
@@ -616,15 +612,7 @@ export default function CoursesPage() {
 
       {/* Course Cards */}
       {filteredCards.length === 0 ? (
-        <div className="py-12 text-center">
-          <BookOpen className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-
-          <h3 className="mb-2 font-serif text-xl">No courses available</h3>
-
-          <p className="text-sm text-muted-foreground">
-            Course materials will appear here once they&apos;re set up
-          </p>
-        </div>
+        <WorkspaceEmpty icon={BookOpen} title="Room for something new." description="Your class materials will appear here when your class head adds them. Try another subject if you have a filter selected." />
       ) : (
         /* These were half-screen cards on a phone: two filled the viewport, and each
            carried one real word. The hierarchy was also inverted — every card shouted

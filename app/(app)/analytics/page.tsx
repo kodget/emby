@@ -16,6 +16,7 @@
  * am I improving, what am I weak at, how consistent am I, and where did it happen.
  */
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Crown } from "lucide-react";
@@ -49,18 +50,7 @@ export default function AnalyticsPage() {
   return (
     <AuthGuard>
       <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-        <header className="flex items-start gap-4">
-          <Icon3D name="analytics" size="lg" />
-          <div className="min-w-0 flex-1">
-            <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-              Your progress
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Built from what you have actually studied — nothing here is illustrative.
-            </p>
-          </div>
-          <Axo pose="teaching" size="md" float className="hidden sm:block" />
-        </header>
+        <WorkspaceHeader tone="lime" eyebrow="Small steps, visible progress" title="Your progress" description="See the habits you’re building, the topics taking shape, and where a little more practice could help." />
 
         {/* Period */}
         <div className="mt-5 flex gap-2" role="group" aria-label="Time period">

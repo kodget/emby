@@ -1,5 +1,6 @@
 'use client';
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Sparkles, Zap, Crown, Loader2 } from 'lucide-react';
@@ -71,15 +72,7 @@ export default function PremiumPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <div className="text-center mb-12">
-        <div className="inline-flex items-center justify-center p-2 bg-primary/10 rounded-full mb-4">
-          <Crown className="h-8 w-8 text-primary" />
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-bold mb-4">Upgrade to Premium</h1>
-        <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-          Unlock unlimited access to all features and supercharge your medical studies
-        </p>
-      </div>
+      <WorkspaceHeader className="mb-8" tone="ink" eyebrow="A little more room to learn" title="Emby Premium" description="Explore the study features and allowances in each plan. Choose what fits your routine." />
 
       {/* Features Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-12">

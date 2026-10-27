@@ -2,13 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { LandingNav } from "@/components/landing/landing-nav"
-import { LandingHero } from "@/components/landing/landing-hero"
-import { LandingFeatures } from "@/components/landing/landing-features"
-import { LandingReaderDemo } from "@/components/landing/landing-reader-demo"
-import { LandingSteeplechase } from "@/components/landing/landing-steeplechase"
-import { LandingPricing } from "@/components/landing/landing-pricing"
-import { LandingFooter } from "@/components/landing/landing-footer"
+import { LandingNav, LandingHero, LandingFeatures, LandingReaderDemo, LandingSteeplechase, LandingPricing, LandingFooter } from "@/components/landing/landing-studio";
 import { getRedirectPath, isAuthenticated } from "@/lib/guards";
 
 export default function HomePage() {
@@ -21,7 +15,7 @@ export default function HomePage() {
   }, [router]);
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="studio-landing min-h-screen text-foreground">
       <LandingNav />
       <LandingHero />
       <LandingFeatures />

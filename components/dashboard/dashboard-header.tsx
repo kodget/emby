@@ -15,6 +15,8 @@ import { motion } from "framer-motion";
 import { Axo } from "@/components/brand/axo";
 import { Icon3D } from "@/components/brand/icon-3d";
 import { StatTile } from "@/components/ui/surface";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { useAppSelector } from "@/store/hooks";
 
 type Snapshot = {
@@ -55,7 +57,7 @@ export function DashboardHeader({
   const streak = snapshot?.streak ?? storeStreak;
 
   return (
-    <section className="relative overflow-hidden rounded-[calc(var(--radius)+6px)] border border-primary/15 plinth depth-3">
+    <section className="studio-dashboard-welcome">
       {/* Soft ambient wash behind the greeting */}
       <div
         aria-hidden="true"
@@ -66,13 +68,13 @@ export function DashboardHeader({
         }}
       />
 
-      <div className="relative flex items-start gap-4 p-5 sm:p-6">
+      <div className="relative flex items-center gap-4 p-6 sm:p-8">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
             {mounted ? greeting() : "Welcome back"}
           </p>
 
-          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="mt-3 max-w-2xl font-editorial text-4xl font-medium leading-tight tracking-[-.04em] sm:text-5xl">
             {message?.headline || fallbackHeadline}
           </h1>
 
@@ -82,22 +84,22 @@ export function DashboardHeader({
               <div className="skeleton h-3 w-3/5" />
             </div>
           ) : (
-            message?.body && (
+            (
               <motion.p
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-2 max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground"
               >
-                {message.body}
+                {message?.body || "A little reading. A little recall. Make space for what you’ll understand today."}
               </motion.p>
             )
           )}
+          <Link href="/courses" className="mt-5 inline-flex min-h-11 items-center gap-4 rounded-full bg-[#302843] py-2 pl-5 pr-3 text-xs font-semibold text-white hover:bg-primary">Open your library <ArrowUpRight className="size-6 rounded-full bg-white/15 p-1" /></Link>
         </div>
 
         {/* Axo waves from the corner at a size that suits the viewport, so the
             mascot is present on phones without crowding the greeting. */}
-        <Axo pose="hero" size="md" float priority className="sm:hidden" />
-        <Axo pose="hero" size="lg" float priority className="hidden sm:block" />
+        <Axo pose="hero" size="lg" priority className="hidden sm:block" />
       </div>
 
       <div className="relative grid grid-cols-2 gap-2.5 px-5 pb-5 sm:grid-cols-4 sm:px-6 sm:pb-6">

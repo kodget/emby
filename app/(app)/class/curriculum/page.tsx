@@ -10,6 +10,7 @@
  * and can be renamed or deleted from here.
  */
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -376,26 +377,11 @@ export default function CurriculumManagementPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen">
         {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-border bg-background/90 px-6 py-4 backdrop-blur-md">
-          <div className="mx-auto flex max-w-3xl items-center justify-between">
-            <div>
-              <h1 className="font-serif text-2xl font-semibold">Curriculum</h1>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                Manage subjects, blocks, sub-blocks, topics, and slides.
-              </p>
-            </div>
-            <button
-              onClick={openAddSubject}
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              <Plus className="size-4" /> Add Subject
-            </button>
-          </div>
-        </div>
+        <div className="mx-auto max-w-3xl px-6 pt-6"><WorkspaceHeader eyebrow="Build the class library" title="Curriculum" description="Give every subject, module and shared slide a place." action={<button onClick={openAddSubject} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"><Plus className="size-4" />Add Subject</button>} /></div>
 
-        <div className="mx-auto max-w-3xl px-6 py-8">
+          <div className="mx-auto max-w-3xl px-6 py-8">
           {error && (
             <div className="mb-6 flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               <AlertCircle className="size-4 shrink-0" />

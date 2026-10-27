@@ -20,7 +20,7 @@ import { UploadProgressStrip } from "@/components/app/upload-progress-strip";
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-[100dvh] bg-background">
+    <div className="studio-app flex min-h-[100dvh]">
       <a href="#main-content" className="sr-only z-[100] rounded-lg bg-primary px-4 py-3 text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Skip to content</a>
       <ProgressSync />
       <AppSidebar />

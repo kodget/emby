@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -106,8 +107,7 @@ export default function AssessmentsPage() {
 
   return <main className="mx-auto max-w-4xl space-y-6 p-4 py-8">
     <Link href="/quiz" className="text-sm text-primary">Back to practice</Link>
-    <div><h1 className="text-3xl font-bold">Class assessments</h1>
-      <p className="mt-2 text-muted-foreground">Your class head sets each paper and time limit. You get one attempt; returning resumes the same timer.</p></div>
+    <WorkspaceHeader tone="lime" eyebrow="Ready when you are" title="Class assessments" description="Your class head sets each paper and time limit. You get one attempt; returning resumes the same timer." />
     {error && <div role="alert" className="rounded-md border border-destructive p-3 text-destructive">{error}</div>}
     {notice && <p role="status" className="rounded-md border p-3">{notice}</p>}
     {loading ? <p>Loading assessments…</p> : <>

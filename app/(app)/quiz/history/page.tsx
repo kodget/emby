@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -31,11 +32,10 @@ export default function AssessmentHistoryPage() {
   useEffect(() => { void load("/api/quiz-attempts/", true); }, [load]);
   return <main className="mx-auto max-w-3xl space-y-4 p-6">
     <Link href="/quiz">Back to practice</Link>
-    <h1 className="text-2xl font-bold">Assessment history</h1>
-    <p className="text-sm text-muted-foreground">Resume an active attempt or revisit a saved result. Historical records without question versions are read-only.</p>
+    <WorkspaceHeader tone="lime" eyebrow="Every attempt is part of the story" title="Assessment history" description="Resume an active attempt or look back at a saved result. Historical records without question versions are read-only." />
     {error && <div role="alert"><p>{error}</p><Button disabled={loading} onClick={() => load(failedPath)}>Retry history</Button></div>}
-    {!loading && !error && !records.length && <p>No assessment attempts are available.</p>}
-    {records.map(record => <article key={record.id} className="space-y-2 rounded border p-4">
+    {!loading && !error && !records.length && <WorkspaceEmpty title="Your story starts with an attempt." description="Completed assessments and any active attempts will appear here. Head to Practice when you’re ready." />}
+    {records.map(record => <article key={record.id} className="space-y-3 rounded-2xl border border-border bg-card p-5">
       <h2 className="font-medium">{record.configuration?.assessment_title || `${record.exam_type} attempt`}</h2>
       {record.started_at && <p className="text-sm">{new Date(record.started_at).toLocaleString()}</p>}
       <p>{record.historical_read_only ? "Historical record — unverified" : record.status === "in_progress" ? "In progress"

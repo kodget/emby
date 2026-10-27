@@ -13,6 +13,7 @@
  * yet") rather than showing a confident-looking zero.
  */
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Play, Settings } from "lucide-react";
@@ -60,15 +61,7 @@ export function FlashcardStudio() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-      <header className="flex items-start gap-4">
-        <Icon3D name="flashcards" size="lg" />
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl tracking-tight sm:text-3xl">Flashcards</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Spaced repetition, fed by the questions you get wrong.
-          </p>
-        </div>
-      </header>
+      <WorkspaceHeader tone="peach" eyebrow="A little recall goes a long way" title="Flashcards" description="Keep the ideas that matter close. Make cards from your notes, revisit mistakes, and review what’s due." />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <CreateFlashcardModal onCreated={loadData} />
@@ -118,7 +111,7 @@ export function FlashcardStudio() {
               <div>
                 <p className="font-display text-[15px]">All caught up</p>
                 <p className="text-[13px] text-muted-foreground">
-                  Nothing due right now — new cards appear as you get questions wrong.
+                  Nothing due right now. Create a card or explore your class materials while your next review waits.
                 </p>
               </div>
             </section>

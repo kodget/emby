@@ -1,3 +1,4 @@
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import Link from "next/link";
 
 import { BattlesDashboard } from "@/components/battles/battles-dashboard";
@@ -22,19 +23,7 @@ export const metadata = {
 export default function BattlesPage() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-      <header className="flex items-start gap-4">
-        <Icon3D name="battle" size="lg" />
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-            Brain Battles
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Race your classmates through a set of questions. Faster correct answers score
-            more.
-          </p>
-        </div>
-        <Axo pose="trophy" size="md" float className="hidden sm:block" />
-      </header>
+      <WorkspaceHeader tone="ink" eyebrow="Learn together. Think faster." title="Brain Battles" description="Bring your classmates, pick a topic, and see what sticks. Faster correct answers score more." />
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_1.3fr]">
         <div className="space-y-4">

@@ -9,6 +9,7 @@
  * limit by hitting it.
  */
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect, useState } from "react";
 import { Crown } from "lucide-react";
 import Link from "next/link";
@@ -116,16 +117,7 @@ export function PracticeSetup({
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6">
-      <header className="flex items-start gap-4">
-        <Icon3D name={copy.icon} size="lg" />
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-            {copy.title}
-          </h1>
-          <p className="mt-1 max-w-xl text-pretty text-sm text-muted-foreground">{copy.blurb}</p>
-        </div>
-        <Axo pose={mode === "HISTOLOGY" ? "microscope" : "magnifier"} size="md" float className="hidden sm:block" />
-      </header>
+      <WorkspaceHeader tone={mode === "HISTOLOGY" ? "peach" : "lime"} eyebrow={mode === "HISTOLOGY" ? "Look closer. See more." : "Find your rhythm under pressure"} title={copy.title} description={copy.blurb} />
 
       {/* Allowance — the server's number, not a guess */}
       <div

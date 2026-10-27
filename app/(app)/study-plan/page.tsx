@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Check, Pencil, Trash2, Wand2 } from "lucide-react";
 import { TodayPlan } from "@/components/dashboard/today-plan";
@@ -56,22 +57,7 @@ export default function StudyPlanPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
-      <section className="rounded-3xl border border-border bg-card p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-widest text-primary">
-              Study Plan
-            </p>
-            <h1 className="mt-2 font-serif text-3xl">
-              Organize your full study schedule
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-              Build a complete plan for reading, quizzes, flashcards and
-              steeplechase practice. Add activity-specific details, track
-              completion and keep your day on schedule.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
+      <WorkspaceHeader tone="lime" eyebrow="Make time for what matters" title="Your study plan" description="A little structure for the week ahead. Balance reading, recall and practice around your day." action={<>
             <button
               type="button"
               onClick={() => setWizardOpen(true)}
@@ -88,9 +74,7 @@ export default function StudyPlanPage() {
               <Plus className="size-4" />
               Add activity
             </button>
-          </div>
-        </div>
-      </section>
+          </>} />
       
       <StudyPlannerWizard 
         isOpen={wizardOpen}

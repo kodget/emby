@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi, classApi } from "@/lib/api";
@@ -111,25 +112,14 @@ export default function AnalyticsPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 py-12 px-4">
+      <div className="min-h-screen py-6 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <button
-              onClick={() => router.push("/class")}
-              className="p-2 hover:bg-white rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-6 h-6 text-gray-600" />
-            </button>
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900">Class Analytics</h1>
-              <p className="text-gray-600">{profile?.set_name || "Performance insights"}</p>
-            </div>
-          </div>
+          <WorkspaceHeader className="mb-6" tone="lime" eyebrow="See how your class is growing" title="Class Analytics" description={profile?.set_name || "Participation and progress, brought together."} />
 
           {/* Key Metrics */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="rounded-2xl border border-border bg-card p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                   <Users className="w-6 h-6 text-purple-600" />
@@ -139,7 +129,7 @@ export default function AnalyticsPage() {
               <div className="text-sm text-gray-600">Total Members</div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="rounded-2xl border border-border bg-card p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <Award className="w-6 h-6 text-blue-600" />
@@ -150,7 +140,7 @@ export default function AnalyticsPage() {
               <div className="text-sm text-gray-600">Average Points</div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="rounded-2xl border border-border bg-card p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                   <Target className="w-6 h-6 text-orange-600" />
@@ -163,7 +153,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Top Performers */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="rounded-2xl border border-border bg-card p-5">
             <h3 className="text-xl font-bold text-gray-900 mb-6">Top members by points</h3>
             {analytics.topPerformers.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No member data available yet.</p>

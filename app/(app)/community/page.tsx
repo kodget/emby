@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -230,15 +231,7 @@ export default function CommunityPage() {
           anything else, and the free-tier notice took a further full card. On a phone
           that was two screens of chrome before the first thread. */}
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-        <header className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="min-w-0">
-            <h1 className="font-display text-2xl tracking-tight sm:text-3xl">Community</h1>
-            <p className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
-              <Stethoscope className="size-3.5 shrink-0 text-primary" />
-              BMS Students · your school only
-            </p>
-          </div>
-          <div className="flex gap-2">
+        <WorkspaceHeader className="mb-5" tone="peach" eyebrow="You don’t have to figure it out alone" title="Community" description="Questions, discoveries and conversations with students at your school." action={<div className="flex gap-2">
             <InputGroup className="w-full md:w-64">
               <InputGroupAddon>
                 <Search className="h-4 w-4" />
@@ -259,8 +252,7 @@ export default function CommunityPage() {
                 Ask
               </Button>
             )}
-          </div>
-        </header>
+          </div>} />
 
         {/* A slim strip, not a card. Reading is free, so this is a footnote about what
             is locked rather than a wall between the reader and the threads. */}

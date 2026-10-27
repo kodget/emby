@@ -37,7 +37,7 @@ export function AppTopbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex min-w-0 h-16 items-center gap-2 border-b border-border bg-background/70 px-3 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55 sm:px-6">
+      <header className="studio-topbar sticky top-0 z-30 flex min-w-0 h-[72px] items-center gap-2 border-b border-border px-3 backdrop-blur-xl sm:px-6">
         {/* Search */}
         <GlobalSearch />
 
@@ -46,10 +46,10 @@ export function AppTopbar() {
           {mounted && isFree && (
             <Link
               href="/premium"
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-primary/80 px-3 py-1.5 text-xs font-medium text-primary-foreground hover:from-primary/90 hover:to-primary/70 transition-colors"
+              className="hidden 2xl:inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-primary/20 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/5 transition-colors"
             >
               <Crown className="size-3" aria-hidden="true" />
-              <span>Upgrade to Premium</span>
+              <span>Explore Premium</span>
             </Link>
           )}
 
@@ -65,7 +65,7 @@ export function AppTopbar() {
               className="size-3"
               aria-hidden="true"
             />
-            <span className="hidden md:inline">Ask AI tutor</span>
+            <span className="hidden xl:inline">Ask AI tutor</span>
           </button>
 
           {/* Uploader — only visible to class heads and material uploaders */}
@@ -74,7 +74,7 @@ export function AppTopbar() {
               type="button"
               whileTap={{ scale: 0.93 }}
               onClick={() => dispatch(openUploadModal({}))}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
               aria-label="Upload slides"
             >
               <FontAwesomeIcon
@@ -82,7 +82,7 @@ export function AppTopbar() {
                 className="size-3"
                 aria-hidden="true"
               />
-              <span className="hidden md:inline">Upload slides</span>
+              <span className="hidden xl:inline">Upload slides</span>
             </motion.button>
           )}
 
@@ -90,7 +90,7 @@ export function AppTopbar() {
           {mounted && (
             <Link
               href="/analytics"
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium hover:border-primary/50 transition-colors"
+              className="hidden 2xl:inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium hover:border-primary/50 transition-colors"
               aria-label="Current streak"
             >
               <FontAwesomeIcon
@@ -103,7 +103,7 @@ export function AppTopbar() {
           )}
 
           {/* Credit Bar */}
-          {mounted && <div className="hidden lg:block"><GlobalCreditBar /></div>}
+          {mounted && <div className="hidden xl:block"><GlobalCreditBar /></div>}
 
           {/* Notifications */}
           {mounted && <NotificationsDropdown />}

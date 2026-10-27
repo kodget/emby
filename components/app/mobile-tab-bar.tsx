@@ -29,7 +29,7 @@ export function MobileTabBar() {
   const head = useAppSelector(state => state.user.isVerifiedClassHead);
   useEffect(() => setOpen(false), [pathname]);
   return <>
-    <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 pb-safe backdrop-blur-xl md:hidden"><ul className="grid grid-cols-5">
+    <nav aria-label="Primary" className="studio-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-border pb-safe backdrop-blur-xl md:hidden"><ul className="grid grid-cols-5 px-2 py-1">
       {tabs.map(({ label, href, icon: Icon, match }) => <li key={href}><Link href={href} aria-current={match.test(pathname) ? 'page' : undefined} className={cn('flex min-h-16 flex-col items-center justify-center gap-1.5 px-1 text-[10px] font-medium', match.test(pathname) ? 'bg-primary/5 text-primary' : 'text-muted-foreground')}><Icon className="size-5" aria-hidden="true" />{label}</Link></li>)}
       <li><button ref={moreButton} type="button" onClick={() => setOpen(true)} aria-expanded={open} aria-haspopup="dialog" className="flex min-h-16 w-full flex-col items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground"><Menu className="size-5" aria-hidden="true" />More</button></li>
     </ul></nav>

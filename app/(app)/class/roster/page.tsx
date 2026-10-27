@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi, classApi } from "@/lib/api";
@@ -89,43 +90,30 @@ export default function RosterPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 py-12 px-4">
+      <div className="min-h-screen py-6 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.push("/class")}
-                className="p-2 hover:bg-white rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-6 h-6 text-gray-600" />
-              </button>
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900">Class Roster</h1>
-                <p className="text-gray-600">{profile?.set_name || "View class members"}</p>
-              </div>
-            </div>
-          </div>
+          <WorkspaceHeader className="mb-6" tone="peach" eyebrow="The people learning with you" title="Class Roster" description={profile?.set_name || "Find your classmates and the people keeping your class connected."} />
 
           {/* Stats */}
-          <div className="grid md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="rounded-2xl border border-border bg-card p-5">
               <div className="text-3xl font-bold text-purple-600 mb-1">{members.length}</div>
               <div className="text-sm text-gray-600">Total Members</div>
             </div>
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="rounded-2xl border border-border bg-card p-5">
               <div className="text-3xl font-bold text-blue-600 mb-1">
                 {members.filter((m) => m.role === "class_head").length}
               </div>
               <div className="text-sm text-gray-600">Class Heads</div>
             </div>
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="rounded-2xl border border-border bg-card p-5">
               <div className="text-3xl font-bold text-green-600 mb-1">
                 {Math.round(members.reduce((sum, m) => sum + m.total_points, 0) / members.length || 0)}
               </div>
               <div className="text-sm text-gray-600">Avg Points</div>
             </div>
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="rounded-2xl border border-border bg-card p-5">
               <div className="text-3xl font-bold text-orange-600 mb-1">
                 {Math.round(members.reduce((sum, m) => sum + m.streak_days, 0) / members.length || 0)}
               </div>
@@ -134,7 +122,7 @@ export default function RosterPage() {
           </div>
 
           {/* Search */}
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="rounded-2xl border border-border bg-card p-5 mb-6">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input

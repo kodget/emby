@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Bell, User, LogOut, Trash2 } from "lucide-react";
@@ -117,14 +118,14 @@ export default function SettingsPage() {
     <AuthGuard>
       <div className="min-h-screen px-4 py-6 sm:px-6">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold text-gray-900 mb-8">Settings</h1>
+          <WorkspaceHeader className="mb-6" eyebrow="Make yourself at home" title="Settings" description="Your account, your preferences, your way of studying." />
 
           {/* Tabs */}
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="bg-card rounded-2xl border border-border overflow-hidden">
             <div className="flex border-b">
               <button
                 onClick={() => setActiveTab("account")}
-                className={`flex-1 px-6 py-4 font-semibold transition-colors ${
+                className={`flex-1 px-3 sm:px-6 py-4 text-sm font-semibold transition-colors ${
                   activeTab === "account"
                     ? "bg-primary/8 text-primary border-b-2 border-primary"
                     : "text-gray-600 hover:bg-gray-50"
@@ -135,7 +136,7 @@ export default function SettingsPage() {
               </button>
               <button
                 onClick={() => setActiveTab("password")}
-                className={`flex-1 px-6 py-4 font-semibold transition-colors ${
+                className={`flex-1 px-3 sm:px-6 py-4 text-sm font-semibold transition-colors ${
                   activeTab === "password"
                     ? "bg-primary/8 text-primary border-b-2 border-primary"
                     : "text-gray-600 hover:bg-gray-50"
@@ -146,7 +147,7 @@ export default function SettingsPage() {
               </button>
               <button
                 onClick={() => setActiveTab("notifications")}
-                className={`flex-1 px-6 py-4 font-semibold transition-colors ${
+                className={`flex-1 px-3 sm:px-6 py-4 text-sm font-semibold transition-colors ${
                   activeTab === "notifications"
                     ? "bg-primary/8 text-primary border-b-2 border-primary"
                     : "text-gray-600 hover:bg-gray-50"

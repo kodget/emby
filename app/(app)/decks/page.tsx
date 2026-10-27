@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -78,14 +79,9 @@ export default function DecksPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Header */}
-      <div className="border-b bg-white px-4 py-6 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900">Documents</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          View your class's PDF, PowerPoint, and Word documents
-        </p>
-      </div>
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8"><WorkspaceHeader eyebrow="The source of your next idea" title="Documents" description="A home for your class PDFs, presentations and notes. Open a document to read, ask questions and begin revising." /></div>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className={`grid gap-8 ${canUpload ? "lg:grid-cols-3" : ""}`}>

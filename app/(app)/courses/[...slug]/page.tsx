@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, BookOpen, FileText, Loader2, Play } from "lucide-react";
@@ -108,14 +109,7 @@ export default function CourseMaterialsPage() {
         Back to courses
       </button>
 
-      <div className="mb-8">
-        <h1 className="font-serif text-4xl font-bold mb-2">{pageTitle}</h1>
-        <p className="text-muted-foreground">
-          {error ? "Materials are temporarily unavailable" : hasContent
-            ? "Click on any material to start reading"
-            : "No materials uploaded yet for this section"}
-        </p>
-      </div>
+      <WorkspaceHeader className="mb-6" eyebrow="Follow the subject" title={pageTitle} description={error ? "Materials are temporarily unavailable." : hasContent ? "Open a material, follow a concept, and start making connections." : "Your class materials will appear here once they’re shared."} />
 
       {error ? (
         <div role="alert" className="rounded-xl border border-destructive p-4">

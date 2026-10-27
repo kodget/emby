@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Sora, Geist_Mono } from "next/font/google";
+import { Inter, Sora, Geist_Mono, Fraunces } from "next/font/google";
 import { ReduxProvider } from "@/store/redux-provider";
 import { GoogleAuthProvider } from "@/components/auth/google-auth-provider";
 import { PwaRegister } from "@/components/pwa/pwa-register";
@@ -8,6 +8,7 @@ import { NotificationProvider } from "@/components/app/notification-provider";
 import { Toaster } from "@/components/ui/toaster";
 
 import "./globals.css";
+import "./studio.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,6 +26,8 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   display: "swap",
 });
+const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', display: 'swap',
+  weight: ['400', '500', '600'], style: ['normal', 'italic'] });
 
 export const metadata: Metadata = {
   title: "Emby, the study OS for medical students",
@@ -54,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${sora.variable} ${geistMono.variable} bg-background`}
+      className={`${inter.variable} ${sora.variable} ${geistMono.variable} ${fraunces.variable} bg-background`}
     >
       <head>
         <script src="https://accounts.google.com/gsi/client" async defer></script>

@@ -14,6 +14,7 @@
  * Tiles with nothing behind them say so instead of leading to an empty screen.
  */
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -88,18 +89,7 @@ export function PracticeArena({
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
-      <header className="flex items-start gap-4">
-        <Icon3D name="quiz" size="lg" />
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl tracking-tight sm:text-3xl">Practice</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {stats.accuracy !== null && stats.accuracy !== undefined
-              ? `You're at ${Math.round(stats.accuracy * 100)}% over the last 30 days.`
-              : "Pick a way in."}
-          </p>
-        </div>
-        <Axo pose="clipboard" size="md" float className="hidden sm:block" />
-      </header>
+      <WorkspaceHeader tone="lime" eyebrow="Turn knowing into doing" title="Practice" description={stats.accuracy !== null && stats.accuracy !== undefined ? `Your accuracy is ${Math.round(stats.accuracy * 100)}% over the last 30 days. Choose your next challenge.` : "Try a question, revisit a mistake, or step into a timed station. Every attempt tells you something."} />
 
       {/* Coverage — the single most useful thing to know before practising. */}
       <section className="card-3d mt-5 flex items-center gap-4 p-4">
@@ -116,7 +106,7 @@ export function PracticeArena({
               ? "Checking…"
               : stats.bankTotal
                 ? `${stats.bankSeen} of ${stats.bankTotal} seen · ${stats.missed} missed at least once`
-                : "No questions generated yet — upload a slide to build the bank."}
+                : "Your question bank starts with the slides your class shares. Open a document to generate practice."}
           </p>
         </div>
       </section>
@@ -217,7 +207,7 @@ function ActionTile({
       <Icon3D name={icon} size="md" />
       <span className="min-w-0 flex-1">
         <span className="block font-display text-[15px] leading-tight">{title}</span>
-        <span className="block truncate text-[12px] text-muted-foreground tabular">
+        <span className="mt-2 block text-[12px] leading-5 text-muted-foreground tabular">
           {busy ? "Building your set…" : detail}
         </span>
       </span>
@@ -225,7 +215,7 @@ function ActionTile({
   );
 
   const classes = cn(
-    "card-3d flex w-full items-center gap-3 p-3.5 text-left",
+    "card-3d flex min-h-28 w-full items-center gap-4 p-5 text-left",
     disabled ? "cursor-not-allowed opacity-55" : "press card-3d-hover",
   );
 

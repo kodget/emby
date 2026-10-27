@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -104,18 +105,18 @@ export default function MockExamPage() {
       setStarting(false);
     }
   };
-  const selectClass = "block w-full rounded border bg-background p-2 mt-1";
+  const selectClass = "block min-h-11 w-full rounded-xl border border-input bg-card px-3 py-2 mt-2";
   if (!isPremium) return <main className="mx-auto max-w-2xl p-6 space-y-4">
-    <h1 className="text-2xl font-semibold">Mock exams</h1>
+    <WorkspaceHeader tone="lime" eyebrow="Rehearse for the real thing" title="Mock exams" />
     <p>Mock exams are included with Premium. Single-deck practice and your class assessments remain available.</p>
     <Link href="/premium">View Premium</Link><br /><Link href="/quiz">Back to practice</Link>
   </main>;
   return <main className="mx-auto max-w-2xl p-6 space-y-5">
     <Link href="/quiz" className="text-sm underline">Back to practice</Link>
-    <h1 className="text-2xl font-semibold">Create a mock exam</h1>
+    <WorkspaceHeader tone="lime" eyebrow="Rehearse for the real thing" title="Create a mock exam" />
     <p>Choose saved questions from one course, module or submodule. Questions are spread across topics and source files at your chosen difficulty.</p>
     {(catalogError || error) && <p role="alert" className="text-destructive">{catalogError || error}</p>}
-    <fieldset disabled={starting} className="space-y-4">
+    <fieldset disabled={starting} className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
       <label className="block">Exam scope<select aria-label="Exam scope" className={selectClass} value={scope} onChange={e => setScope(e.target.value as Scope)}>
         <option value="course">Course</option><option value="module">Module</option><option value="submodule">Submodule</option>
       </select></label>

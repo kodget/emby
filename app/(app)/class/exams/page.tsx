@@ -1,4 +1,5 @@
 "use client";
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CalendarDays, ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -48,7 +49,7 @@ export default function ExamCountdownsPage() {
   }
   return <AuthGuard><div className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
     <Link href="/class" className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-primary"><ArrowLeft className="size-4" />My class</Link>
-    <header className="flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-3xl">Exam countdowns</h1><p className="mt-2 text-muted-foreground">See what’s coming up and give your revision a clear target.</p></div>{canManage && <Button onClick={() => edit()}><Plus className="size-4" />Add exam</Button>}</header>
+    <WorkspaceHeader tone="peach" eyebrow="Something to work towards" title="Exam countdowns" description="See what’s coming up and give your revision a clear target." action={canManage && <Button onClick={() => edit()}><Plus className="size-4" />Add exam</Button>} />
     {error && <div role="alert" className="rounded-xl border border-destructive/25 bg-card p-5"><p>{error}</p><Button variant="outline" onClick={load} className="mt-3">Try again</Button></div>}
     {loading ? <p role="status" className="py-12 text-center text-muted-foreground">Loading exam dates…</p> : !error && exams.length === 0 ? <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center"><CalendarDays className="mx-auto mb-4 size-8 text-primary" /><h2 className="text-xl">No exam dates yet</h2><p className="mt-2 text-sm text-muted-foreground">{canManage ? 'Add the next exam so everyone can plan their revision.' : 'Exam dates will appear here when your class head adds them.'}</p></div> : <div className="space-y-4">{exams.map(exam => <article id={`exam-${exam.id}`} key={exam.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card p-6">
       <div className="min-w-0"><h2 className="break-words text-lg">{exam.title}</h2><p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays className="size-4" />{new Date(exam.exam_date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>

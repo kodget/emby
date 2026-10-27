@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { authApi, classApi, ClassGroup, UserProfile } from "@/lib/api";
@@ -45,7 +46,7 @@ export default function ClassPage() {
   return (
     <AuthGuard>
       <main className="mx-auto max-w-5xl space-y-6 p-4 py-8 sm:p-8">
-        <header><h1 className="text-3xl font-bold">My class</h1><p className="mt-2 text-muted-foreground">Your class updates, classmates and learning materials.</p></header>
+        <WorkspaceHeader tone="peach" eyebrow="A class, connected" title="My class" description="The people, plans and shared discoveries that make learning better together." />
         {loading ? <p role="status" className="flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" />Loading your class…</p> : error ? (
           <Card><CardContent className="space-y-4 pt-6"><p role="alert">{error}</p><Button onClick={loadData}>Try again</Button></CardContent></Card>
         ) : !classData ? (
@@ -62,7 +63,7 @@ export default function ClassPage() {
             </Card>
             <div className="grid gap-4 sm:grid-cols-2">
               {links.map(({ href, title, description, icon: Icon }) => (
-                <Link href={href} key={href} className="rounded-xl border bg-card p-5 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary">
+                <Link href={href} key={href} className="studio-action-card focus-visible:outline-2 focus-visible:outline-primary">
                   <Icon className="mb-3 h-6 w-6 text-primary" aria-hidden="true" /><h2 className="text-lg font-semibold">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{description}</p>
                 </Link>
               ))}

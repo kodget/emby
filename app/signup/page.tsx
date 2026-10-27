@@ -1,5 +1,6 @@
 "use client";
 
+import { AuthStudio } from "@/components/auth/auth-studio";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -117,25 +118,15 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
+    <AuthStudio mode="signup">
       <div className="w-full max-w-md">
-        <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-          <span className="flex size-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Stethoscope className="size-5" />
-          </span>
-          <span className="flex flex-col leading-none">
-            <span className="font-serif text-2xl">Emby</span>
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">
-              BMS Edition
-            </span>
-          </span>
-        </Link>
+        
 
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold">Create account</CardTitle>
             <CardDescription>
-              Enter your information to get started
+              Your class, your notes, your next discovery. Start here.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -151,6 +142,7 @@ export default function SignUpPage() {
                   <Label htmlFor="first_name">First name</Label>
                   <Input
                     id="first_name"
+                    autoComplete="given-name"
                     placeholder="John"
                     value={formData.first_name}
                     onChange={(e) =>
@@ -164,6 +156,7 @@ export default function SignUpPage() {
                   <Label htmlFor="last_name">Last name</Label>
                   <Input
                     id="last_name"
+                    autoComplete="family-name"
                     placeholder="Doe"
                     value={formData.last_name}
                     onChange={(e) =>
@@ -261,6 +254,6 @@ export default function SignUpPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </AuthStudio>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { classApi, authApi } from "@/lib/api";
@@ -97,38 +98,14 @@ export default function AnnouncementsPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 py-12 px-4">
+      <div className="min-h-screen py-6 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.push("/class")}
-                className="p-2 hover:bg-white rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-6 h-6 text-gray-600" />
-              </button>
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900">Announcements</h1>
-                <p className="text-gray-600">
-                  {profile?.set_name || "Class announcements and updates"}
-                </p>
-              </div>
-            </div>
-            {isHead && (
-              <button
-                onClick={handleCreate}
-                className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                New Announcement
-              </button>
-            )}
-          </div>
+          <WorkspaceHeader className="mb-6" tone="peach" eyebrow="From your class" title="Announcements" description={profile?.set_name || "Updates, shared plans and things to know before your next lecture."} action={isHead && <button onClick={handleCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-white"><Plus className="size-4" />New Announcement</button>} />
 
           {/* Announcements List */}
           {announcements.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+            <div className="workspace-empty">
               <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-gray-900 mb-2">No Announcements Yet</h2>
               <p className="text-gray-600">

@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceHeader, WorkspaceEmpty } from "@/components/ui/workspace-header";
 import { creditsApi } from "@/lib/api";
 import { Coins, History, CreditCard, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -42,12 +43,7 @@ export default function CreditsPage() {
 
   return (
     <div className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">AI Credits</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage your AI credits. Credits are dynamically consumed based on the exact amount of AI compute used across Emby features.
-        </p>
-      </div>
+      <WorkspaceHeader tone="peach" eyebrow="Keep your curiosity going" title="AI Credits" description="Check your balance, see how credits are used, and top up when you need more AI study support." />
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Balance Card */}
