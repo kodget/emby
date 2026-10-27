@@ -57,7 +57,10 @@ def office_to_pdf(source, output):
             result = subprocess.run([
                 office_executable(), f'-env:UserInstallation={Path(profile).resolve().as_uri()}',
                 '--headless', '--convert-to', 'pdf', '--outdir', str(output), str(Path(source).resolve()),
-            ], capture_output=True, timeout=120,
+            # Fresh Office profiles start substantially slower on Windows during
+            # local bulk imports. Keep the server deadline unchanged; the parent
+            # renderer still enforces its overall timeout on both platforms.
+            ], capture_output=True, timeout=300 if os.name == 'nt' else 120,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
     except subprocess.TimeoutExpired:
         raise DocumentRenderingError('office_timeout') from None

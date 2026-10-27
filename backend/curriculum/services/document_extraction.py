@@ -197,7 +197,7 @@ def ensure_slide_extraction(slide):
         from curriculum.document_index import request_index
         from curriculum.models import SlideDeck
         origin = SlideDeck.objects.filter(curriculum_slide=slide, asset_id=slide.asset_id).first()
-        request_index(origin or slide)
+        request_index(origin or slide, requested=True)
         raise ExtractionError('incomplete', data.get('text_extraction'))
     try:
         result = extract_document(content_file_url(slide), slide.file_type)

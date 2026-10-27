@@ -90,6 +90,7 @@ Thumbs.db
 /backend/media/
 .test-tessdata/
 .test-results-uploads/
+.imports/
 
 # Environment variable documentation with secrets
 RENDER_ENV_VARS.md

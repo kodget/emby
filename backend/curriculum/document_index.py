@@ -55,6 +55,8 @@ def identity(source, data):
 def status_for(source):
     job = Job.objects.filter(**({'slide': source} if isinstance(source, Slide) else {'deck': source})).first()
     if job:
+        if job.error_code == 'on_demand':
+            return {'status': 'unverified', 'error_code': '', 'mode': 'on_demand'}
         retrying = job.status == 'failed' and job.next_attempt_at and job.attempts < MAX_FAILURES
         return {'status': 'pending' if retrying else job.status, 'error_code': job.error_code}
     report = source_data(source).get('text_extraction', {})
@@ -62,7 +64,10 @@ def status_for(source):
 
 
 @transaction.atomic
-def request_index(source, *, force=False):
+def request_index(source, *, force=False, requested=False):
+    from .ai_policy import on_demand
+    if on_demand(source) and not requested:
+        return False
     source = type(source).objects.select_for_update().get(pk=source.pk)
     data = source_data(source)
     lookup = {'slide': source} if isinstance(source, Slide) else {'deck': source}
@@ -75,11 +80,13 @@ def request_index(source, *, force=False):
     key = identity(source, data)
     job, _ = Job.objects.get_or_create(**lookup, defaults={'source_key': key})
     job = Job.objects.select_for_update().get(pk=job.pk)
+    if requested and job.error_code == 'on_demand':
+        job.attempts = 0
     now = timezone.now()
     if job.source_key == key:
         if job.status == 'running' and job.lease_expires_at and job.lease_expires_at > now:
             return False
-        if job.status == 'pending' and job.next_attempt_at and job.next_attempt_at > now:
+        if (job.status == 'pending' or job.error_code == 'provider_rate_limited') and job.next_attempt_at and job.next_attempt_at > now:
             return False
         if job.attempts >= MAX_FAILURES and not force:
             return False
@@ -217,8 +224,9 @@ def _finish(source, data):
         content.save()
         source = slide
     SlideChunk.objects.filter(slide=source).delete()
+    from .ai_policy import on_demand
     SlideProcessingStatus.objects.filter(slide=source).exclude(status__in=ACTIVE_STATES).update(
-        status='generating_quizzes', content_extracted=True, error_message='')
+        status='completed' if on_demand(source) else 'generating_quizzes', content_extracted=True, error_message='')
     request_generation(source)
 
 
@@ -290,6 +298,17 @@ def run(job_id):
             else:
                 transaction.on_commit(lambda: publish(job_id), robust=True)
         return done
+    except llm.LLMRateLimited as exc:
+        with transaction.atomic():
+            locked = Job.objects.select_for_update().filter(pk=job_id, status='running', lease_token=token).first()
+            if locked:
+                locked.status, locked.error_code = 'failed', 'provider_rate_limited'
+                locked.attempts = max(0, locked.attempts - 1)
+                locked.lease_token = locked.lease_expires_at = None
+                locked.next_attempt_at = timezone.now() + timedelta(seconds=max(30, exc.retry_after))
+                locked.save()
+        logger.warning('Document index waiting for provider capacity: job=%s retry_after=%s', job_id, exc.retry_after)
+        return False
     except Exception as exc:
         code = exc.code if isinstance(exc, IndexUnavailable) else 'visual_read_failed'
         logger.warning('Document index paused: job=%s code=%s', job_id, code)

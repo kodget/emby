@@ -1086,7 +1086,7 @@ class SlideDeckViewSet(PrivateMediaResponseMixin, viewsets.ModelViewSet):
         deck = self.get_object()
         if deck.processing_status != 'completed':
             return Response({'error': 'Wait for the document pages to finish rendering.'}, status=409)
-        queued = request_index(deck, force=True)
+        queued = request_index(deck, force=True, requested=True)
         return Response({'queued': queued, 'ai_index': status_for(deck)}, status=202)
     
     @action(detail=True, methods=['get'])
@@ -1158,17 +1158,21 @@ def generate_questions_from_slide_view(request, slide_id):
     from .content_permissions import can_reprocess_upload
     from learning.generation_dispatch import request_generation
     from learning.models import QuestionGenerationJob
+    from .ai_policy import on_demand
     slide = visible(Slide, request.user).filter(pk=slide_id).first()
     if slide is None:
         return Response({'error': 'Slide not found'}, status=404)
-    if not can_reprocess_upload(request.user, slide):
+    manager = can_reprocess_upload(request.user, slide)
+    if not manager and not on_demand(slide):
         return Response({'error': 'You cannot generate questions for this upload.'}, status=403)
     force = request.data.get('force', False)
     if type(force) is not bool:
         return Response({'error': 'force must be a boolean.'}, status=400)
+    if force and not manager:
+        return Response({'error': 'Only an uploader can force regeneration.'}, status=403)
     if 'num_mcq' in request.data or 'num_theory' in request.data:
         return Response({'error': 'Bank generation uses the configured bank targets, not quiz attempt counts.'}, status=400)
-    queued = request_generation(slide, force=force)
+    queued = request_generation(slide, force=force, requested=True)
     job = QuestionGenerationJob.objects.get(slide=slide)
     return Response({'slide_id': slide.pk, 'queued': queued, 'status': job.status,
                      'mcq_target': job.mcq_target, 'theory_target': job.theory_target,
@@ -1494,7 +1498,7 @@ def reprocess_slide(request, slide_id):
 
         if request.data.get('index_only') is True:
             from .document_index import request_index, status_for
-            queued = request_index(slide, force=True)
+            queued = request_index(slide, force=True, requested=True)
             return Response({'queued': queued, 'ai_index': status_for(slide)}, status=202)
 
         from .slide_processing import reserve

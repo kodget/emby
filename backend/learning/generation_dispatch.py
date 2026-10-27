@@ -11,13 +11,18 @@ from .models import QuestionGenerationJob as Job
 logger = logging.getLogger(__name__)
 
 
-def request_generation(slide, *, force=False):
+def request_generation(slide, *, force=False, requested=False):
+    from curriculum.ai_policy import on_demand, DEFERRED_MESSAGE
+    if on_demand(slide) and not requested:
+        return False
     from curriculum.models import Slide
     from .generation import LEASE_DURATION, source_identity, extracted_digest, MCQ_TARGETS, THEORY_TARGETS
     with transaction.atomic():
         slide = Slide.objects.select_for_update().get(pk=slide.pk)
         job, created = Job.objects.get_or_create(slide=slide)
         job = Job.objects.select_for_update().get(pk=job.pk)
+        if requested and job.error == DEFERRED_MESSAGE:
+            job.attempts = 0
         expiry = job.lease_expires_at or ((job.started_at or job.updated_at) + LEASE_DURATION)
         if job.status == Job.Status.RUNNING and expiry > timezone.now():
             return False

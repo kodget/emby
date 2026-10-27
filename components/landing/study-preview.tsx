@@ -32,7 +32,7 @@ export function HeroStudyCanvas() {
 
 export function RecallCard({ compact = false }: { compact?: boolean }) {
   const [flipped, setFlipped] = useState(false);
-  return <div className={cn('flex h-full flex-col', compact && 'min-h-[272px]')}>
+  return <div className={cn('flex flex-col', compact ? 'min-h-[272px]' : 'min-h-[310px]')}>
     <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-[.14em]"><span>Study strategy</span><span className="studio-example">Sample card</span></div>
     <button type="button" aria-label={flipped ? 'Show flashcard question' : 'Reveal flashcard answer'} aria-pressed={flipped} onClick={() => setFlipped(value => !value)} className={cn('group my-5 flex flex-1 flex-col items-center justify-center rounded-2xl border border-current/15 p-6 text-center transition-colors', compact ? 'bg-[#ece8ff]' : 'bg-white/40 hover:bg-white/65')}>
       <span className="text-[10px] uppercase tracking-[.2em] opacity-65">{flipped ? 'The answer' : 'A quick check-in'}</span>

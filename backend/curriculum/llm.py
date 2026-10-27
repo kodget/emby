@@ -26,8 +26,9 @@ exhausted, so adding a Cerebras or OpenRouter key to .env immediately multiplies
 Design notes
 ------------
 * Uses `requests`, which is already a dependency — no new packages to install or deploy.
-* Retries on 429 and 5xx with exponential backoff, honouring Retry-After when present,
-  then drops to the fallback model, then to the next provider.
+* Rate limits start a provider/model cooldown and immediately try a configured
+  fallback. Background generation persists the retry deadline instead of sleeping.
+  Transient server failures use bounded exponential backoff.
 * `json_schema=` uses the provider's strict structured-output mode when available and
   degrades to json_object for providers that lack it.
 * Vision is supported. The primary text model is text-only, so any request carrying an
@@ -38,9 +39,13 @@ Design notes
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
+import math
 import random
+import re
 import time
+from email.utils import parsedate_to_datetime
 from typing import Any, Iterable, NamedTuple
 
 import requests
@@ -55,7 +60,7 @@ DEFAULT_FALLBACK_MODEL = "qwen/qwen3.8-27b"
 DEFAULT_VISION_MODEL = "qwen/qwen3.8-27b"
 DEFAULT_TIMEOUT = 90
 
-_RETRY_STATUS = {408, 409, 425, 429, 500, 502, 503, 504}
+_RETRY_STATUS = {408, 409, 425, 500, 502, 503, 504}
 _MAX_ATTEMPTS = 4
 
 
@@ -65,6 +70,57 @@ class LLMNotConfigured(RuntimeError):
 
 class LLMError(RuntimeError):
     """Raised when the provider could not produce a completion."""
+
+
+class LLMRateLimited(LLMError):
+    """A provider cooldown, carried through to durable background-job retries."""
+
+    def __init__(self, message='AI provider rate limit reached.', *, retry_after=60):
+        self.retry_after = max(1, math.ceil(retry_after))
+        super().__init__(f'{message} Retry after {self.retry_after} seconds (HTTP 429).')
+
+
+def _retry_delay(response):
+    """Read seconds/HTTP-date Retry-After, then Groq's duration in its error."""
+    value = response.headers.get('Retry-After') or response.headers.get('retry-after')
+    if value:
+        try:
+            delay = float(value)
+        except (TypeError, ValueError):
+            try:
+                delay = parsedate_to_datetime(value).timestamp() - time.time()
+            except (TypeError, ValueError, OverflowError):
+                delay = 0
+        if math.isfinite(delay) and delay > 0:
+            return math.ceil(delay)
+    match = re.search(r'try again in\s+((?:\d+(?:\.\d+)?\s*[hms]\s*)+)', response.text, re.I)
+    if match:
+        delay = sum(float(number) * {'h': 3600, 'm': 60, 's': 1}[unit.lower()]
+                    for number, unit in re.findall(r'(\d+(?:\.\d+)?)\s*([hms])', match[1], re.I))
+        if math.isfinite(delay) and delay > 0:
+            return math.ceil(delay)
+    return 60
+
+
+def _cooldown_key(url, headers, payload):
+    # Never put credentials in cache keys or logs. The model can have a separate
+    # quota, so an exhausted model must not prevent trying another provider/model.
+    identity = [url, headers.get('Authorization', ''), payload.get('model', '')]
+    return 'llm-cooldown:' + hashlib.sha256(json.dumps(identity).encode()).hexdigest()
+
+
+def _cooldown(key, delay=None):
+    # Uses the configured Django cache (process-local by default). Job-level
+    # next_attempt_at below remains durable across restarts and worker processes.
+    try:
+        from django.core.cache import cache
+        if delay is not None:
+            deadline = max(float(cache.get(key) or 0), time.time() + delay)
+            cache.set(key, deadline, timeout=math.ceil(deadline-time.time()))
+        return max(0, math.ceil(float(cache.get(key) or 0) - time.time()))
+    except Exception:
+        logger.warning('AI cooldown cache unavailable; background retry scheduling remains active.')
+        return 0
 
 
 class RequestTooLarge(LLMError):
@@ -255,6 +311,7 @@ def chat(
         payload_base["response_format"] = {"type": "json_object"}
 
     last_error = "unknown error"
+    rate_limits = []
 
     for provider in chain:
         url = f"{provider.base_url}/chat/completions"
@@ -264,8 +321,14 @@ def chat(
         }
         for candidate in ([provider.vision_model] if vision else _provider_models(provider, model)):
             payload = dict(payload_base, model=candidate)
-            content, last_error, fatal, total_tokens = _try_model(
-                url, headers, payload, last_error, require_complete=require_complete)
+            try:
+                content, last_error, fatal, total_tokens = _try_model(
+                    url, headers, payload, last_error, require_complete=require_complete)
+            except LLMRateLimited as exc:
+                rate_limits.append(exc)
+                last_error = str(exc)
+                logger.warning('LLM %s/%s cooling down for %s seconds', provider.name, candidate, exc.retry_after)
+                continue
             if content is not None:
                 if return_usage:
                     return content, total_tokens
@@ -276,6 +339,9 @@ def chat(
             if fatal:
                 break  # provider-level problem (bad key, dead host) — move on
 
+    if rate_limits:
+        raise LLMRateLimited('Available AI providers could not complete this request.',
+                             retry_after=min(error.retry_after for error in rate_limits))
     raise LLMError(f"LLM request failed across all providers: {last_error}")
 
 
@@ -296,6 +362,10 @@ def _try_model(
     *, require_complete: bool = False,
 ) -> tuple[str | None, str, bool, int]:
     """Attempt one model with retries. Returns (content, error, provider_is_dead, total_tokens)."""
+    cooldown_key = _cooldown_key(url, headers, payload)
+    remaining = _cooldown(cooldown_key)
+    if remaining:
+        raise LLMRateLimited(retry_after=remaining)
     for attempt in range(_MAX_ATTEMPTS):
         try:
             resp = requests.post(url, headers=headers, json=payload, timeout=_timeout())
@@ -327,6 +397,12 @@ def _try_model(
             payload["response_format"] = {"type": "json_object"}
             continue
 
+        if resp.status_code == 429:
+            delay = _retry_delay(resp)
+            _cooldown(cooldown_key, delay)
+            # Do not sleep inside a web request/worker or retry before this
+            # deadline. Try a configured fallback; otherwise defer the job.
+            raise LLMRateLimited(retry_after=delay)
         last_error = f"HTTP {resp.status_code}: {resp.text[:300]}"
         if resp.status_code == 413:
             raise RequestTooLarge(last_error)  # prompt too large, skip retries and bubble up

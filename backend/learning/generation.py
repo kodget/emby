@@ -246,7 +246,7 @@ def save_batch(job, slide, rows, text, kind, difficulty, limit):
 
 
 @transaction.atomic
-def finish_job(job, *, error=''):
+def finish_job(job, *, error='', retry_after=None):
     from .models import QuestionGenerationJob as Job
     from curriculum.models import Slide, SlideProcessingStatus
     current = owned_job(job)
@@ -261,7 +261,13 @@ def finish_job(job, *, error=''):
     current.finished_at = timezone.now()
     current.lease_expires_at = None
     current.lease_token = None
-    current.next_attempt_at = timezone.now() + RETRY_DELAY if not complete and current.attempts < Job.MAX_ATTEMPTS else None
+    if not complete and retry_after is not None:
+        # Exhausted provider capacity is not a corrupt-document/worker failure.
+        # Preserve the bounded failure budget and wait durably for quota refill.
+        current.attempts = max(0, current.attempts - 1)
+        current.next_attempt_at = timezone.now() + timedelta(seconds=max(30, retry_after))
+    else:
+        current.next_attempt_at = timezone.now() + RETRY_DELAY if not complete and current.attempts < Job.MAX_ATTEMPTS else None
     current.save()
     Slide.objects.filter(pk=current.slide_id).update(generation_status='completed' if complete else 'failed')
     from curriculum.slide_processing import ACTIVE_STATES
@@ -276,6 +282,7 @@ def finish_job(job, *, error=''):
 def generate_for_slide(slide, *, force=False):
     """Resume saved batches under an expiring lease; never publish from an old worker."""
     from curriculum.services.ai_question_generator import AIQuestionGenerator
+    from curriculum.llm import LLMRateLimited
     from curriculum.services.document_extraction import ExtractionError
     from curriculum.models import QuizQuestion
     from .bank_sources import evidence
@@ -330,6 +337,9 @@ def generate_for_slide(slide, *, force=False):
                         )
                     except LostLease:
                         raise
+                    except LLMRateLimited as exc:
+                        return finish_job(job, error=f'AI provider limit reached. Saved questions are preserved; '
+                                          f'generation can retry after {exc.retry_after} seconds.', retry_after=exc.retry_after)
                     except Exception as exc:
                         from django.db import DatabaseError
                         if isinstance(exc, DatabaseError):
@@ -377,6 +387,12 @@ def generate_for_slide(slide, *, force=False):
         return finish_job(job, error=error)
     except LostLease:
         return {'slide_id': slide.id, 'skipped': True, 'reason': 'worker ownership expired or source changed'}
+    except LLMRateLimited as exc:
+        try:
+            return finish_job(job, error=f'AI provider limit reached. Generation can retry after {exc.retry_after} seconds.',
+                              retry_after=exc.retry_after)
+        except LostLease:
+            return {'slide_id': slide.id, 'skipped': True, 'reason': 'worker ownership expired or source changed'}
     except Exception as exc:
         logger.warning('Question generation failed for %s (%s)', slide.id, type(exc).__name__)
         try:

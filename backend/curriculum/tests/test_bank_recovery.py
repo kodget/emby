@@ -76,6 +76,22 @@ class BankFixture:
 
 
 class BankRecoveryTests(BankFixture, TestCase):
+    def test_provider_cooldown_preserves_questions_and_defers_remaining_batches(self):
+        before = timezone.now()
+        with patch.object(AIQuestionGenerator, 'generate_mcqs_from_text',
+                          side_effect=[[mcq()], RateLimitExceeded('Daily quota exhausted', retry_after=1094)]) as generate, \
+             patch.object(AIQuestionGenerator, 'generate_theory_from_text') as theory_call:
+            result = gen.generate_for_slide(self.slide)
+        job = Job.objects.get(slide=self.slide)
+        self.assertEqual(result['status'], 'partial')
+        self.assertEqual(job.mcq_generated, 1)
+        self.assertEqual(QuizQuestion.objects.filter(source_slide=self.slide).count(), 1)
+        self.assertGreaterEqual(job.next_attempt_at, before + timedelta(seconds=1094))
+        self.assertEqual(job.attempts, 0)
+        self.assertEqual(generate.call_count, 2)
+        theory_call.assert_not_called()
+        self.assertTrue(gen.generate_for_slide(self.slide)['skipped'])
+
     def test_legacy_completed_bank_restarts_with_fifteen_target_without_destroying_history(self):
         Job.objects.create(slide=self.slide, status='completed', mcq_target=50, mcq_generated=50,
                            theory_generated=10, attempts=3)

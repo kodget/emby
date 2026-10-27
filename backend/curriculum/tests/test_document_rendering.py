@@ -113,8 +113,12 @@ class DocumentRenderingTests(SimpleTestCase):
     def test_worker_accepts_office_document_instead_of_rejecting_non_pdf(self):
         with tempfile.TemporaryDirectory(prefix='emby-fixture-') as directory:
             source = make_document(directory, 'pptx')
+            # This exercises real Office conversion and publication, not the
+            # production 192 MiB limit. Linux counts LibreOffice and Python RSS
+            # together; mocking host headroom alone still leaves that low cap.
             with patch('curriculum.services.slide_conversion_pipeline._download_from_cloudinary', side_effect=downloaded_bytes(source.read_bytes())), \
-                 patch('curriculum.services.isolated_rendering.available_container_memory', return_value=512 * 1024 * 1024):
+                 patch.dict(os.environ, {'EMBY_RENDER_MEMORY_MB': '1024'}), \
+                 patch('curriculum.services.isolated_rendering.available_container_memory', return_value=2048 * 1024 * 1024):
                 result = SlideConversionPipeline.process_slide('https://storage.invalid/source', 'fixture', 'pptx')
             try:
                 self.assertTrue(result['success'], result)

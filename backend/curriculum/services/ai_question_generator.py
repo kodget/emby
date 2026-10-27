@@ -16,7 +16,7 @@ from .. import llm
 logger = logging.getLogger(__name__)
 
 
-class RateLimitExceeded(Exception):
+class RateLimitExceeded(llm.LLMRateLimited):
     """Raised when every configured LLM provider is rate-limited."""
 
 
@@ -54,6 +54,8 @@ def _generate(parts: list, model=None, return_usage: bool = False) -> Any:
             max_tokens=4096,
             return_usage=return_usage,
         )
+    except llm.LLMRateLimited as e:
+        raise RateLimitExceeded('AI generation is waiting for provider capacity.', retry_after=e.retry_after) from e
     except llm.LLMError as e:
         text = str(e).lower()
         if "429" in text or "rate limit" in text or "quota" in text:

@@ -69,6 +69,31 @@ class VisualIndexTests(ProcessingFixture, TestCase):
         self.assertEqual(reader.call_args.args[1]['page_number'], 2)
         self.assertEqual(self.upload.call_count, 2)
 
+    def test_provider_cooldown_keeps_pages_and_defers_recovery_without_spending_failure_budget(self):
+        job = self.render()
+        before = timezone.now()
+        def read(source, page):
+            if page['page_number'] == 2:
+                raise llm.LLMRateLimited(retry_after=1094)
+            return visual_read(source, page)
+        with patch.object(index, 'read_page', side_effect=read):
+            self.assertFalse(index.run(job.pk))
+        job.refresh_from_db()
+        self.assertEqual(job.error_code, 'provider_rate_limited')
+        self.assertEqual(job.attempts, 0)
+        self.assertGreaterEqual(job.next_attempt_at, before + timedelta(seconds=1094))
+        self.assertEqual(index.status_for(self.slide)['status'], 'pending')
+        self.assertFalse(index.request_index(self.slide, force=True))
+        self.assertEqual(index.recover(), 0)
+        self.assertTrue(SlideContent.objects.get(slide=self.slide).is_extracted)
+        DocumentIndexJob.objects.filter(pk=job.pk).update(next_attempt_at=timezone.now()-timedelta(seconds=1))
+        self.assertTrue(index.request_index(self.slide))
+        with patch.object(index, 'read_page', side_effect=visual_read) as reader:
+            self.assertTrue(index.run(job.pk))
+        reader.assert_called_once()
+        self.assertEqual(reader.call_args.args[1]['page_number'], 2)
+        self.assertEqual(self.upload.call_count, 2)
+
     def test_source_replacement_fences_an_old_image_read(self):
         job = self.render()
         def replace(source, page):

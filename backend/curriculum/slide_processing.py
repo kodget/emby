@@ -160,18 +160,21 @@ def process(slide_id, *, token=None, local_file_path=None):
             content.extraction_error = ''
             content.extracted_at = timezone.now()
             content.save()
+            from .ai_policy import on_demand
+            deferred_ai = on_demand(current)
             current.page_count = len(pages)
-            current.generation_status = 'in_progress'
+            current.generation_status = 'pending' if deferred_ai else 'in_progress'
             current.save(update_fields=['page_count', 'generation_status'])
-            locked.status = 'generating_quizzes' if complete else 'indexing'
+            locked.status = 'completed' if deferred_ai else 'generating_quizzes' if complete else 'indexing'
             locked.content_extracted = complete
             locked.processing_lease_until = locked.next_attempt_at = None
             locked.completed_at = timezone.now()
             locked.error_message = ''
             locked.save()
             from .document_index import request_index
-            request_index(current, force=True)
-            if complete:
+            if not deferred_ai:
+                request_index(current, force=True)
+            if complete and not deferred_ai:
                 # Persist the durable generation request inside publication; its broker send is on_commit.
                 from learning.generation_dispatch import request_generation
                 queued = request_generation(current)
