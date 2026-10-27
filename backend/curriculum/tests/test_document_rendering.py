@@ -113,7 +113,8 @@ class DocumentRenderingTests(SimpleTestCase):
     def test_worker_accepts_office_document_instead_of_rejecting_non_pdf(self):
         with tempfile.TemporaryDirectory(prefix='emby-fixture-') as directory:
             source = make_document(directory, 'pptx')
-            with patch('curriculum.services.slide_conversion_pipeline._download_from_cloudinary', side_effect=downloaded_bytes(source.read_bytes())):
+            with patch('curriculum.services.slide_conversion_pipeline._download_from_cloudinary', side_effect=downloaded_bytes(source.read_bytes())), \
+                 patch('curriculum.services.isolated_rendering.available_container_memory', return_value=512 * 1024 * 1024):
                 result = SlideConversionPipeline.process_slide('https://storage.invalid/source', 'fixture', 'pptx')
             try:
                 self.assertTrue(result['success'], result)
