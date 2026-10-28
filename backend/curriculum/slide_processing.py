@@ -3,7 +3,7 @@ from datetime import timedelta
 import logging
 import uuid
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.utils import timezone
 
 from .models import Slide, SlideContent, SlideProcessingStatus
@@ -113,6 +113,13 @@ def fail(state, detail=''):
             'Processing stopped after repeated failures. An uploader can retry.'))
 
 
+def renew_worker_connection():
+    # Rendering may outlive the database's idle-connection timeout. All owned
+    # job state is committed before that work. Never close a caller's transaction.
+    if not connection.in_atomic_block:
+        connection.close()
+
+
 def process(slide_id, *, token=None, local_file_path=None):
     claim_result = claim(slide_id, token)
     if claim_result is None:
@@ -126,6 +133,7 @@ def process(slide_id, *, token=None, local_file_path=None):
         progress = Progress(state)
         result = SlideConversionPipeline.process_slide(cloudinary_url=local_file_path or content_file_url(slide),
             slide_id=slide_id, original_file_type=slide.file_type or 'pdf', status_obj=progress)
+        renew_worker_connection()
         if not result['success']:
             # The pipeline returns predefined safe messages, never raw provider exceptions.
             fail(state, result.get('error', ''))
@@ -199,6 +207,7 @@ def process(slide_id, *, token=None, local_file_path=None):
         return {'success': False, 'skipped': True, 'slide_id': slide_id}
     except Exception as exc:
         logger.warning('Slide conversion failed (%s)', type(exc).__name__)
+        renew_worker_connection()
         fail(state)
         return {'success': False, 'slide_id': slide_id, 'error': 'Slide processing failed. Please retry.'}
     finally:

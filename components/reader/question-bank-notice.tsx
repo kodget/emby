@@ -17,10 +17,12 @@ type Bank = {
   error?: string;
 };
 
-export function QuestionBankNotice({ slideId, canGenerate, textReady, deckId }: {
+export function QuestionBankNotice({ slideId, canGenerate, canForce = canGenerate, textReady, deckId, onDemandAI = false }: {
   slideId: string;
   deckId?: string;
   canGenerate: boolean;
+  canForce?: boolean;
+  onDemandAI?: boolean;
   textReady: boolean;
 }) {
   const statusUrl = deckId ? `/api/decks/${deckId}/question-bank/` : `/api/slides/${slideId}/status/`;
@@ -60,7 +62,7 @@ export function QuestionBankNotice({ slideId, canGenerate, textReady, deckId }: 
     setBusy(true);
     setGenerationError("");
     try {
-      await api.post(generateUrl, { force: true });
+      await api.post(generateUrl, { force: canForce });
       if (session === sessionStorage.getItem("user")) setRevision(value => value + 1);
     } catch (error) {
       if (session === sessionStorage.getItem("user")) {
@@ -88,6 +90,8 @@ export function QuestionBankNotice({ slideId, canGenerate, textReady, deckId }: 
     {generationError && <p role="alert">Could not queue question generation ({generationError}).</p>}
     {bank && !pending && bank.status !== "completed" && (canGenerate && textReady
       ? <button disabled={busy} className="mt-1 underline disabled:opacity-60" onClick={generate}>{busy ? "Queuing questions…" : bank.status === "not_requested" ? "Prepare saved questions" : "Retry question generation"}</button>
+      : onDemandAI && canGenerate && !textReady
+      ? <p>Use “Prepare AI tools” above, then refresh the document status to prepare saved questions.</p>
       : <p>{!textReady && "AI is still preparing the document. "}The uploader or class head can prepare or retry these questions.</p>)}
   </div>;
 }

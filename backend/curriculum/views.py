@@ -600,10 +600,15 @@ def get_slide_content(request, slide_id):
     slide_content, _ = SlideContent.objects.get_or_create(slide=slide)
     from .content_permissions import can_reprocess_upload
     from .document_index import status_for
+    from .ai_policy import ON_DEMAND
+    mode = (slide_content.content_data or {}).get('ai_generation_mode', 'auto')
+    can_reprocess = can_reprocess_upload(request.user, slide)
     extraction_info = {
         'ai_index': status_for(slide),
         'text_extraction': (slide_content.content_data or {}).get('text_extraction', {'status': 'unverified'}),
-        'can_reprocess': can_reprocess_upload(request.user, slide),
+        'can_reprocess': can_reprocess,
+        'ai_generation_mode': mode,
+        'can_prepare_ai': can_reprocess or mode == ON_DEMAND,
     }
     
     # Return cached if available — check both 'pages' exists and has content
@@ -1477,7 +1482,7 @@ def generate_slide_mcqs(request):
 # SLIDE PROCESSING VIEWS
 # -------------------------
 @api_view(['POST'])
-@permission_classes([CanWriteUploadedContent, ClassContentReferences])
+@permission_classes([IsAuthenticated, ClassContentReferences])
 def reprocess_slide(request, slide_id):
     """
     Reprocess a specific slide (useful for failed slides)
@@ -1493,13 +1498,18 @@ def reprocess_slide(request, slide_id):
             return Response({
                 'error': f'Slide {slide_id} not found'
             }, status=status.HTTP_404_NOT_FOUND)
-        if not CanWriteUploadedContent().has_object_permission(request, None, slide):
-            return Response({'error': 'You cannot reprocess this upload.'}, status=403)
-
+        from .content_permissions import can_reprocess_upload
+        from .ai_policy import on_demand
+        can_manage = can_reprocess_upload(request.user, slide)
         if request.data.get('index_only') is True:
+            if not can_manage and not on_demand(slide):
+                return Response({'error': 'You cannot prepare AI for this upload.'}, status=403)
             from .document_index import request_index, status_for
-            queued = request_index(slide, force=True, requested=True)
+            queued = request_index(slide, force=can_manage, requested=True)
             return Response({'queued': queued, 'ai_index': status_for(slide)}, status=202)
+
+        if not can_manage:
+            return Response({'error': 'You cannot reprocess this upload.'}, status=403)
 
         from .slide_processing import reserve
         from .slide_uploads import dispatch_slide_processing

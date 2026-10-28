@@ -258,8 +258,8 @@ export function Reader({
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col">
-      <ExtractionNotice key={slide.id} slideId={slide.id} summary={slideContent?.text_extraction} aiIndex={slideContent?.ai_index} canReprocess={slideContent?.can_reprocess} />
-      <QuestionBankNotice key={`${slide.id}:${user.id}:${user.school}:${user.setName}`} slideId={slide.id} canGenerate={!!slideContent?.can_reprocess} textReady={slideContent?.text_extraction?.status === "complete"} />
+      <ExtractionNotice key={slide.id} slideId={slide.id} summary={slideContent?.text_extraction} aiIndex={slideContent?.ai_index} canReprocess={slideContent?.can_reprocess} canPrepare={slideContent?.can_prepare_ai} onDemandAI={slideContent?.ai_generation_mode === "on_demand"} />
+      <QuestionBankNotice key={`${slide.id}:${user.id}:${user.school}:${user.setName}`} slideId={slide.id} canGenerate={!!(slideContent?.can_prepare_ai ?? slideContent?.can_reprocess)} canForce={!!slideContent?.can_reprocess} onDemandAI={slideContent?.ai_generation_mode === "on_demand"} textReady={slideContent?.text_extraction?.status === "complete"} />
       {reading.loadError && <div role="status" className="p-2 text-center text-sm">
         Your saved reading position could not be loaded. Reading time is paused until you retry. <button className="underline" onClick={reading.retry}>Retry saved position</button>
       </div>}
@@ -356,6 +356,7 @@ export function Reader({
               {/* Resources: textbook + videos + MCQs + Flashcards */}
               {(tab === "textbook" || tab === "videos" || tab === "quiz" || tab === "flashcards") && (
                   <ResourcePanel
+                    onDemandAI={slideContent?.ai_generation_mode === "on_demand"}
                     slideId={slide.id}
                     slideIndex={currentSlideIndex}
                     activeTab={tab}

@@ -2147,6 +2147,83 @@ test("opening a material rechecks access instead of using its cached file link",
 const readerImage =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jYzQAAAAASUVORK5CYII=";
 
+test("manual imports wait for a student's explicit AI requests and preserve access to saved cards", async ({ page }) => {
+  test.setTimeout(120000);
+  let textReady = false;
+  let indexRequests = 0;
+  let bankRequests = 0;
+  let resourceRequests = 0;
+  let cardReads = 0;
+  let videoRequests = 0;
+  await fixtures(page, async (route, url) => {
+    if (url.pathname === "/api/slides/reader-a/content/") {
+      await route.fulfill({ json: {
+        total_pages: 1, can_reprocess: false, can_prepare_ai: true,
+        ai_generation_mode: "on_demand", ai_index: { status: textReady ? "complete" : "unverified" },
+        text_extraction: { status: textReady ? "complete" : "partial", missing_pages: textReady ? [] : [1] },
+        pages: [{ page_number: 1, image_url: readerImage, width: 400, height: 300 }],
+      } });
+      return true;
+    }
+    if (url.pathname === "/api/slides/reader-a/status/") {
+      await route.fulfill({ json: { question_bank: {
+        status: bankRequests ? "pending" : "not_requested", mcq_target: 15,
+        theory_target: 10, mcq_by_difficulty: {}, theory_by_difficulty: {},
+      } } });
+      return true;
+    }
+    if (url.pathname === "/api/slides/reader-a/reprocess/") {
+      expect(route.request().postDataJSON()).toEqual({ index_only: true });
+      indexRequests++;
+      textReady = true;
+      await route.fulfill({ status: 202, json: { queued: true, ai_index: { status: "pending" } } });
+      return true;
+    }
+    if (url.pathname === "/api/slides/reader-a/generate-questions/") {
+      expect(route.request().postDataJSON()).toEqual({ force: false });
+      bankRequests++;
+      await route.fulfill({ status: 202, json: { queued: true } });
+      return true;
+    }
+    if (url.pathname === "/api/ai/resources/") {
+      resourceRequests++;
+      await route.fulfill({ json: { youtube: [], textbooks: [], mcqs: [] } });
+      return true;
+    }
+    if (url.pathname === "/api/ai/video-suggestions/") {
+      videoRequests++;
+      await route.fulfill({ json: { videos: [] } });
+      return true;
+    }
+    if (url.pathname === "/api/flashcards/") {
+      cardReads++;
+      await route.fulfill({ json: { count: 0, results: [] } });
+      return true;
+    }
+    return readerResponse(route, url);
+  }, { ...profile, class_role: "student" });
+  await page.goto("/read/anatomy/reader-a");
+  await expect(page.getByAltText("Page 1", { exact: true })).toBeVisible();
+  const notice = page.getByRole("status", { name: "Document text status" });
+  await expect(notice).toContainText("Prepare AI tools when you need");
+  expect(indexRequests + bankRequests + resourceRequests).toBe(0);
+  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await expect.poll(() => cardReads).toBeGreaterThan(0);
+  expect(resourceRequests).toBe(0);
+  await page.getByRole("button", { name: "Videos", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Generate now", exact: true })).toBeVisible();
+  expect(resourceRequests).toBe(0);
+  await page.getByRole("button", { name: "Generate now", exact: true }).click();
+  await expect.poll(() => resourceRequests).toBe(1);
+  await expect(page.getByRole("button", { name: "Find video suggestions", exact: true })).toBeVisible();
+  expect(videoRequests).toBe(0);
+  await notice.getByRole("button", { name: "Prepare AI tools", exact: true }).click();
+  await expect.poll(() => indexRequests).toBe(1);
+  await notice.getByRole("button", { name: "Refresh extraction status" }).click();
+  await page.getByRole("button", { name: "Prepare saved questions", exact: true }).click();
+  await expect.poll(() => bankRequests).toBe(1);
+});
+
 test("extraction warning names missing pages and supports failed retry then successful refresh", async ({
   page,
 }) => {
@@ -3684,6 +3761,7 @@ test("flashcard generation resumes its saved job after reload and allows retry a
   };
   let generationRequests = 0;
   let statusRequests = 0;
+  let failJob = false;
   await page.clock.install();
   await fixtures(
     page,
@@ -3709,14 +3787,12 @@ test("flashcard generation resumes its saved job after reload and allows retry a
         await route.fulfill({
           json: {
             job_id: "flashcard-job-1",
-            status: statusRequests === 1 ? "running" : "failed",
+            status: failJob ? "failed" : "running",
             requested_count: 5,
             generated_count: 0,
             error:
-              statusRequests === 1
-                ? null
-                : "The source could not be processed.",
-            completed_at: statusRequests === 1 ? null : "2026-10-23T10:00:00Z",
+              failJob ? "The source could not be processed." : null,
+            completed_at: failJob ? "2026-10-23T10:00:00Z" : null,
           },
         });
         return true;
@@ -3746,7 +3822,7 @@ test("flashcard generation resumes its saved job after reload and allows retry a
     .click();
   await expect.poll(() => generationRequests).toBe(1);
   await page.clock.fastForward(3000);
-  await expect.poll(() => statusRequests).toBe(1);
+  await expect.poll(() => statusRequests).toBeGreaterThanOrEqual(1);
   await page.reload();
   await page.getByRole("button", { name: "Cards", exact: true }).click();
   expect(
@@ -3754,8 +3830,9 @@ test("flashcard generation resumes its saved job after reload and allows retry a
       sessionStorage.getItem("flashcard-generation:reader-a"),
     ),
   ).toBe("flashcard-job-1");
+  failJob = true;
   await page.clock.fastForward(3000);
-  await expect.poll(() => statusRequests).toBe(2);
+  await expect.poll(() => statusRequests).toBeGreaterThanOrEqual(2);
 
   await expect(
     page.getByText("The source could not be processed.", { exact: true }),

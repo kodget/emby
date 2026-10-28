@@ -185,6 +185,30 @@ class SlideProcessingTests(ProcessingFixture, TestCase):
 
 @skipUnless(connection.vendor == 'postgresql', 'PostgreSQL row locks required')
 class SlideProcessingConcurrencyTests(ProcessingFixture, TransactionTestCase):
+    def test_connection_lost_during_render_is_reopened_before_page_publication(self):
+        self.mocks()
+
+        def render(**kwargs):
+            connection.connection.close()
+            return self.result
+
+        self.convert.side_effect = render
+        self.assertTrue(worker.process(self.slide.pk)['success'])
+        self.assertEqual(len(SlideContent.objects.get(slide=self.slide).content_data['pages']), 2)
+
+    def test_connection_lost_during_upload_does_not_prevent_recording_failure(self):
+        self.mocks()
+
+        def upload(*args, **kwargs):
+            connection.connection.close()
+            raise RuntimeError('Storage connection interrupted')
+
+        self.upload.side_effect = upload
+        self.assertFalse(worker.process(self.slide.pk)['success'])
+        self.state.refresh_from_db()
+        self.assertEqual(self.state.status, 'failed')
+        self.assertIsNotNone(self.state.next_attempt_at)
+
     def parallel(self, action):
         barrier = Barrier(2)
         def run(_):

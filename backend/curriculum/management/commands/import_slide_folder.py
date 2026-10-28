@@ -273,8 +273,9 @@ class Command(BaseCommand):
                     # Manual folder imports prepare reading first. AI features
                     # are requested explicitly by a class member and reused.
                     content, _ = SlideContent.objects.get_or_create(slide=slide)
-                    content.content_data = {**(content.content_data or {}), 'ai_generation_mode': 'on_demand'}
-                    content.save(update_fields=['content_data'])
+                    if (content.content_data or {}).get('ai_generation_mode') != 'on_demand':
+                        from curriculum.ai_policy import defer_automatic_ai
+                        defer_automatic_ai(slide)
                 record(entry, status='uploaded', upload_sha256=digest, upload_bytes=path.stat().st_size,
                        prepared_copy=str(path) if path != Path(entry['path']) else None)
                 # Existing pages are reusable only when every page has private storage

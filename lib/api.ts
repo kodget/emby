@@ -1102,6 +1102,8 @@ export const curriculumApi = {
     title: string;
     total_pages: number;
     can_reprocess?: boolean;
+    can_prepare_ai?: boolean;
+    ai_generation_mode?: "auto" | "on_demand";
     processing?: boolean;
     processing_status?: string;
     ai_index?: { status: string; error_code?: string };

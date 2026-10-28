@@ -5,7 +5,7 @@
  *
  * ARCHITECTURE RULES:
  * 1. Resources are fetched ONCE per slide and cached in global store
- * 2. Auto-generated when slide loads (useEffect on slideIndex)
+ * 2. Manually imported documents generate resources only on request
  * 3. MCQ answers tracked per slide+question in global store
  * 4. YouTube links built from query string — no API key needed
  */
@@ -34,12 +34,14 @@ export function ResourcePanel({
   activeTab,
   onTabChange,
   selection,
+  onDemandAI = false,
 }: {
   slideId: string;
   slideIndex: number;
   activeTab: "textbook" | "videos" | "quiz" | "flashcards";
   onTabChange?: (tab: string) => void;
   selection: string | null;
+  onDemandAI?: boolean;
 }) {
   const { slides, getResources, setResources, setLoading, isLoading } =
     useSlideStore();
@@ -53,10 +55,10 @@ export function ResourcePanel({
     const cached = getResources(slideIndex);
     setError(null);
     setLocalLoading(false);
-    if (!cached && activeTab !== "quiz") void generateResources();
+    if (!onDemandAI && !cached && (activeTab === "videos" || activeTab === "textbook")) void generateResources();
     return () => { requestVersion.current++; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slideId, slideIndex, activeTab]);
+  }, [slideId, slideIndex, activeTab, onDemandAI]);
 
   const generateResources = async () => {
     const version = ++requestVersion.current;
@@ -104,6 +106,10 @@ export function ResourcePanel({
     <Link className="text-primary underline" href={`/quiz?slide=${encodeURIComponent(slideId)}`}>Choose practice questions</Link>
   </div>;
 
+  if (activeTab === "flashcards") {
+    return <FlashcardsTab slideId={slideId} slideImageUrl={slides[slideIndex]?.imageUrl} />;
+  }
+
   if (localLoading) {
     return (
       <div className="flex h-full items-center justify-center p-8">
@@ -139,7 +145,7 @@ export function ResourcePanel({
       <div className="p-5">
         <div className="rounded-2xl border border-border bg-muted/50 p-4 text-center">
           <p className="text-sm text-muted-foreground">
-            No resources yet for this slide.
+            {onDemandAI ? "Find videos and textbooks for this slide when you need them." : "No resources yet for this slide."}
           </p>
           <button
             onClick={generateResources}
@@ -156,10 +162,7 @@ export function ResourcePanel({
     return <TextbookTab books={resources.textbooks} />;
   }
   if (activeTab === "videos") {
-    return <VideosTab videos={resources.youtube} selection={selection} slideId={slideId} />;
-  }
-  if (activeTab === "flashcards") {
-    return <FlashcardsTab slideId={slideId} slideImageUrl={slides[slideIndex]?.imageUrl} />;
+    return <VideosTab videos={resources.youtube} selection={selection} slideId={slideId} onDemandAI={onDemandAI} />;
   }
   return null;
 }
@@ -434,10 +437,12 @@ function VideosTab({
   videos,
   selection,
   slideId,
+  onDemandAI = false,
 }: {
   videos: YouTubeResource[];
   selection: string | null;
   slideId: string;
+  onDemandAI?: boolean;
 }) {
   const [suggestions, setSuggestions] = useState(videos);
   const [source, setSource] = useState<"youtube_api" | "ai_suggestions">("ai_suggestions");
@@ -467,9 +472,10 @@ function VideosTab({
   useEffect(() => {
     setSuggestions(videos);
     setSource("ai_suggestions");
-    void loadVideos();
+    if (onDemandAI) setLoading(false);
+    else void loadVideos();
     return () => { videoRequestVersion.current++; };
-  }, [loadVideos, videos]);
+  }, [loadVideos, videos, onDemandAI]);
 
   if (loading && suggestions.length === 0) {
     return (
@@ -494,6 +500,7 @@ function VideosTab({
     return (
       <div className="p-5 text-center text-sm text-muted-foreground">
         No video suggestions generated.
+        {onDemandAI && <button type="button" onClick={loadVideos} className="mt-3 block min-h-11 w-full text-primary underline">Find video suggestions</button>}
       </div>
     );
   }

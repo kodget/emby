@@ -53,7 +53,9 @@ class FolderImportTests(TransactionTestCase):
     def process(self, slide_id, *, token, local_file_path):
         slide = Slide.objects.get(pk=slide_id)
         page = MediaAsset.objects.create(class_group=self.group, public_id=f'page/{uuid.uuid4()}', resource_type='image')
+        content = SlideContent.objects.get(slide=slide)
         SlideContent.objects.update_or_create(slide=slide, defaults={'is_extracted': True, 'content_data': {
+            **content.content_data,
             'pages': [{'page_number': 1, 'asset_id': str(page.pk), 'text': 'Study material'}],
             'text_extraction': {'source_sha256': importer.fingerprint(local_file_path)}}})
         Slide.objects.filter(pk=slide.pk).update(page_count=1)
@@ -82,6 +84,7 @@ class FolderImportTests(TransactionTestCase):
             self.assertEqual(slide.topic.block, slide.block)
             self.assertEqual(slide.topic.sub_block, slide.sub_block)
             self.assertTrue(importer.reading_ready(slide))
+            self.assertEqual(SlideContent.objects.get(slide=slide).content_data['ai_generation_mode'], 'on_demand')
 
     def test_active_processing_is_not_overwritten(self):
         slide = Slide.objects.create(id='old', title='Lecture', class_group=self.group, sub_block=self.sub)
