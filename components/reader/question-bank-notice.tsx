@@ -15,6 +15,7 @@ type Bank = {
   represented_pages?: number[];
   source_pages?: number;
   error?: string;
+  next_attempt_at?: string | null;
 };
 
 export function QuestionBankNotice({ slideId, canGenerate, canForce = canGenerate, textReady, deckId, onDemandAI = false }: {
@@ -43,7 +44,7 @@ export function QuestionBankNotice({ slideId, canGenerate, canForce = canGenerat
         if (!data.question_bank) throw new Error("Missing bank status");
         setBank(data.question_bank);
         setStatusError("");
-        if (["pending", "running"].includes(data.question_bank.status)) timer = setTimeout(load, 5000);
+        if (["pending", "running"].includes(data.question_bank.status) || data.question_bank.next_attempt_at) timer = setTimeout(load, 5000);
       } catch (error) {
         if (controller.signal.aborted) return;
         const detail = axios.isAxiosError(error)
@@ -74,12 +75,14 @@ export function QuestionBankNotice({ slideId, canGenerate, canForce = canGenerat
     } finally { setBusy(false); }
   }
 
-  const pending = bank && ["pending", "running"].includes(bank.status);
+  const pending = bank && (["pending", "running"].includes(bank.status) || !!bank.next_attempt_at);
   return <div role="status" aria-label="Saved question bank" className="border-b bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
     {!bank ? <p>{statusError ? `Question-bank status is unavailable (${statusError}).` : "Checking saved questions…"}</p> : <>
       <p>Saved MCQs: {bank.mcq_by_difficulty.easy ?? 0} easy, {bank.mcq_by_difficulty.medium ?? 0} medium, {bank.mcq_by_difficulty.hard ?? 0} hard. Target: {bank.mcq_target} (5 each).</p>
       <p>Theory questions: {Object.values(bank.theory_by_difficulty).reduce((sum, count) => sum + count, 0)}/{bank.theory_target}.
-        {pending ? " Questions are being prepared; you can keep reading." : bank.status === "completed" ? " Bank ready." : " Bank is not complete yet."}</p>
+        {bank.next_attempt_at && ["partial", "failed"].includes(bank.status)
+          ? " Waiting for the next automatic attempt. You can keep reading; no retry click is needed."
+          : pending ? " Questions are being prepared; you can keep reading." : bank.status === "completed" ? " Bank ready." : " Bank is not complete yet."}</p>
       {!!bank.needs_review && <p>{bank.needs_review} question(s) awaiting review are excluded from practice.</p>}
       {!!bank.source_pages && <p>Saved questions cite {bank.represented_pages?.length ?? 0} of {bank.source_pages} source pages. This does not mean every topic has been assessed.</p>}
       {bank.error && <p>{bank.error}</p>}

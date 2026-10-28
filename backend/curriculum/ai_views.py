@@ -135,12 +135,13 @@ def _rag_context(slide, query, fallback_text):
             score += 20 if page.get('page_number') in requested_pages else 0
             serial += 1
             row = (score, -serial, f"[Page {page.get('page_number', '?')}]\n{excerpt}")
-            if len(candidates) < 10:
+            if len(candidates) < 3:
                 heapq.heappush(candidates, row)
             elif row[:2] > candidates[0][:2]:
                 heapq.heapreplace(candidates, row)
     if not candidates:
-        return fallback_text[:22000]
+        from .ai_service import bounded_chat_source
+        return bounded_chat_source(fallback_text, query)
     context = '\n\n'.join(row[2] for row in sorted(candidates, reverse=True))
     return 'Selected saved page excerpts; unprocessed pages and omitted details may be unavailable.\n' + context
 
@@ -580,6 +581,8 @@ def chat_with_slide(request):
                 {'error': 'message is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        if not isinstance(message, str) or len(message) > 4000:
+            return Response({'error': 'Keep your question under 4,000 characters.'}, status=400)
 
         slide = None
         deck = None
@@ -615,7 +618,7 @@ def chat_with_slide(request):
             if slide is None:
                 return Response({'error': f'Slide {slide_id} not found'}, status=status.HTTP_404_NOT_FOUND)
             slide_text = _slide_text(slide)
-            context_text = _rag_context(slide, message, slide_text)
+            context_text = _rag_context(slide, f'{message} page {page_number or ""}', slide_text)
             history_scope = {'slide': slide}
             slide_context = {
                 'slide_index': 1,
@@ -683,6 +686,12 @@ def chat_with_slide(request):
                 request.user, reservation['reserved_amount'], action="REFUND_CHAT_ERROR",
                 reservation_id=reservation['reservation_id'],
             )
+            if isinstance(result, dict) and result.get('error_code') == 'rate_limited':
+                retry_after = max(1, int(result.get('retry_after', 60)))
+                return Response({'error': result['error'], 'retry_after': retry_after}, status=429,
+                                headers={'Retry-After': str(retry_after)})
+            if isinstance(result, dict) and result.get('error_code') == 'request_too_large':
+                return Response({'error': result['error']}, status=413)
             return Response(
                 {'error': 'The AI provider could not complete the request. Please try again.'},
                 status=status.HTTP_502_BAD_GATEWAY
@@ -994,7 +1003,8 @@ def flashcard_generation_status(request, job_id):
             return Response({'error': 'Generation request not found'}, status=status.HTTP_404_NOT_FOUND)
         queued_too_long = (
             job.status == 'queued'
-            and job.updated_at <= now - FLASHCARD_QUEUE_TIMEOUT
+            and ((job.next_attempt_at is not None and job.next_attempt_at <= now)
+                 or (job.next_attempt_at is None and job.updated_at <= now - FLASHCARD_QUEUE_TIMEOUT))
         )
         worker_lease_expired = (
             job.status == 'running'
@@ -1003,11 +1013,12 @@ def flashcard_generation_status(request, job_id):
         )
         if queued_too_long or worker_lease_expired:
             job.status = 'queued'
+            job.next_attempt_at = None
             job.processing_lease_until = None
             job.processing_token = None
             job.updated_at = now
             job.save(update_fields=[
-                'status', 'processing_lease_until', 'processing_token', 'updated_at',
+                'status', 'next_attempt_at', 'processing_lease_until', 'processing_token', 'updated_at',
             ])
             should_requeue = True
     if should_requeue:
@@ -1023,4 +1034,5 @@ def flashcard_generation_status(request, job_id):
         'generated_count': job.generated_count,
         'error': job.error_message or None,
         'completed_at': job.completed_at,
+        'next_attempt_at': job.next_attempt_at,
     }, status=status.HTTP_200_OK)

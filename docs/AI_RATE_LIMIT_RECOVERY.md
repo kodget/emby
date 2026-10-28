@@ -19,6 +19,32 @@ The code reads `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and optional `LLM_BAC
 
 Deploy the code changes to activate the new cooldown handling. Existing credentials and subscription plans were not changed by this fix.
 
+## Automatic continuation after a student request
+
+- Question-bank recovery runs every 30 seconds. Partial batches reset the consecutive
+  no-progress counter as soon as valid questions are saved. A short quota wait cannot
+  exhaust the failure budget. The reader keeps polling during scheduled waits and does
+  not offer another Retry button while a retry is already scheduled.
+- Flashcard jobs also persist their retry deadline and accumulated token usage. They
+  save batches of up to five cards, resume through Beat even with the browser closed,
+  and settle the original credit reservation once. Status polling continues beyond
+  two minutes and never bypasses a future provider deadline.
+- Question requests use a bounded selection of passages spread across the document,
+  preferring source pages without saved questions. Learning objectives and content-rich
+  pages guide selection; each accepted question must still have a verified supporting
+  quotation on its cited page. Flashcards exclude already saved prompts.
+- Chat bounds source passages, recent conversation and image dimensions. HTTP 413 gets
+  one smaller request with the page image retained. Interactive network calls use one
+  attempt per model with a 25-second timeout, then try configured alternatives. Actual
+  quota exhaustion returns HTTP 429 with Retry-After and refunds the chat reservation.
+- Repeated attempts that produce no usable new content still stop after a bounded
+  number of attempts; unreadable sources and broken provider accounts require repair.
+
+Deployment includes migration `0032_flashcard_automatic_continuation`. Run migrations
+before starting the updated Django, Celery worker and Beat processes. The Render release
+command already runs migrations; redeploy the combined service to load the new schedule.
+These changes do not automatically start AI work for unrequested manual imports.
+
 ## Manually imported slides
 
 `import_slide_folder` marks its documents with `ai_generation_mode: on_demand`.

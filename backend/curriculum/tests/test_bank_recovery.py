@@ -429,7 +429,8 @@ class BankRecoveryTests(BankFixture, TestCase):
         with patch('curriculum.tasks.generate_question_bank_task.delay'), self.captureOnCommitCallbacks(execute=True):
             call_command('fix_stuck_slides', stdout=StringIO())
         job.refresh_from_db()
-        self.assertEqual(job.status, 'pending')
+        self.assertEqual(job.status, 'partial')
+        self.assertIsNotNone(job.next_attempt_at)
         self.assertEqual(QuizQuestion.objects.count(), 1)
 
     def test_generation_endpoint_queues_instead_of_calling_provider(self):

@@ -1387,6 +1387,9 @@ class FlashcardGenerationJob(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
     processing_lease_until = models.DateTimeField(null=True, blank=True, editable=False)
     processing_token = models.UUIDField(null=True, blank=True, editable=False)
+    next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    tokens_used = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["-created_at"]

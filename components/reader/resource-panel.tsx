@@ -177,6 +177,7 @@ function FlashcardsTab({ slideId, slideImageUrl }: { slideId: string, slideImage
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [generationJobId, setGenerationJobId] = useState<string | null>(null);
+  const [generationStatus, setGenerationStatus] = useState("");
   const [canGenerateMore, setCanGenerateMore] = useState(false);
   const generationStorageKey = `flashcard-generation:${slideId}`;
 
@@ -214,15 +215,27 @@ function FlashcardsTab({ slideId, slideImageUrl }: { slideId: string, slideImage
   useEffect(() => {
     if (!generating || !generationJobId) return;
 
-    let pollAttempts = 0;
-    const maxPolls = 40; // 2 minutes total
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let lastCount = 0;
 
     const pollJobStatus = async () => {
-      pollAttempts++;
+      let delay = 3000;
       try {
         const job = await aiApi.getFlashcardGenerationStatus(generationJobId);
+        if (cancelled) return;
+        setGenerationStatus(job.next_attempt_at
+          ? "Waiting for AI capacity. Your saved request will continue automatically; no retry is needed."
+          : "Preparing your flashcards. You can keep reading.");
+        if (job.next_attempt_at) delay = Math.max(3000, Math.min(30000, Date.parse(job.next_attempt_at) - Date.now()));
+        if (job.generated_count > lastCount && job.status !== "completed") {
+          lastCount = job.generated_count;
+          await fetchFlashcards();
+          if (cancelled) return;
+        }
         if (job.status === "completed") {
           const found = await fetchFlashcards();
+          if (cancelled) return;
           const shortfall = job.generated_count < job.requested_count;
           setCanGenerateMore(shortfall);
           if (shortfall && found) {
@@ -246,16 +259,13 @@ function FlashcardsTab({ slideId, slideImageUrl }: { slideId: string, slideImage
         }
       } catch {
         // Keep polling through temporary network errors; the durable job remains queryable.
+        delay = 15000;
+        if (!cancelled) setGenerationStatus("Could not refresh progress. Your request is saved; checking again automatically.");
       }
-
-      if (pollAttempts >= maxPolls) {
-        setError("Flashcard generation is taking longer than expected. Check its status or try again later.");
-        setGenerating(false);
-      }
+      if (!cancelled) timer = setTimeout(pollJobStatus, delay);
     };
-
-    const interval = setInterval(pollJobStatus, 3000);
-    return () => clearInterval(interval);
+    timer = setTimeout(pollJobStatus, 3000);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [generating, generationJobId, generationStorageKey]);
 
   const handleGenerate = async () => {
@@ -296,8 +306,9 @@ function FlashcardsTab({ slideId, slideImageUrl }: { slideId: string, slideImage
         Spaced Repetition
       </h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        Instantly convert this slide's contents into flashcards for your daily review queue.
+        Build flashcards from this document for your daily review queue.
       </p>
+      {generating && generationStatus && <p role="status" className="mt-3 text-sm text-muted-foreground">{generationStatus}</p>}
 
       {error && (
         <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-center">

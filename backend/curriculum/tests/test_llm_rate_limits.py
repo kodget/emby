@@ -30,6 +30,15 @@ class ProviderCooldownTests(SimpleTestCase):
         self.assertEqual(llm._retry_delay(error), 1094)
         self.assertEqual(llm._retry_delay(response(429, message='Please try again in 1h2m3.1s.')), 3724)
 
+    def test_interactive_timeout_tries_backup_without_repeated_long_waits(self):
+        with patch.object(llm, 'providers', return_value=[self.primary, self.backup]), patch.object(
+                llm.requests, 'post', side_effect=[llm.requests.Timeout('timed out'), response()]) as post, patch.object(
+                llm.time, 'sleep') as sleep:
+            self.assertEqual(llm.chat([{'role': 'user', 'content': 'Question'}], timeout=25, attempts=1), 'OK')
+        self.assertEqual(post.call_count, 2)
+        self.assertTrue(all(call.kwargs['timeout'] == 25 for call in post.call_args_list))
+        sleep.assert_not_called()
+
     def test_retry_after_seconds_and_http_date_are_supported(self):
         self.assertEqual(llm._retry_delay(response(429, headers={'Retry-After': '1093.824'})), 1094)
         now = datetime(2026, 10, 27, tzinfo=timezone.utc).timestamp()

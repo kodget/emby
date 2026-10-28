@@ -20,6 +20,10 @@ def debug_task(self):
     print(f"Request: {self.request!r}")
 
 app.conf.beat_schedule = {
+    "recover-flashcard-generation": {
+        "task": "curriculum.tasks.recover_flashcard_generation_task",
+        "schedule": 30.0,
+    },
     "recover-document-indexes": {
         "task": "curriculum.tasks.recover_document_indexes_task",
         "schedule": crontab(minute="*/5"),
@@ -46,7 +50,7 @@ app.conf.beat_schedule = {
     },
     "recover-question-generation": {
         "task": "learning.tasks.recover_question_generation_task",
-        "schedule": crontab(minute="*/5"),
+        "schedule": 30.0,
     },
     "build-notifications-hourly": {
         "task": "learning.tasks.build_all_notifications_task",

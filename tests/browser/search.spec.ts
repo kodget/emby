@@ -129,7 +129,7 @@ test('landing page has visible mobile sign in and readable responsive layouts', 
   for (const width of [375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('study breakthrough');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Big lectures\.\s*Clearer thinking\./);
     await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Sign in', exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `.test-results-uploads/landing-${width}.png`, fullPage: true, caret: 'initial' });

@@ -29,7 +29,7 @@ def _strip_json_fences(text: str) -> str:
     return llm.strip_fences(text)
 
 
-def _generate(parts: list, model: Optional[str] = None, return_usage: bool = False, require_image: bool = False) -> Any:
+def _generate(parts: list, model: Optional[str] = None, return_usage: bool = False, require_image: bool = False, interactive: bool = False) -> Any:
     """
     Core helper: run a completion against the configured open-weight model.
 
@@ -49,6 +49,7 @@ def _generate(parts: list, model: Optional[str] = None, return_usage: bool = Fal
             images.append(part)
 
     prompt = "\n\n".join(t for t in texts if t).strip()
+    request_options = {'timeout': 25, 'attempts': 1} if interactive else {}
     if not prompt:
         raise llm.LLMError("Refusing to call the model with an empty prompt.")
 
@@ -65,6 +66,7 @@ def _generate(parts: list, model: Optional[str] = None, return_usage: bool = Fal
                 mime_type=image.get("mime_type", "image/jpeg"),
                 max_tokens=1500,
                 return_usage=return_usage,
+                **request_options,
             )
         except (llm.LLMError, llm.LLMNotConfigured, ValueError) as exc:
             if require_image:
@@ -80,6 +82,7 @@ def _generate(parts: list, model: Optional[str] = None, return_usage: bool = Fal
         temperature=0.4,
         max_tokens=2048,
         return_usage=return_usage,
+        **request_options,
     )
 
 
@@ -94,6 +97,48 @@ def _as_base64(data) -> str:
     if isinstance(data, bytes):
         return base64.b64encode(data).decode()
     return str(data)
+
+
+def bounded_chat_source(text, query, budget=8000):
+    """Retrieve passages before building a prompt, retaining their page labels."""
+    import re
+    from learning.bank_sources import page_sources
+    if len(text) <= budget:
+        return text
+    pages = page_sources(text)
+    if not pages:
+        return 'Selected source excerpts; omitted details may be unavailable.\n' + text[:budget - 70]
+    intro = text.split('[Page ', 1)[0].strip()[:500]
+    terms = set(re.findall(r'\w{3,}', str(query).casefold()))
+    requested = {int(n) for n in re.findall(r'page\s+(\d+)', str(query).lower())}
+    chunks = []
+    for page, body in pages.items():
+        for offset in range(0, len(body), 1400):
+            passage = body[offset:offset + 1600]
+            score = len(terms & set(re.findall(r'\w{3,}', passage.casefold()))) + 20 * (page in requested)
+            chunks.append((score, page, offset, f'[Page {page}]\n{passage}'))
+    selected = intro + '\nSelected page excerpts; omitted details may be unavailable.\n'
+    for _, _, _, passage in sorted(chunks, key=lambda row: (-row[0], row[1], row[2])):
+        remaining = budget - len(selected) - 2
+        if remaining < 100:
+            break
+        selected += '\n\n' + passage[:remaining]
+    return selected
+
+
+def chat_image(image, size=1024):
+    """Bound inference image dimensions without changing the saved reading page."""
+    import base64
+    from io import BytesIO
+    from PIL import Image
+    try:
+        with Image.open(BytesIO(base64.b64decode(image))) as picture:
+            picture.thumbnail((size, size))
+            output = BytesIO()
+            picture.convert('RGB').save(output, format='JPEG', quality=85)
+            return base64.b64encode(output.getvalue()).decode('ascii')
+    except (ValueError, OSError):
+        return image
 
 
 class SlideAwareAI:
@@ -167,6 +212,7 @@ FORMATTING:
         slide_image_base64: Optional[str] = None,
         conversation_history: Optional[List[Dict[str, str]]] = None,
         return_usage: bool = False,
+        _compact_retry: bool = False,
     ) -> Dict[str, Any]:
         """
         Send a chat message with full slide context.
@@ -181,6 +227,10 @@ FORMATTING:
             {"response": "...", "sources": [...], "youtube": {...}}
         """
         try:
+            slide_context = dict(slide_context)
+            query = f"{user_message} page {slide_context.get('image_page', slide_context.get('slide_index', ''))}"
+            slide_context['text'] = bounded_chat_source(slide_context.get('text', ''), query,
+                                                        budget=2500 if _compact_retry else 8000)
             system_prompt = self.build_system_prompt(slide_context)
             if slide_image_base64:
                 system_prompt += (
@@ -193,9 +243,10 @@ FORMATTING:
             # Build history string to prepend
             history_text = ""
             if conversation_history:
-                for msg in conversation_history[-6:]:  # Last 6 exchanges to keep context bounded
+                for msg in conversation_history[-6:]:
                     role = "Student" if msg.get("role") == "user" else "Emby"
-                    history_text += f"{role}: {msg.get('content', '')}\n"
+                    history_text += f"{role}: {str(msg.get('content', ''))[:800]}\n"
+                history_text = history_text[-2400:]
 
             full_prompt = f"{system_prompt}\n\nPrevious conversation:\n{history_text}\nStudent: {user_message}\nEmby:"
 
@@ -203,14 +254,14 @@ FORMATTING:
 
             # Include slide image for vision understanding
             if slide_image_base64:
-                parts.append({"data": slide_image_base64, "mime_type": "image/jpeg"})
+                parts.append({"data": chat_image(slide_image_base64, 768 if _compact_retry else 1024), "mime_type": "image/jpeg"})
 
             parts.append(full_prompt)
 
             if return_usage:
-                response_text, tokens = _generate(parts, return_usage=True, require_image=bool(slide_image_base64))
+                response_text, tokens = _generate(parts, return_usage=True, require_image=bool(slide_image_base64), interactive=True)
             else:
-                response_text = _generate(parts, require_image=bool(slide_image_base64))
+                response_text = _generate(parts, require_image=bool(slide_image_base64), interactive=True)
 
             result = {
                 "response": response_text,
@@ -221,6 +272,15 @@ FORMATTING:
                 result["total_tokens"] = tokens
             return result
 
+        except llm.RequestTooLarge:
+            if not _compact_retry:
+                return self.chat(user_message, slide_context, slide_image_base64, [],
+                                 return_usage=return_usage, _compact_retry=True)
+            return {'error': 'The provider cannot fit this question and page. Ask a shorter, focused question.',
+                    'error_code': 'request_too_large'}
+        except llm.LLMRateLimited as error:
+            return {'error': 'AI capacity is temporarily unavailable. Your credits have not been used.',
+                    'error_code': 'rate_limited', 'retry_after': error.retry_after}
         except Exception as e:
             logger.error(f"LLM chat error: {e}")
             return {

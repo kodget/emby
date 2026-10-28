@@ -277,6 +277,8 @@ def chat(
     return_usage: bool = False,
     vision: bool = False,
     require_complete: bool = False,
+    timeout: float | None = None,
+    attempts: int | None = None,
 ) -> Any:
     """Run a chat completion and return the assistant's text.
 
@@ -323,7 +325,8 @@ def chat(
             payload = dict(payload_base, model=candidate)
             try:
                 content, last_error, fatal, total_tokens = _try_model(
-                    url, headers, payload, last_error, require_complete=require_complete)
+                    url, headers, payload, last_error, require_complete=require_complete,
+                    timeout=timeout, attempts=attempts)
             except LLMRateLimited as exc:
                 rate_limits.append(exc)
                 last_error = str(exc)
@@ -360,18 +363,22 @@ def _try_model(
     payload: dict[str, Any],
     last_error: str,
     *, require_complete: bool = False,
+    timeout: float | None = None,
+    attempts: int | None = None,
 ) -> tuple[str | None, str, bool, int]:
     """Attempt one model with retries. Returns (content, error, provider_is_dead, total_tokens)."""
     cooldown_key = _cooldown_key(url, headers, payload)
     remaining = _cooldown(cooldown_key)
     if remaining:
         raise LLMRateLimited(retry_after=remaining)
-    for attempt in range(_MAX_ATTEMPTS):
+    total_attempts = max(1, attempts if attempts is not None else _MAX_ATTEMPTS)
+    for attempt in range(total_attempts):
         try:
-            resp = requests.post(url, headers=headers, json=payload, timeout=_timeout())
+            resp = requests.post(url, headers=headers, json=payload, timeout=timeout or _timeout())
         except requests.RequestException as exc:
             last_error = f"{type(exc).__name__}: {exc}"
-            _sleep_backoff(attempt, None)
+            if attempt + 1 < total_attempts:
+                _sleep_backoff(attempt, None)
             continue
 
         if resp.status_code == 200:
@@ -386,7 +393,8 @@ def _try_model(
             if content.strip():
                 return content, last_error, False, total_tokens
             last_error = "empty completion"
-            _sleep_backoff(attempt, None)
+            if attempt + 1 < total_attempts:
+                _sleep_backoff(attempt, None)
             continue
 
         # Some providers reject strict schemas for some models; degrade and retry once.
@@ -409,7 +417,8 @@ def _try_model(
         if resp.status_code in (401, 402, 403, 404):
             return None, last_error, True, 0  # credentials/host/quota problem: skip provider
         if resp.status_code in _RETRY_STATUS:
-            _sleep_backoff(attempt, resp.headers.get("Retry-After"))
+            if attempt + 1 < total_attempts:
+                _sleep_backoff(attempt, resp.headers.get("Retry-After"))
             continue
         return None, last_error, False, 0
 
@@ -513,6 +522,8 @@ def chat_with_image(
     temperature: float = 0.4,
     return_usage: bool = False,
     require_complete: bool = False,
+    timeout: float | None = None,
+    attempts: int | None = None,
 ) -> Any:
     """Run a completion that includes an image.
 
@@ -545,4 +556,6 @@ def chat_with_image(
         temperature=temperature,
         max_tokens=max_tokens,
         return_usage=return_usage,
+        timeout=timeout,
+        attempts=attempts,
     )

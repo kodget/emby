@@ -26,6 +26,8 @@ def request_generation(slide, *, force=False, requested=False):
         expiry = job.lease_expires_at or ((job.started_at or job.updated_at) + LEASE_DURATION)
         if job.status == Job.Status.RUNNING and expiry > timezone.now():
             return False
+        if job.status in {Job.Status.FAILED, Job.Status.PARTIAL} and job.next_attempt_at and job.next_attempt_at > timezone.now():
+            return False
         current_version = (job.source_key == source_identity(slide) and job.bank_key
                            and job.source_digest == extracted_digest(slide.pk))
         changed_version = bool(job.source_key and job.source_key != source_identity(slide)) or bool(

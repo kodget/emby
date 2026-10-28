@@ -31,7 +31,7 @@ def slide_text(slide) -> str:
 
 
 LEASE_DURATION = timedelta(hours=2)
-RETRY_DELAY = timedelta(minutes=5)
+RETRY_DELAY = timedelta(minutes=1)
 MCQ_TARGETS = {"easy": 5, "medium": 5, "hard": 5}
 THEORY_TARGETS = {"easy": 2, "medium": 4, "hard": 4}
 
@@ -74,8 +74,9 @@ def claim_job(slide, *, force=False):
         job.bank_key = ''
         job.mcq_generated = job.theory_generated = job.attempts = 0
         job.next_attempt_at = None
-    if not force and ((job.status == Job.Status.COMPLETED and job.bank_key) or job.attempts >= Job.MAX_ATTEMPTS
-                      or (job.status != Job.Status.PENDING and job.next_attempt_at and job.next_attempt_at > now)):
+    if job.status != Job.Status.PENDING and job.next_attempt_at and job.next_attempt_at > now:
+        return None
+    if not force and ((job.status == Job.Status.COMPLETED and job.bank_key) or job.attempts >= Job.MAX_ATTEMPTS):
         return None
     job.source_key = identity
     job.status = Job.Status.RUNNING
@@ -241,7 +242,10 @@ def save_batch(job, slide, rows, text, kind, difficulty, limit):
     current.mcq_generated = sum(existing_counts_by_difficulty(slide, 'mcq').values())
     current.theory_generated = sum(existing_counts_by_difficulty(slide, 'theory').values())
     current.lease_expires_at = timezone.now() + LEASE_DURATION
-    current.save(update_fields=['mcq_generated', 'theory_generated', 'lease_expires_at', 'updated_at'])
+    if saved:
+        # Persist progress immediately, including if this worker later crashes.
+        current.attempts = 0
+    current.save(update_fields=['mcq_generated', 'theory_generated', 'attempts', 'lease_expires_at', 'updated_at'])
     return saved
 
 
@@ -265,9 +269,11 @@ def finish_job(job, *, error='', retry_after=None):
         # Exhausted provider capacity is not a corrupt-document/worker failure.
         # Preserve the bounded failure budget and wait durably for quota refill.
         current.attempts = max(0, current.attempts - 1)
-        current.next_attempt_at = timezone.now() + timedelta(seconds=max(30, retry_after))
+        current.next_attempt_at = timezone.now() + timedelta(seconds=max(1, retry_after))
     else:
         current.next_attempt_at = timezone.now() + RETRY_DELAY if not complete and current.attempts < Job.MAX_ATTEMPTS else None
+    if current.next_attempt_at:
+        current.error = 'Saved questions are preserved. Generation will continue automatically when the next attempt is due.'
     current.save()
     Slide.objects.filter(pk=current.slide_id).update(generation_status='completed' if complete else 'failed')
     from curriculum.slide_processing import ACTIVE_STATES
@@ -324,8 +330,13 @@ def generate_for_slide(slide, *, force=False):
                         save_batch(job, slide, rows, text, kind, difficulty, want)
 
                     try:
+                        from .source_sampling import assessment_source
+                        used_pages = QuizQuestion.objects.filter(source_slide=slide,
+                            bank_key=job.bank_key, needs_review=False).values_list('source_page', flat=True)
+                        source = assessment_source(text, count=want, used_pages=used_pages,
+                            seed=f'{job.lease_token}:{kind}:{difficulty}:{have}:{repair_used}')
                         rows = generator(
-                            text=text,
+                            text=source,
                             slide=slide,
                             topic=getattr(slide, 'topic', None),
                             count=want,

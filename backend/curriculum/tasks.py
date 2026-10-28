@@ -282,6 +282,12 @@ def generate_flashcards_task(self, attempt_id):
         logger.error(f"generate_flashcards_task[{attempt_id}] failed: {e}", exc_info=True)
         raise self.retry(exc=e)
 
+@shared_task
+def recover_flashcard_generation_task():
+    from .flashcard_dispatch import recover_flashcard_jobs
+    return recover_flashcard_jobs()
+
+
 @shared_task(bind=True, max_retries=3)
 def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, count: int = 5, reservation: dict = None, slide_image_base64: str = None, job_id: str = None):
     """
@@ -302,6 +308,7 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
     logger.info(f"=== AI FLASHCARD GENERATION TASK START slide={slide_id} user={user_id} count={count} ===")
     job = None
     processing_token = None
+    exhausted = False
     if job_id and job is None:
         with transaction.atomic():
             job = FlashcardGenerationJob.objects.select_for_update().filter(pk=job_id).first()
@@ -316,6 +323,8 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
                     'error': job.error_message or None,
                 }
             now = timezone.now()
+            if job.next_attempt_at and job.next_attempt_at > now:
+                return {'success': False, 'slide_id': slide_id, 'in_progress': True}
             if (
                 job.status == 'running'
                 and job.processing_lease_until is not None
@@ -327,9 +336,12 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
             job.error_message = ''
             job.processing_token = processing_token
             job.processing_lease_until = now + timedelta(minutes=12)
+            job.next_attempt_at = None
+            exhausted = job.attempts >= 3
+            job.attempts += 1
             job.save(update_fields=[
                 'status', 'error_message', 'processing_token',
-                'processing_lease_until', 'updated_at',
+                'processing_lease_until', 'next_attempt_at', 'attempts', 'updated_at',
             ])
             reservation = job.reservation or reservation
     
@@ -382,6 +394,9 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
                 ])
         return {'success': False, 'slide_id': slide_id, 'error': error_msg}
 
+    if exhausted:
+        return failed('Generation stopped after repeated worker interruptions. Saved cards are preserved; please retry.')
+
     slide = visible(Slide, user).select_related(
         'subject', 'block', 'sub_block', 'topic'
     ).filter(pk=slide_id).first()
@@ -406,10 +421,13 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
                 if current_job is None:
                     return {'success': False, 'slide_id': slide_id, 'error': 'Generation worker was superseded.'}
             if reservation:
-                CreditManager.refund_credits(
-                    user, reservation['reserved_amount'], action="REFUND_FLASHCARD_ERROR",
-                    reservation_id=reservation['reservation_id'],
-                )
+                if current_job and current_job.tokens_used:
+                    CreditManager.commit_usage(user, reservation, current_job.tokens_used)
+                else:
+                    CreditManager.refund_credits(
+                        user, reservation['reserved_amount'], action="REFUND_FLASHCARD_ERROR",
+                        reservation_id=reservation['reservation_id'],
+                    )
             if current_job:
                 current_job.status = 'completed'
                 current_job.generated_count = existing_count
@@ -442,20 +460,40 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
         logger.warning(error_msg)
         return failed(error_msg)
     
+    from .llm import LLMRateLimited
     try:
+        from learning.source_sampling import assessment_source
+        batch_count = min(5, remaining_count) if job else remaining_count
         flashcards_data, tokens = AIFlashcardGenerator.generate_flashcards_from_text(
-            text=text,
+            text=assessment_source(text, count=batch_count, seed=str(processing_token)),
             slide=slide,
             topic=slide.topic,
-            count=remaining_count,
-            slide_image_base64=slide_image_base64,
-            return_usage=True
+            count=batch_count,
+            slide_image_base64=None,
+            return_usage=True,
+            exclude_fronts=list(Flashcard.objects.filter(user=user, source='ai', source_slide=slide)
+                                .order_by('-pk').values_list('front', flat=True)[:20]),
         )
+    except LLMRateLimited as error:
+        if not job:
+            return failed('The AI provider is temporarily busy. Please retry shortly.')
+        with transaction.atomic():
+            current = FlashcardGenerationJob.objects.select_for_update().filter(
+                pk=job.pk, processing_token=processing_token, status='running').first()
+            if current is None:
+                return {'success': False, 'slide_id': slide_id, 'error': 'Generation worker was superseded.'}
+            current.status = 'queued'
+            current.next_attempt_at = timezone.now() + timedelta(seconds=max(1, error.retry_after))
+            current.attempts = max(0, current.attempts - 1)
+            current.error_message = 'Waiting for AI capacity. Your flashcards will continue automatically.'
+            current.processing_lease_until = current.processing_token = None
+            current.save()
+        return {'success': False, 'slide_id': slide_id, 'in_progress': True}
     except Exception as e:
         error_msg = f"Error generating flashcards: {str(e)}"
         logger.error(error_msg, exc_info=True)
         return failed(error_msg)
-    if not flashcards_data:
+    if not flashcards_data and (not job or job.attempts >= 3):
         return failed("No flashcards could be generated from this slide.")
 
     saved_count = 0
@@ -470,7 +508,7 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
                 ).first()
                 if current_job is None:
                     return {'success': False, 'slide_id': slide_id, 'error': 'Generation worker was superseded.'}
-            for flashcard_data in flashcards_data:
+            for flashcard_data in flashcards_data[:batch_count]:
                 flashcard, created = Flashcard.objects.get_or_create(
                     user=user,
                     source='ai',
@@ -492,21 +530,27 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
                     flashcard=flashcard,
                     defaults={'due_date': timezone.now()},
                 )
-            if reservation:
-                CreditManager.commit_usage(user, reservation, tokens)
             existing_total = Flashcard.objects.filter(
                 user=user, source='ai', source_slide=slide
             ).count()
             if current_job:
-                current_job.status = 'completed'
+                current_job.tokens_used += tokens
+                current_job.attempts = 0 if saved_count else current_job.attempts
+                continuing = existing_total < count and current_job.attempts < 3
+                current_job.status = 'queued' if continuing else 'completed'
                 current_job.generated_count = existing_total
-                current_job.completed_at = timezone.now()
+                current_job.completed_at = None if continuing else timezone.now()
+                current_job.next_attempt_at = timezone.now() + timedelta(seconds=10) if continuing else None
+                current_job.error_message = 'Saved cards are ready. More will be prepared automatically.' if continuing else ''
                 current_job.processing_lease_until = None
                 current_job.processing_token = None
                 current_job.save(update_fields=[
                     'status', 'generated_count', 'completed_at',
-                    'processing_lease_until', 'processing_token', 'updated_at',
+                    'processing_lease_until', 'processing_token', 'next_attempt_at',
+                    'attempts', 'tokens_used', 'error_message', 'updated_at',
                 ])
+            if reservation and (not current_job or current_job.status == 'completed'):
+                CreditManager.commit_usage(user, reservation, current_job.tokens_used if current_job else tokens)
     except Exception as e:
         error_msg = f"Error saving generated flashcards: {str(e)}"
         logger.error(error_msg, exc_info=True)

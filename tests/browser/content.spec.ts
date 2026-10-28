@@ -1515,6 +1515,7 @@ test("header streak refreshes after activity and ignores a superseded response",
   page,
 }) => {
   test.setTimeout(120000);
+  await page.setViewportSize({ width: 1600, height: 1000 });
   let calls = 0;
   let held: Route | undefined;
   await fixtures(page, async (route, url) => {
@@ -1532,7 +1533,7 @@ test("header streak refreshes after activity and ignores a superseded response",
   await page.goto("/read/anatomy/reader-a");
   await page.waitForLoadState("networkidle");
   await expect(
-    page.getByRole("button", { name: "Current streak", exact: true }),
+    page.getByRole("link", { name: "Current streak", exact: true }),
   ).toHaveText("1");
   // A saved page is a real API mutation and triggers the shared refresh hook.
   await page
@@ -1545,11 +1546,11 @@ test("header streak refreshes after activity and ignores a superseded response",
     .getByRole("button", { name: "Next" })
     .click();
   await expect(
-    page.getByRole("button", { name: "Current streak", exact: true }),
+    page.getByRole("link", { name: "Current streak", exact: true }),
   ).toHaveText("4");
   await held?.fulfill({ json: { current_streak: 99 } }).catch(() => {});
   await expect(
-    page.getByRole("button", { name: "Current streak", exact: true }),
+    page.getByRole("link", { name: "Current streak", exact: true }),
   ).toHaveText("4");
 });
 
@@ -3851,6 +3852,51 @@ test("flashcard generation resumes its saved job after reload and allows retry a
   ).toBeDisabled();
 });
 
+test("flashcard quota waits keep polling automatically past two minutes", async ({ page }) => {
+  let generationRequests = 0;
+  let statusRequests = 0;
+  let ready = false;
+  await page.clock.install();
+  await fixtures(page, async (route, url) => {
+    if (url.pathname === "/api/ai/resources/") {
+      await route.fulfill({ json: { youtube: [], textbooks: [], mcqs: [] } });
+      return true;
+    }
+    if (url.pathname === "/api/flashcards/") {
+      const results = ready ? [{ id: 1, front: "Automatically prepared card", back: "Saved answer", explanation: "" }] : [];
+      await route.fulfill({ json: { results, count: results.length } });
+      return true;
+    }
+    if (url.pathname === "/api/ai/generate-flashcards/") {
+      generationRequests++;
+      await route.fulfill({ status: 202, json: { job_id: "quota-wait" } });
+      return true;
+    }
+    if (url.pathname === "/api/ai/flashcards/quota-wait/") {
+      statusRequests++;
+      await route.fulfill({ json: { job_id: "quota-wait", status: ready ? "completed" : "queued",
+        requested_count: 1, generated_count: ready ? 1 : 0, error: null, completed_at: null,
+        next_attempt_at: ready ? null : new Date(Date.now() + 900000).toISOString(),
+      } });
+      return true;
+    }
+    return readerResponse(route, url);
+  }, { ...profile, class_role: "class_head", class_head_verified: true, is_premium: true });
+  await page.goto("/read/anatomy/reader-a");
+  await page.getByRole("button", { name: "Cards", exact: true }).click();
+  await page.getByRole("button", { name: "Generate Flashcards", exact: true }).click();
+  await expect.poll(() => generationRequests).toBe(1);
+  await page.clock.fastForward(3000);
+  await expect(page.getByText(/Your saved request will continue automatically/)).toBeVisible();
+  await page.clock.fastForward(180000);
+  await expect.poll(() => statusRequests).toBeGreaterThanOrEqual(2);
+  await expect(page.getByRole("button", { name: "Generating...", exact: true })).toBeDisabled();
+  ready = true;
+  await page.clock.fastForward(30000);
+  await expect(page.getByText("Automatically prepared card", { exact: true })).toBeVisible();
+  expect(generationRequests).toBe(1);
+});
+
 test("flashcard shortfalls are shown and can be filled in a second generation", async ({
   page,
 }) => {
@@ -4105,6 +4151,10 @@ test("document library retries a failed list and opens the saved deck", async ({
   page,
 }) => {
   test.setTimeout(90000);
+  const hydrationErrors: string[] = [];
+  page.on("pageerror", error => {
+    if (/hydration|hydrating/i.test(error.message)) hydrationErrors.push(error.message);
+  });
   let failed = true;
   const deck = {
     id: "reader-deck",
@@ -4136,6 +4186,8 @@ test("document library retries a failed list and opens the saved deck", async ({
     }
   });
   await page.goto("/decks");
+  await expect(page.getByRole("heading", { name: "Upload New Document" })).toBeVisible();
+  expect(hydrationErrors).toEqual([]);
   await expect(
     page
       .getByRole("alert")
@@ -4221,6 +4273,41 @@ test("saved question bank shows 5 each and permits an uploader to retry without 
   await expect(notice).toContainText("Bank ready");
   await expect(notice).toContainText("cite 1 of 5 source pages");
   expect(attempts).toBe(2);
+});
+
+test("saved question bank continues from a quota wait without another generation click", async ({ page }) => {
+  let requested = false;
+  let ready = false;
+  let generationRequests = 0;
+  await page.clock.install();
+  await fixtures(page, async (route, url) => {
+    if (url.pathname === "/api/slides/reader-a/status/") {
+      await route.fulfill({ json: { question_bank: {
+        status: ready ? "completed" : requested ? "partial" : "not_requested",
+        next_attempt_at: requested && !ready ? new Date(Date.now() + 60000).toISOString() : null,
+        mcq_target: 15, theory_target: 10,
+        mcq_by_difficulty: ready ? { easy: 5, medium: 5, hard: 5 } : { easy: 1 },
+        theory_by_difficulty: ready ? { easy: 2, medium: 4, hard: 4 } : {},
+      } } });
+      return true;
+    }
+    if (url.pathname === "/api/slides/reader-a/generate-questions/") {
+      generationRequests++;
+      requested = true;
+      await route.fulfill({ status: 202, json: { queued: true } });
+      return true;
+    }
+    return readerResponse(route, url);
+  });
+  await page.goto("/read/anatomy/reader-a");
+  const notice = page.getByRole("status", { name: "Saved question bank" });
+  await notice.getByRole("button", { name: "Prepare saved questions" }).click();
+  await expect(notice).toContainText("no retry click is needed");
+  await expect(notice.getByRole("button", { name: "Retry question generation" })).toHaveCount(0);
+  ready = true;
+  await page.clock.fastForward(5000);
+  await expect(notice).toContainText("Bank ready");
+  expect(generationRequests).toBe(1);
 });
 
 test("saved question bank failure does not stop reading or offer students a generation button", async ({

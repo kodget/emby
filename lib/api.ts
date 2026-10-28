@@ -1782,6 +1782,7 @@ export const aiApi = {
     generated_count: number;
     error: string | null;
     completed_at: string | null;
+    next_attempt_at?: string | null;
   }> => {
     const response = await api.get(
       `/api/ai/flashcards/${encodeURIComponent(jobId)}/`,
