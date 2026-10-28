@@ -2220,7 +2220,7 @@ test("manual imports wait for a student's explicit AI requests and preserve acce
   expect(videoRequests).toBe(0);
   await notice.getByRole("button", { name: "Prepare AI tools", exact: true }).click();
   await expect.poll(() => indexRequests).toBe(1);
-  await notice.getByRole("button", { name: "Refresh extraction status" }).click();
+  await expect(notice).toHaveCount(0);
   await page.getByRole("button", { name: "Prepare saved questions", exact: true }).click();
   await expect.poll(() => bankRequests).toBe(1);
 });
@@ -2266,9 +2266,9 @@ test("extraction warning names missing pages and supports failed retry then succ
   await expect(notice).toContainText("pages 2, 4");
   await expect(page.getByAltText("Page 1", { exact: true })).toBeVisible();
   await notice.getByRole("button", { name: "Retry AI preparation" }).click();
-  await expect(notice.getByRole("alert")).toContainText("could not be queued");
+  await expect(notice.getByRole("alert")).toContainText("HTTP 503");
   await notice.getByRole("button", { name: "Retry AI preparation" }).click();
-  await expect(notice).toContainText("Processing queued");
+  await expect(notice).toContainText("Request saved");
   expect(attempts).toBe(2);
   complete = true;
   await notice
@@ -4281,6 +4281,13 @@ test("saved question bank continues from a quota wait without another generation
   let generationRequests = 0;
   await page.clock.install();
   await fixtures(page, async (route, url) => {
+    if (url.pathname === "/api/slides/reader-a/content/") {
+      await route.fulfill({ json: { total_pages: 1, can_prepare_ai: true, can_reprocess: true,
+        text_extraction: { status: "complete" },
+        pages: [{ page_number: 1, image_url: readerImage, width: 400, height: 300 }],
+      } });
+      return true;
+    }
     if (url.pathname === "/api/slides/reader-a/status/") {
       await route.fulfill({ json: { question_bank: {
         status: ready ? "completed" : requested ? "partial" : "not_requested",

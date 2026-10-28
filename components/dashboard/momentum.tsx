@@ -57,7 +57,7 @@ export function Momentum({ className }: { className?: string }) {
   const active = days.filter((d) => d.value > 0).length;
   const streak = report.consistency.current_streak;
   const accuracy = report.overview.accuracy;
-  const totalMinutes = report.consistency.total_minutes;
+  const totalMinutes = Math.round(report.consistency.total_minutes);
 
   return (
     <section className={cn("card-3d overflow-hidden", className)}>

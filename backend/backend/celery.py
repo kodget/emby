@@ -26,7 +26,7 @@ app.conf.beat_schedule = {
     },
     "recover-document-indexes": {
         "task": "curriculum.tasks.recover_document_indexes_task",
-        "schedule": crontab(minute="*/5"),
+        "schedule": 30.0,
     },
     "dispatch-due-notifications": {
         "task": "learning.tasks.dispatch_due_notifications_task",

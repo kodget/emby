@@ -33,6 +33,9 @@ export function AiChatPanel({
 
   // Load messages for THIS slide
   const messages = getChatHistory(slideIndex);
+  const failedQuestion = messages.at(-1)?.id.startsWith("err-")
+    ? [...messages].reverse().find(message => message.role === "user")?.content
+    : undefined;
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -120,6 +123,10 @@ export function AiChatPanel({
       </div>
 
       {/* ── Quick actions + input ────────────────────────────────────── */}
+      {failedQuestion && !isLoading && <div className="border-t border-border bg-muted/30 px-3 py-2">
+        <p className="text-xs text-muted-foreground">Your question is still here.</p>
+        <button type="button" onClick={() => onSend(failedQuestion)} className="min-h-11 text-sm font-medium text-primary underline underline-offset-4">Retry this question</button>
+      </div>}
       <div className="border-t border-border p-3">
         <div className="mb-2 flex flex-wrap gap-1.5">
           {quickActions.map((a) => (

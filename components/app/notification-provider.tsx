@@ -28,6 +28,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     let stopped = false;
     let reconnect: ReturnType<typeof setTimeout> | undefined;
     let retryDelay = 1000;
+    let failedConnections = 0;
     const seen = new Set<string>();
     // The durable inbox also catches up after a dropped socket or a sleeping tab.
     const poll = setInterval(() => { if (document.visibilityState === 'visible') dispatch(fetchNotifications(false)); }, 60000);
@@ -38,6 +39,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {
+      failedConnections = 0;
       retryDelay = 1000;
       dispatch(fetchNotifications(false));
       // Send auth token to authenticate connection if needed
@@ -99,6 +101,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
     ws.current.onclose = () => {
       if (stopped) return;
+      // WSGI deployments have no socket endpoint. Keep the durable inbox
+      // polling instead of sending failing handshakes indefinitely.
+      failedConnections++;
+      if (failedConnections >= 3) return;
       reconnect = setTimeout(connect, retryDelay);
       retryDelay = Math.min(30000, retryDelay * 2);
     };

@@ -58,7 +58,8 @@ def status_for(source):
         if job.error_code == 'on_demand':
             return {'status': 'unverified', 'error_code': '', 'mode': 'on_demand'}
         retrying = job.status == 'failed' and job.next_attempt_at and job.attempts < MAX_FAILURES
-        return {'status': 'pending' if retrying else job.status, 'error_code': job.error_code}
+        return {'status': 'pending' if retrying else job.status, 'error_code': job.error_code,
+                'next_attempt_at': job.next_attempt_at}
     report = source_data(source).get('text_extraction', {})
     return {'status': 'complete' if report.get('status') == 'complete' else 'unverified', 'error_code': ''}
 

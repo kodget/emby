@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 
 import type { Slide } from "@/lib/api";
+import axios from "axios";
 import { aiApi, progressApi } from "@/lib/api";
 import { useReadingProgress } from "@/hooks/use-reading-progress";
 import { UnavailableReadingSave } from "./unavailable-reading-save";
@@ -67,7 +68,7 @@ type Tab = "ai" | "textbook" | "videos" | "quiz" | "flashcards";
 export function Reader({
   courseId,
   slide,
-  slideContent,
+  slideContent: initialSlideContent,
   suggestedVideos,
   courseBreadcrumb,
   onAccessDenied,
@@ -79,6 +80,8 @@ export function Reader({
   courseBreadcrumb: string;
   onAccessDenied: () => void;
 }) {
+  const [slideContent, setSlideContent] = useState(initialSlideContent);
+  useEffect(() => setSlideContent(initialSlideContent), [initialSlideContent]);
   const [panelOpen, setPanelOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("ai");
   const [selection, setSelection] = useState<SelectionPayload | null>(null);
@@ -176,13 +179,12 @@ export function Reader({
         content: text,
       };
       addChatMessage(idx, userMsg);
-      dispatch(incrementUsage("aiQuestions"));
       setLoading("chat", true);
 
       try {
         if (!active()) return;
         // Build conversation history for THIS slide only
-        const history = getChatHistory(idx).map((m) => ({
+        const history = getChatHistory(idx).filter((m) => m.id !== userMsg.id && !m.id.startsWith("err-")).map((m) => ({
           role: m.role === "ai" ? "assistant" : "user",
           content: m.content,
         }));
@@ -196,6 +198,7 @@ export function Reader({
         });
 
         if (!active()) return;
+        dispatch(incrementUsage("aiQuestions"));
         const aiMsg: ChatMessage = {
           id: `a-${Date.now()}`,
           role: "ai",
@@ -213,11 +216,17 @@ export function Reader({
         addChatMessage(idx, aiMsg);
       } catch (err) {
         if (!active()) return;
+        const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+        const detail = axios.isAxiosError(err) ? err.response?.data?.error : undefined;
+        const message = status === 429 ? (typeof detail === "string" ? detail : "AI capacity is temporarily unavailable. Please try again after the quota wait.")
+          : status === 401 ? "Your session expired. Sign in again, then retry your question."
+          : status === 403 ? "Your account cannot access this document's AI tools."
+          : !status ? "The request did not complete. Check your connection and retry your question. Your document remains open."
+          : typeof detail === "string" ? detail : `The server could not answer this question (HTTP ${status}). Please retry.`;
         addChatMessage(idx, {
           id: `err-${Date.now()}`,
           role: "ai",
-          content:
-            "Sorry, I had trouble answering that. Please try again in a moment.",
+          content: message,
         });
       } finally {
         if (active()) setLoading("chat", false);
@@ -258,7 +267,7 @@ export function Reader({
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col">
-      <ExtractionNotice key={slide.id} slideId={slide.id} summary={slideContent?.text_extraction} aiIndex={slideContent?.ai_index} canReprocess={slideContent?.can_reprocess} canPrepare={slideContent?.can_prepare_ai} onDemandAI={slideContent?.ai_generation_mode === "on_demand"} />
+      <ExtractionNotice key={slide.id} slideId={slide.id} summary={slideContent?.text_extraction} aiIndex={slideContent?.ai_index} canReprocess={slideContent?.can_reprocess} canPrepare={slideContent?.can_prepare_ai} onDemandAI={slideContent?.ai_generation_mode === "on_demand"} onContentUpdate={setSlideContent} />
       <QuestionBankNotice key={`${slide.id}:${user.id}:${user.school}:${user.setName}`} slideId={slide.id} canGenerate={!!(slideContent?.can_prepare_ai ?? slideContent?.can_reprocess)} canForce={!!slideContent?.can_reprocess} onDemandAI={slideContent?.ai_generation_mode === "on_demand"} textReady={slideContent?.text_extraction?.status === "complete"} />
       {reading.loadError && <div role="status" className="p-2 text-center text-sm">
         Your saved reading position could not be loaded. Reading time is paused until you retry. <button className="underline" onClick={reading.retry}>Retry saved position</button>

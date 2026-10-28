@@ -25,7 +25,9 @@ case "${1:-web}" in
       --worker-connections 1000 \
       --timeout 120 \
       --keep-alive 5 \
-      --log-level info
+      --log-level info \
+      --access-logfile - \
+      --access-logformat '%(m)s %(U)s %(s)s %(L)s'
     ;;
   worker)
     exec celery -A backend worker --loglevel=info --concurrency=2
