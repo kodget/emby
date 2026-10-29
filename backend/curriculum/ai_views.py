@@ -232,8 +232,9 @@ def _get_or_generate_resources(slide, user, slide_image_base64=None, force_refre
     }
     try:
         resources = slide_ai.generate_resources(
-            slide_context=slide_context, slide_image_base64=slide_image_base64, return_usage=True)
-        if not isinstance(resources, dict) or not resources or resources.get('error'):
+            slide_context=slide_context, slide_image_base64=None, return_usage=True)
+        if (not isinstance(resources, dict) or resources.get('error') or
+                not (resources.get('youtube') or resources.get('textbooks'))):
             raise StudyResourceError('The AI provider could not generate study resources. Please retry.')
         with transaction.atomic():
             sc = SlideContent.objects.select_for_update().get(pk=sc.pk)
@@ -637,7 +638,11 @@ def chat_with_slide(request):
                          if p.get('page_number') == page_number), None)
             if page is None:
                 return Response({'error': 'This page is not ready to read yet.'}, status=409)
-            if llm.supports_vision():
+            import re
+            needs_image = (page.get('extraction_status') not in {'complete', 'blank'} or
+                           bool(re.search(r'\b(diagram|image|picture|arrow|label|illustration|figure|photo)s?\b',
+                                          str(message), re.I)))
+            if needs_image and llm.supports_vision():
                 try:
                     slide_image_base64 = page_image(source, page)
                 except IndexUnavailable:
@@ -645,6 +650,10 @@ def chat_with_slide(request):
                 slide_context['image_page'] = page_number
             elif not slide_context.get('text'):
                 return Response({'error': 'AI is preparing this document. Please try again shortly.'}, status=409)
+            else:
+                # Reuse verified page text for ordinary questions. Sending a page
+                # image on every message unnecessarily pins chat to vision quota.
+                slide_image_base64 = None
         if not library and not slide_context.get('text') and not slide_image_base64:
             return Response({'error': 'AI is preparing this document. Please try again shortly.'}, status=409)
 

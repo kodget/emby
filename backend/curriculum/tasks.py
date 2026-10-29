@@ -463,7 +463,8 @@ def generate_ai_flashcards_from_slide_task(self, slide_id: str, user_id: int, co
     from .llm import LLMRateLimited
     try:
         from learning.source_sampling import assessment_source
-        batch_count = min(5, remaining_count) if job else remaining_count
+        from .llm import generation_batch_size
+        batch_count = generation_batch_size(min(5, remaining_count)) if job else remaining_count
         flashcards_data, tokens = AIFlashcardGenerator.generate_flashcards_from_text(
             text=assessment_source(text, count=batch_count, seed=str(processing_token)),
             slide=slide,

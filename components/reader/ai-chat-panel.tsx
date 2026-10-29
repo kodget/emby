@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { BookOpenText, Loader2, Play, Send, Sparkles } from "lucide-react";
+import { BookOpenText, Brain, Lightbulb, Loader2, Play, Send, Sparkles, Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSlideStore, type ChatMessage } from "@/store/slide-store";
 
@@ -41,7 +41,7 @@ export function AiChatPanel({
   useEffect(() => {
     listRef.current?.scrollTo({
       top: listRef.current.scrollHeight,
-      behavior: "smooth",
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? "instant" : "smooth",
     });
   }, [messages.length]);
 
@@ -93,10 +93,10 @@ export function AiChatPanel({
     <div className="flex h-full flex-col">
       {/* Contextual Header */}
       {currentSlide && (
-        <div className="bg-primary/5 border-b border-border px-4 py-2.5 flex items-center justify-between text-[11px] text-muted-foreground select-none shrink-0">
+        <div className="border-b border-border bg-background px-4 py-3 flex items-center justify-between text-xs text-muted-foreground shrink-0">
           <span className="flex items-center gap-1.5 truncate">
-            <Sparkles className="size-3.5 text-primary animate-pulse" />
-            Discussing: <strong className="text-foreground truncate font-semibold">{currentSlide.title}</strong>
+            <BookOpenText className="size-4 shrink-0 text-primary" />
+            Page {slideIndex + 1} <span aria-hidden="true">/</span> <strong className="text-foreground truncate font-medium">{currentSlide.title}</strong>
           </span>
         </div>
       )}
@@ -106,17 +106,31 @@ export function AiChatPanel({
         ref={listRef}
         className="flex-1 min-h-0 space-y-3 overflow-y-auto px-4 py-4"
       >
-        {displayMessages.map((m) => (
+        {messages.length === 0 ? <div className="py-3">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-medium text-primary"><Sparkles className="size-3" /> Your reading companion</span>
+          <h3 className="mt-4 max-w-64 font-serif text-3xl leading-tight tracking-tight">Make this page<br />make sense.</h3>
+          <p className="mt-3 max-w-72 text-sm leading-relaxed text-muted-foreground">Start with what feels unclear. Your tutor uses this document to explain, connect, and help you recall.</p>
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            {[
+              { icon: Lightbulb, title: "Explain simply", detail: "Break it into small steps", prompt: quickActions[1].prompt },
+              { icon: Brain, title: "Test me", detail: "One question at a time", prompt: quickActions[3].prompt },
+              { icon: BookOpenText, title: "Summarise", detail: "Find the key ideas", prompt: quickActions[0].prompt },
+              { icon: Stethoscope, title: "Clinical relevance", detail: "Make useful connections", prompt: quickActions[2].prompt },
+            ].map(action => <button key={action.title} type="button" aria-label={action.title} disabled={isLoading} onClick={() => onSend(action.prompt)} className="group rounded-2xl border border-border bg-background p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50">
+              <action.icon className="mb-3 size-5 text-primary" /><span className="block text-xs font-semibold">{action.title}</span><span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground">{action.detail}</span>
+            </button>)}
+          </div>
+        </div> : displayMessages.map((m) => (
           <MessageBubble key={m.id} message={m} />
         ))}
 
         {isLoading && (
-          <div className="flex gap-2 justify-start">
+          <div role="status" aria-label="Tutor is responding" className="flex gap-2 justify-start">
             <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Sparkles className="size-3.5" />
             </span>
             <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-muted px-3.5 py-2.5">
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              <span className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-4 motion-safe:animate-spin" /> Working on your question…</span>
             </div>
           </div>
         )}
@@ -128,38 +142,41 @@ export function AiChatPanel({
         <button type="button" onClick={() => onSend(failedQuestion)} className="min-h-11 text-sm font-medium text-primary underline underline-offset-4">Retry this question</button>
       </div>}
       <div className="border-t border-border p-3">
-        <div className="mb-2 flex flex-wrap gap-1.5">
+        {messages.length > 0 && <div className="mb-2 flex flex-wrap gap-1.5">
           {quickActions.map((a) => (
             <button
               key={a.label}
               onClick={() => onSend(a.prompt)}
               disabled={isLoading}
-              className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground hover:border-primary hover:text-foreground disabled:opacity-50"
+              className="min-h-11 rounded-full border border-border bg-background px-3 py-2 text-xs text-muted-foreground hover:border-primary hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
             >
               {a.label}
             </button>
           ))}
-        </div>
+        </div>}
 
         <form onSubmit={submit} className="relative">
-          <input
-            type="text"
+          <textarea
+            rows={2}
+            maxLength={4000}
             value={value}
             onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(e); } }}
             placeholder="Ask about this slide…"
             disabled={isLoading}
-            className="h-11 w-full rounded-full border border-border bg-background pl-4 pr-11 text-sm outline-none focus:border-primary disabled:opacity-60"
+            className="min-h-24 w-full resize-none rounded-2xl border border-border bg-background p-3 pr-14 text-sm leading-relaxed outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:opacity-60"
             aria-label="Ask the Emby tutor"
           />
           <button
             type="submit"
             disabled={!value.trim() || isLoading}
             aria-label="Send"
-            className="absolute right-1 top-1 flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            className="absolute bottom-3 right-2 flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
           >
             <Send className="size-4" />
           </button>
         </form>
+        <p className="mt-1 text-center text-[10px] text-muted-foreground">Enter to send · Shift + Enter for a new line</p>
       </div>
     </div>
   );

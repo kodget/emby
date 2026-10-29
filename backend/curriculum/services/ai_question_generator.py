@@ -181,6 +181,7 @@ class AIQuestionGenerator:
             chunk_count = min(base_per_chunk, remaining)
             # Reserve each selected source window its share of the requested questions.
             request_count = min(chunk_count, remaining, count // len(chunks) + int(idx < count % len(chunks)))
+            request_count = llm.generation_batch_size(request_count, tokens_per_item=450)
 
             prompt = f"""You are an examiner creating MCQ assessment questions for Nigerian medical students.
             
@@ -320,6 +321,7 @@ Format:
                 
             chunk_count = min(base_per_chunk, remaining)
             request_count = min(chunk_count, remaining, count // len(chunks) + int(idx < count % len(chunks)))
+            request_count = llm.generation_batch_size(request_count, tokens_per_item=450)
 
             prompt = f"""You are an examiner creating theory assessment questions for Nigerian medical students.
             

@@ -2148,7 +2148,7 @@ test("opening a material rechecks access instead of using its cached file link",
 const readerImage =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jYzQAAAAASUVORK5CYII=";
 
-test("manual imports wait for a student's explicit AI requests and preserve access to saved cards", async ({ page }) => {
+test("opening manual imports indexes automatically while generated content waits for a request", async ({ page }, testInfo) => {
   test.setTimeout(120000);
   let textReady = false;
   let indexRequests = 0;
@@ -2160,8 +2160,8 @@ test("manual imports wait for a student's explicit AI requests and preserve acce
     if (url.pathname === "/api/slides/reader-a/content/") {
       await route.fulfill({ json: {
         total_pages: 1, can_reprocess: false, can_prepare_ai: true,
-        ai_generation_mode: "on_demand", ai_index: { status: textReady ? "complete" : "unverified" },
-        text_extraction: { status: textReady ? "complete" : "partial", missing_pages: textReady ? [] : [1] },
+        ai_generation_mode: "on_demand", ai_index: { status: textReady ? "complete" : "pending" },
+        text_extraction: { status: textReady ? "complete" : "partial", total_pages: 1, processed_pages: textReady ? 1 : 0, missing_pages: textReady ? [] : [1] },
         pages: [{ page_number: 1, image_url: readerImage, width: 400, height: 300 }],
       } });
       return true;
@@ -2206,7 +2206,9 @@ test("manual imports wait for a student's explicit AI requests and preserve acce
   await page.goto("/read/anatomy/reader-a");
   await expect(page.getByAltText("Page 1", { exact: true })).toBeVisible();
   const notice = page.getByRole("status", { name: "Document text status" });
-  await expect(notice).toContainText("Prepare AI tools when you need");
+  await expect(notice).toContainText("Text recognition and indexing started when you opened this slide");
+  await expect(page.getByRole("progressbar", { name: "Pages indexed" })).toHaveAttribute("aria-valuenow", "0");
+  await page.screenshot({ path: testInfo.outputPath("reader-indexing.png"), fullPage: true });
   expect(indexRequests + bankRequests + resourceRequests).toBe(0);
   await page.getByRole("button", { name: "Cards", exact: true }).click();
   await expect.poll(() => cardReads).toBeGreaterThan(0);
@@ -2218,9 +2220,11 @@ test("manual imports wait for a student's explicit AI requests and preserve acce
   await expect.poll(() => resourceRequests).toBe(1);
   await expect(page.getByRole("button", { name: "Find video suggestions", exact: true })).toBeVisible();
   expect(videoRequests).toBe(0);
-  await notice.getByRole("button", { name: "Prepare AI tools", exact: true }).click();
-  await expect.poll(() => indexRequests).toBe(1);
+  textReady = true;
   await expect(notice).toHaveCount(0);
+  await expect(page.getByRole("status", { name: "Study tools ready" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("reader-ready.png"), fullPage: true });
+  expect(indexRequests).toBe(0);
   await page.getByRole("button", { name: "Prepare saved questions", exact: true }).click();
   await expect.poll(() => bankRequests).toBe(1);
 });
@@ -2236,6 +2240,7 @@ test("extraction warning names missing pages and supports failed retry then succ
         json: {
           total_pages: 5,
           can_reprocess: true,
+          ai_index: { status: complete ? "complete" : "failed" },
           text_extraction: {
             status: complete ? "complete" : "partial",
             missing_pages: complete ? [] : [2, 4],

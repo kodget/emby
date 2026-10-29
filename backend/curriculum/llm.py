@@ -106,7 +106,40 @@ def _cooldown_key(url, headers, payload):
     # Never put credentials in cache keys or logs. The model can have a separate
     # quota, so an exhausted model must not prevent trying another provider/model.
     identity = [url, headers.get('Authorization', ''), payload.get('model', '')]
-    return 'llm-cooldown:' + hashlib.sha256(json.dumps(identity).encode()).hexdigest()
+    # Versioned: older clients cached oversized-output rejections as cooldowns.
+    return 'llm-cooldown-v2:' + hashlib.sha256(json.dumps(identity).encode()).hexdigest()
+
+
+def _output_limit(response):
+    """An impossible request size is not a time-based quota exhaustion."""
+    message = response.text
+    if 'request too large' not in message.lower() or 'output tokens' not in message.lower():
+        return None
+    match = re.search(r'output tokens per minute\s*\(OTPM\):\s*Limit\s+([\d,]+)', message, re.I)
+    return max(1, int(match[1].replace(',', '')) * 9 // 10) if match else None
+
+
+def _output_budget(key, limit=None):
+    from django.core.cache import cache
+    try:
+        if limit is not None:
+            cache.set(key + ':output-budget', limit, timeout=86400)
+        return cache.get(key + ':output-budget')
+    except Exception:
+        return limit
+
+
+def generation_batch_size(requested, *, tokens_per_item=350):
+    """Keep structured batches within output limits learned from this account."""
+    size = requested
+    for provider in providers():
+        for model in _provider_models(provider, None):
+            key = _cooldown_key(f'{provider.base_url}/chat/completions',
+                                {'Authorization': f'Bearer {provider.api_key}'}, {'model': model})
+            limit = _output_budget(key)
+            if limit:
+                size = min(size, max(1, int(limit) // tokens_per_item))
+    return size
 
 
 def _cooldown(key, delay=None):
@@ -365,12 +398,17 @@ def _try_model(
     *, require_complete: bool = False,
     timeout: float | None = None,
     attempts: int | None = None,
+    _output_adjusted: bool = False,
 ) -> tuple[str | None, str, bool, int]:
     """Attempt one model with retries. Returns (content, error, provider_is_dead, total_tokens)."""
     cooldown_key = _cooldown_key(url, headers, payload)
     remaining = _cooldown(cooldown_key)
     if remaining:
         raise LLMRateLimited(retry_after=remaining)
+    payload = dict(payload)
+    budget = _output_budget(cooldown_key)
+    if budget and payload.get('max_completion_tokens', 0) > budget:
+        payload['max_completion_tokens'] = budget
     total_attempts = max(1, attempts if attempts is not None else _MAX_ATTEMPTS)
     for attempt in range(total_attempts):
         try:
@@ -406,6 +444,19 @@ def _try_model(
             continue
 
         if resp.status_code == 429:
+            limit = _output_limit(resp)
+            if limit is not None:
+                _output_budget(cooldown_key, limit)
+                if not _output_adjusted and limit < payload.get('max_completion_tokens', 0):
+                    payload['max_completion_tokens'] = limit
+                    # One immediate corrected request, also for interactive calls
+                    # whose ordinary transient retry budget is one.
+                    return _try_model(url, headers, payload, last_error,
+                        require_complete=require_complete, timeout=timeout,
+                        attempts=1, _output_adjusted=True)
+                return None, 'Provider rejected the output size after adjustment.', False, 0
+            if 'request too large' in resp.text.lower():
+                raise RequestTooLarge('The request exceeds the provider token limit.')
             delay = _retry_delay(resp)
             _cooldown(cooldown_key, delay)
             # Do not sleep inside a web request/worker or retry before this

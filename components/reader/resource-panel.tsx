@@ -68,18 +68,9 @@ export function ResourcePanel({
     setError(null);
 
     try {
-      const currentSlide = slides[slideIndex];
-
-      // Convert image to base64 so Gemini can see the slide
-      // slides[slideIndex] may not be populated yet if slideContent is still loading
-      const slideImageBase64 = currentSlide?.imageUrl
-        ? await imageUrlToBase64(currentSlide.imageUrl).catch(() => undefined)
-        : undefined;
-
       if (!active()) return;
       const data = await aiApi.generateResources({
         slide_id: slideId,
-        slide_image_base64: slideImageBase64,
       });
 
       // Cache in global store keyed by slideIndex
@@ -92,7 +83,7 @@ export function ResourcePanel({
     } catch (err: any) {
       if (!active()) return;
       console.error("Resource generation failed:", err);
-      setError("Failed to generate resources. Tap retry to try again.");
+      setError(err?.response?.data?.error || "Could not reach the study resource service. Please try again.");
     } finally {
       if (active()) setLocalLoading(false);
     }
@@ -143,13 +134,16 @@ export function ResourcePanel({
   if (!resources) {
     return (
       <div className="p-5">
-        <div className="rounded-2xl border border-border bg-muted/50 p-4 text-center">
-          <p className="text-sm text-muted-foreground">
+        <div className="rounded-3xl border border-border bg-gradient-to-br from-primary/5 to-background p-5">
+          <span className="mb-5 flex size-12 items-center justify-center rounded-2xl border border-primary/15 bg-background text-primary">{activeTab === 'videos' ? <Play className="size-5" /> : <BookOpenText className="size-5" />}</span>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Go a little deeper</p>
+          <h3 className="mt-2 font-serif text-2xl leading-tight tracking-tight">Another explanation.<br />A clearer understanding.</h3>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {onDemandAI ? "Find videos and textbooks for this slide when you need them." : "No resources yet for this slide."}
           </p>
           <button
             onClick={generateResources}
-            className="mt-3 text-xs text-primary hover:underline"
+            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             Generate now
           </button>

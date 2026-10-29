@@ -103,7 +103,7 @@ class ManualAIPolicyTests(BankFixture, TestCase):
 
 
 class ManualReadingTests(ProcessingFixture, TestCase):
-    def test_render_and_read_do_not_start_ai_for_manual_imports(self):
+    def test_opening_manual_import_starts_index_once_without_generating_questions(self):
         self.mocks()
         defer_automatic_ai(self.slide)
         for page in self.result['pages']:
@@ -116,10 +116,26 @@ class ManualReadingTests(ProcessingFixture, TestCase):
         self.assertEqual(self.state.status, 'completed')
         request = APIRequestFactory().get('/api/test/')
         force_authenticate(request, self.user)
-        with patch('curriculum.llm.chat') as ai:
+        with patch('curriculum.llm.chat') as ai, patch('curriculum.tasks.index_document_task.delay') as queue, self.captureOnCommitCallbacks(execute=True):
             response = views.get_slide_content(request, self.slide.pk)
+        job = DocumentIndexJob.objects.get(slide=self.slide)
+        queue.assert_called_once_with(job.pk)
+        self.assertEqual(response.data['ai_index']['status'], 'pending')
+        with patch('curriculum.tasks.index_document_task.delay') as queue, self.captureOnCommitCallbacks(execute=True):
+            views.get_slide_content(request, self.slide.pk)
+        queue.assert_not_called()
+        self.generate.assert_not_called()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data['pages']), 2)
         self.assertEqual(response.data['ai_generation_mode'], 'on_demand')
         self.assertTrue(response.data['can_prepare_ai'])
         ai.assert_not_called()
+
+    def test_opening_an_inaccessible_slide_never_queues_indexing(self):
+        self.user.profile.class_group = None
+        self.user.profile.save()
+        request = APIRequestFactory().get('/api/test/')
+        force_authenticate(request, self.user)
+        with patch.object(document_index, 'request_index') as queue:
+            self.assertEqual(views.get_slide_content(request, self.slide.pk).status_code, 404)
+        queue.assert_not_called()

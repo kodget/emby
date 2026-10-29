@@ -25,6 +25,8 @@ class VisualIndexTests(ProcessingFixture, TestCase):
         self.result['text_content'] = ''
         self.result['text_extraction'].update(status='failed', missing_pages=[1, 2], processed_pages=0)
         self.vision = patch('curriculum.document_index.llm.supports_vision', return_value=True).start()
+        self.local = patch.object(index, 'read_page_locally', side_effect=lambda source, page:
+            {**page, 'local_ocr_version': index.LOCAL_OCR_VERSION}).start()
         self.addCleanup(patch.stopall)
 
     def render(self):
@@ -107,6 +109,49 @@ class VisualIndexTests(ProcessingFixture, TestCase):
         job.refresh_from_db()
         self.assertEqual(job.status, 'pending')
 
+    def test_local_text_recognition_finishes_without_any_provider_call(self):
+        job = self.render()
+        self.local.side_effect = lambda source, page: {**visual_read(source, page),
+            'extraction_method': 'ocr', 'local_ocr_version': index.LOCAL_OCR_VERSION}
+        with patch.object(index, 'read_page') as vision:
+            self.assertTrue(index.run(job.pk))
+        vision.assert_not_called()
+        self.assertTrue(is_complete(index.source_data(self.slide)))
+        self.assertEqual(index.source_data(self.slide)['text_extraction']['ocr_pages'], [1, 2])
+
+    def test_old_provider_wait_does_not_block_first_local_scan(self):
+        job = self.render()
+        DocumentIndexJob.objects.filter(pk=job.pk).update(status='failed',
+            error_code='provider_rate_limited', next_attempt_at=timezone.now()+timedelta(hours=1))
+        self.assertTrue(index.request_index(self.slide, requested=True))
+        self.local.side_effect = lambda source, page: {**visual_read(source, page),
+            'extraction_method': 'ocr', 'local_ocr_version': index.LOCAL_OCR_VERSION}
+        with patch.object(index, 'read_page') as vision:
+            self.assertTrue(index.run(job.pk))
+        vision.assert_not_called()
+
+    def test_later_page_ocr_is_saved_before_earlier_page_vision_hits_quota(self):
+        job = self.render()
+        self.local.side_effect = lambda source, page: {**(visual_read(source, page) if page['page_number'] == 2 else page),
+            'extraction_method': 'ocr', 'local_ocr_version': index.LOCAL_OCR_VERSION}
+        with patch.object(index, 'read_page', side_effect=llm.LLMRateLimited(retry_after=100)):
+            self.assertFalse(index.run(job.pk))
+        data = index.source_data(self.slide)
+        self.assertEqual(data['text_extraction']['missing_pages'], [1])
+        self.assertEqual(data['pages'][1]['extraction_status'], 'complete')
+
+    def test_local_scan_is_bounded_and_resumes_before_vision(self):
+        job = self.render()
+        with patch.object(index, 'BATCH_SIZE', 1), patch.object(index, 'read_page') as vision:
+            self.assertFalse(index.run(job.pk))
+        self.local.assert_called_once()
+        vision.assert_not_called()
+        self.local.reset_mock()
+        with patch.object(index, 'read_page', side_effect=visual_read):
+            self.assertTrue(index.run(job.pk))
+        self.local.assert_called_once()
+        self.assertEqual(self.local.call_args.args[1]['page_number'], 2)
+
     def test_broker_failure_keeps_pages_and_recoverable_request(self):
         job = self.render()
         with patch('curriculum.tasks.index_document_task.delay', side_effect=RuntimeError('offline')):
@@ -186,8 +231,46 @@ class VisualIndexTests(ProcessingFixture, TestCase):
             index.page_image(self.slide, data['pages'][0])
         download.assert_not_called()
 
+    def test_indexed_page_chat_reuses_text_but_diagram_questions_keep_the_image(self):
+        from rest_framework.test import APIRequestFactory, force_authenticate
+        from curriculum.ai_views import chat_with_slide
+        job = self.render()
+        self.local.side_effect = lambda source, page: {**visual_read(source, page),
+            'extraction_method': 'ocr', 'local_ocr_version': index.LOCAL_OCR_VERSION}
+        self.assertTrue(index.run(job.pk))
+        with patch.object(index, 'page_image', return_value='owned-image') as image, \
+                patch('curriculum.ai_views.slide_ai.chat', return_value={'response': 'From Page 1', 'total_tokens': 20}) as chat, \
+                patch('curriculum.ai_views.CreditManager') as credits:
+            credits.reserve_credits.return_value = {'reservation_id': 'test', 'reserved_amount': 3}
+            credits.get_user_balance.return_value = 10
+            for question, expect_image in [('Explain the main idea', False), ('Explain the diagram', True)]:
+                request = APIRequestFactory().post('/api/ai/chat/',
+                    {'slide_id': self.slide.pk, 'page_number': 1, 'message': question}, format='json')
+                force_authenticate(request, self.user)
+                response = chat_with_slide(request)
+                self.assertEqual(response.status_code, 200, response.data)
+                self.assertEqual(bool(chat.call_args.kwargs['slide_image_base64']), expect_image)
+            image.assert_called_once()
+
 
 class VisionProviderTests(SimpleTestCase):
+    def test_local_reader_recognizes_real_image_and_keeps_native_text(self):
+        import base64
+        import fitz
+        from curriculum.tests.test_document_extraction import pdf_bytes
+        with fitz.open(stream=pdf_bytes(count=1), filetype='pdf') as document:
+            image = document[0].get_pixmap(matrix=fitz.Matrix(2, 2)).tobytes('png')
+        with patch.object(index, 'page_image', return_value=base64.b64encode(image).decode()), \
+                patch.object(llm, 'chat_with_image') as provider:
+            page = index.read_page_locally(None, {'page_number': 7, 'text': 'Native heading',
+                'extraction_status': 'needs_ocr', 'asset_id': 'unchanged'})
+        self.assertEqual(page['page_number'], 7)
+        self.assertEqual(page['asset_id'], 'unchanged')
+        self.assertEqual(page['extraction_status'], 'complete', page)
+        self.assertIn('Native heading', page['text'])
+        self.assertIn('The heart pumps blood', page['text'])
+        provider.assert_not_called()
+
     def test_chat_cannot_silently_drop_an_unreadable_image(self):
         from curriculum.ai_service import _generate
         with patch.object(llm, 'supports_vision', return_value=True), \

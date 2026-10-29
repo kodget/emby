@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 LEASE = timedelta(minutes=15)
 MAX_FAILURES = 4
 BATCH_SIZE = 3
+LOCAL_OCR_VERSION = 1
 
 
 class IndexUnavailable(Exception):
@@ -87,7 +88,11 @@ def request_index(source, *, force=False, requested=False):
     if job.source_key == key:
         if job.status == 'running' and job.lease_expires_at and job.lease_expires_at > now:
             return False
-        if (job.status == 'pending' or job.error_code == 'provider_rate_limited') and job.next_attempt_at and job.next_attempt_at > now:
+        local_work = any(p.get('extraction_status') not in {'complete', 'blank'}
+                         and p.get('local_ocr_version') != LOCAL_OCR_VERSION for p in data['pages'])
+        local_upgrade = job.error_code == 'provider_rate_limited' and local_work
+        if (job.status == 'pending' or (not force and not local_upgrade) or
+                (job.error_code == 'provider_rate_limited' and not local_work)) and job.next_attempt_at and job.next_attempt_at > now:
             return False
         if job.attempts >= MAX_FAILURES and not force:
             return False
@@ -174,6 +179,35 @@ def read_page(source, page):
             'extraction_status': 'complete' if result['status'] == 'readable' else 'blank'}
 
 
+def read_page_locally(source, page):
+    """OCR the existing authorized rendering: no Office conversion or LLM quota.
+
+    Native text is retained. OCR indexes visible text and labels; it does not
+    invent descriptions of diagrams. Unreadable images still need vision.
+    """
+    import fitz
+    from .services.document_extraction import ocr_options, ExtractionError
+    result = {**page, 'local_ocr_version': LOCAL_OCR_VERSION}
+    try:
+        image = base64.b64decode(page_image(source, page))
+        with fitz.open(stream=image) as picture:
+            pdf = picture.convert_to_pdf()
+        with fitz.open(stream=pdf, filetype='pdf') as document:
+            rendered = document[0]
+            textpage = rendered.get_textpage_ocr(full=True, **ocr_options())
+            recognized = rendered.get_text(textpage=textpage, sort=True).strip()
+        if not recognized:
+            raise IndexUnavailable('unreadable')
+        native = (page.get('text') or '').strip()
+        text = recognized if not native or native in recognized else native + '\n\n' + recognized
+        result.update(text=text, extraction_status='complete', extraction_method='ocr', error_code='')
+    except (IndexUnavailable, ExtractionError) as exc:
+        result['error_code'] = exc.code
+    except Exception:
+        result['error_code'] = 'ocr_failed'
+    return result
+
+
 def _source(job, *, lock=False):
     model, pk = (Slide, job.slide_id) if job.slide_id else (SlideDeck, job.deck_id)
     qs = model.objects.select_for_update() if lock else model.objects
@@ -231,6 +265,25 @@ def _finish(source, data):
     request_generation(source)
 
 
+def _persist_page(job, token, replacement):
+    with transaction.atomic():
+        current = _source(job, lock=True)
+        locked = Job.objects.select_for_update().get(pk=job.pk)
+        latest = source_data(current)
+        if (locked.status != 'running' or locked.lease_token != token or not _valid(current)
+                or identity(current, latest) != job.source_key):
+            return False
+        latest['pages'] = [{**p, **replacement} if p['page_number'] == replacement['page_number'] else p
+                           for p in latest['pages']]
+        _save(current, latest)
+        # Advancing the local scan is finite progress, even for a page that will
+        # need vision. A large document must not exhaust the failure budget.
+        locked.attempts = 0
+        locked.lease_expires_at = timezone.now() + LEASE
+        locked.save(update_fields=['attempts', 'lease_expires_at', 'updated_at'])
+    return True
+
+
 def run(job_id):
     with transaction.atomic():
         initial = Job.objects.filter(pk=job_id).first()
@@ -254,33 +307,24 @@ def run(job_id):
     token = job.lease_token
     try:
         missing = [p for p in data['pages'] if p.get('extraction_status') not in {'complete', 'blank'}]
-        ocr_result = None
-        if missing and not llm.supports_vision():
-            # Optional local fallback remains useful for deployments without a vision provider.
-            from .private_media import content_file_url
-            from .services.document_extraction import extract_document
-            ocr_result = extract_document(content_file_url(source), source.file_type)
-            if ocr_result['text_extraction']['source_sha256'] != data['text_extraction']['source_sha256']:
-                raise IndexUnavailable('source_changed')
-            if len(ocr_result['pages']) != len(data['pages']):
-                raise IndexUnavailable('page_count_changed')
-        for page in missing[:BATCH_SIZE]:
-            replacement = (ocr_result['pages'][page['page_number'] - 1] if ocr_result else read_page(source, page))
+        local = [p for p in missing if p.get('local_ocr_version') != LOCAL_OCR_VERSION]
+        for page in local[:BATCH_SIZE]:
+            replacement = read_page_locally(source, page)
+            if not _persist_page(job, token, replacement):
+                return False
+        # Scan all pages locally before spending tokens. An unreadable early
+        # diagram or a provider outage cannot block OCR of the remaining pages.
+        data = source_data(_source(job))
+        missing = [p for p in data['pages'] if p.get('extraction_status') not in {'complete', 'blank'}]
+        local_remaining = any(p.get('local_ocr_version') != LOCAL_OCR_VERSION for p in missing)
+        for page in ([] if local_remaining else missing[:BATCH_SIZE]):
+            if not llm.supports_vision():
+                raise IndexUnavailable(page.get('error_code') or 'ocr_unavailable')
+            replacement = read_page(source, page)
             if replacement.get('extraction_status') not in {'complete', 'blank'}:
                 raise IndexUnavailable(replacement.get('error_code') or 'visual_unreadable')
-            with transaction.atomic():
-                current = _source(job, lock=True)
-                locked = Job.objects.select_for_update().get(pk=job_id)
-                latest = source_data(current)
-                if (locked.status != 'running' or locked.lease_token != token or not _valid(current)
-                        or identity(current, latest) != job.source_key):
-                    return False
-                latest['pages'] = [{**p, **replacement} if p['page_number'] == page['page_number'] else p
-                                   for p in latest['pages']]
-                _save(current, latest)
-                locked.attempts = 0  # Count consecutive failures, not successful batches.
-                locked.lease_expires_at = timezone.now() + LEASE
-                locked.save(update_fields=['attempts', 'lease_expires_at', 'updated_at'])
+            if not _persist_page(job, token, replacement):
+                return False
         with transaction.atomic():
             current = _source(job, lock=True)
             locked = Job.objects.select_for_update().get(pk=job_id)

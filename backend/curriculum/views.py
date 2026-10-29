@@ -599,10 +599,14 @@ def get_slide_content(request, slide_id):
 
     slide_content, _ = SlideContent.objects.get_or_create(slide=slide)
     from .content_permissions import can_reprocess_upload
-    from .document_index import status_for
+    from .document_index import status_for, request_index
     from .ai_policy import ON_DEMAND
     mode = (slide_content.content_data or {}).get('ai_generation_mode', 'auto')
     can_reprocess = can_reprocess_upload(request.user, slide)
+    # This endpoint is the reader's open/poll action, after class authorization.
+    # Indexing is idempotent; opening a manual import opts into preparation,
+    # while its flashcards and question bank remain explicitly requested work.
+    request_index(slide, requested=True)
     extraction_info = {
         'ai_index': status_for(slide),
         'text_extraction': (slide_content.content_data or {}).get('text_extraction', {'status': 'unverified'}),
@@ -673,7 +677,7 @@ def get_slide_content(request, slide_id):
         if content['total_pages'] > 0:
             Slide.objects.filter(id=slide.id).update(page_count=content['total_pages'])
             from .document_index import request_index
-            request_index(slide)
+            request_index(slide, requested=True)
             extraction_info['ai_index'] = status_for(slide)
         
         return Response({
@@ -1081,6 +1085,8 @@ class SlideDeckViewSet(PrivateMediaResponseMixin, viewsets.ModelViewSet):
     def pages(self, request, id=None):
         """Get all pages of a slide deck"""
         deck = self.get_object()
+        from .document_index import request_index
+        request_index(deck, requested=True)
         pages = deck.pages.all().order_by('slide_number')
         serializer = SlidePageSerializer(pages, many=True)
         return Response(serializer.data)

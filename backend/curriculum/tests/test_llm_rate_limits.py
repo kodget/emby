@@ -83,3 +83,37 @@ class ProviderCooldownTests(SimpleTestCase):
             with self.assertRaises(RateLimitExceeded) as caught:
                 _generate(['Generate a question'])
         self.assertEqual(caught.exception.retry_after, 1094)
+
+    def test_oversized_output_is_reduced_immediately_and_reused_without_cooldown(self):
+        error = response(429, message='Request too large for model on output tokens per minute (OTPM): '
+                         'Limit 1000, Requested 1471. Reduce max_tokens and try again.')
+        budgets = []
+        def post(url, **kwargs):
+            budgets.append(kwargs['json']['max_completion_tokens'])
+            return error if len(budgets) == 1 else response()
+        with patch.object(llm, 'providers', return_value=[self.primary]), \
+                patch.object(llm.requests, 'post', side_effect=post), patch.object(llm.time, 'sleep') as sleep:
+            self.assertEqual(llm.chat([], max_tokens=2048, attempts=1), 'OK')
+            self.assertEqual(llm.chat([], max_tokens=6000, attempts=1), 'OK')
+        self.assertEqual(budgets, [2048, 900, 900])
+        sleep.assert_not_called()
+        with patch.object(llm, 'providers', return_value=[self.primary]):
+            self.assertEqual(llm.generation_batch_size(5), 2)
+            self.assertEqual(llm.generation_batch_size(1), 1)
+
+    def test_repeated_output_rejection_tries_backup_instead_of_scheduling_forever(self):
+        error = response(429, message='Request too large on output tokens per minute (OTPM): Limit 1000')
+        with patch.object(llm, 'providers', return_value=[self.primary, self.backup]), patch.object(
+                llm.requests, 'post', side_effect=[error, error, response()]) as post:
+            self.assertEqual(llm.chat([], attempts=1), 'OK')
+        self.assertEqual(post.call_count, 3)
+
+    def test_ordinary_output_quota_exhaustion_still_waits(self):
+        error = response(429, message='Rate limit reached on output tokens per minute (OTPM): '
+                         'Limit 1000, Used 990, Requested 100. Please try again in 30s.')
+        with patch.object(llm, 'providers', return_value=[self.primary]), \
+                patch.object(llm.requests, 'post', return_value=error) as post:
+            with self.assertRaises(llm.LLMRateLimited) as caught:
+                llm.chat([])
+        self.assertEqual(caught.exception.retry_after, 30)
+        post.assert_called_once()

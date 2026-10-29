@@ -296,13 +296,13 @@ FORMATTING:
     ) -> Dict[str, Any]:
         """
         Generate structured study resources for a slide.
-        Returns YouTube suggestions, textbook references, and MCQs as JSON.
+        Returns video search suggestions and textbook references as JSON.
         """
         empty = {"youtube": [], "textbooks": [], "mcqs": []}
 
         slide_text = slide_context.get('text', '')
         if slide_text:
-            slide_text = slide_text[:8000]
+            slide_text = bounded_chat_source(slide_text, slide_context.get('title', ''), budget=5000)
         else:
             slide_text = 'No text available'
 
@@ -324,13 +324,13 @@ Format:
   ],
   "textbooks": [
     {{"title": "Textbook Name", "author": "Author Name", "chapter": "Relevant Chapter", "reason": "why relevant"}}
-  ],
-  "mcqs": [
-    {{"question": "Question text?", "options": ["A) option", "B) option", "C) option", "D) option"], "correct": 0, "explanation": "why correct"}}
   ]
 }}
 
-Generate: 3 YouTube suggestions, 2 textbook recommendations, 5 MCQs based on this slide."""
+Generate 2 YouTube search suggestions and 2 textbook recommendations. Keep each reason
+to one short sentence. Do not invent textbook editions, chapter numbers, or video URLs.
+These are study suggestions, not verified search results. Do not generate questions;
+the saved question bank handles practice separately."""
 
         try:
             parts: list = []
